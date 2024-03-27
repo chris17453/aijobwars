@@ -26,7 +26,7 @@
 
 ## Play
 - Just download the code and open index.html
-- Go to the live website !(AIJOBWARSC.COM)[AIJOBWARS.COM]
+- ![AIJOBWARSC.COM](https://AIJOBWARS.COM)
 
 ## Open source autio was fount at opengameart.org
 
