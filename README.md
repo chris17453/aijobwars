@@ -1,5 +1,5 @@
 
-# LinkedIn Job Seeker
+# AI Job Wars
 
 - Dynamic Particulate Simulation System (DPSS)
 
@@ -20,13 +20,10 @@
 - STRAFING - WASD
 - Space - Fire lasers
 - Enter - Fire Missiles
-- S for sound
+- M for sound
 - Escape toggles  Pause
+- CTRL + Escape will turn on boss mode, Escape will exit
 
-## BOSS Mode
-
-- CTRL + Escape will turn on boss mode
-- Escape will exit
 
 ## Open source autio was fount at opengameart.org
 
