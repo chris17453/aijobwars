@@ -24,6 +24,9 @@
 - Escape toggles  Pause
 - CTRL + Escape will turn on boss mode, Escape will exit
 
+## Play
+- Just download the code and open index.html
+- Go to the live website !(AIJOBWARSC.COM)[AIJOBWARS.COM]
 
 ## Open source autio was fount at opengameart.org
 
