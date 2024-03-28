@@ -38,12 +38,12 @@ class ui{
 
     toggle_sound(){
         if(this.G.play_sounds){
-            this.G.track1Sound.pause();
-            this.G.spaceship.sound_off();
+            this.G.level.track.pause();
+            this.G.level.spaceship.sound_off();
             this.G.play_sounds=false;
         } else {
-            this.G.track1Sound.play();
-            this.G.spaceship.sound_on();
+            this.G.level.track.play();
+            this.G.level.spaceship.sound_on();
             this.G.play_sounds=true;
         }
     }
@@ -89,8 +89,8 @@ class ui{
 }
 
 class PercentageBar {
-    constructor(ctx, x, y, width, height, label) {
-        this.ctx = ctx;
+    constructor(graphics, x, y, width, height, label) {
+        this.graphics=graphics;
         this.x = x;
         this.y = y;
         this.width = width;
@@ -99,15 +99,16 @@ class PercentageBar {
     }
 
     render(percentage) {
-        let x = this.x;
-        let y = this.y;
+        let vp=this.graphics.viewport.given;
+        let x = this.x+vp.x;
+        let y = this.y+vp.y;
 
         // Background with subtle gradient
-        let bgGradient = this.ctx.createLinearGradient(x, y, x, y + this.height);
+        let bgGradient = this.graphics.ctx.createLinearGradient(x, y, x, y + this.height);
         bgGradient.addColorStop(0, '#222222'); // Light gray
         bgGradient.addColorStop(1, '#000000'); // Almost white
-        this.ctx.fillStyle = bgGradient;
-        this.ctx.fillRect(x, y, this.width, this.height);
+        this.graphics.ctx.fillStyle = bgGradient;
+        this.graphics.ctx.fillRect(x, y, this.width, this.height);
 
         let adjusted_percentage=percentage;
         if (adjusted_percentage<0)adjusted_percentage=0;
@@ -116,26 +117,26 @@ class PercentageBar {
         // Adjust bar color based on percentage
         const redIntensity = Math.floor(255 * (1 - adjusted_percentage / 100));
         const greenIntensity = Math.floor(255 * (adjusted_percentage/ 100));
-        this.ctx.fillStyle = `rgb(${redIntensity},${greenIntensity},0)`;
+        this.graphics.ctx.fillStyle = `rgb(${redIntensity},${greenIntensity},0)`;
 
         // Fill the entire bar, adjusting color based on percentage
-        this.ctx.fillRect(x + 3, y + 3, (this.width - 6) * (adjusted_percentage/ 100), this.height - 6);
+        this.graphics.ctx.fillRect(x + 3, y + 3, (this.width - 6) * (adjusted_percentage/ 100), this.height - 6);
 
         // Draw outline
-        this.ctx.strokeStyle = '#AAA'; // Dark gray
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, this.width, this.height);
+        this.graphics.ctx.strokeStyle = '#AAA'; // Dark gray
+        this.graphics.ctx.lineWidth = 2;
+        this.graphics.ctx.strokeRect(x, y, this.width, this.height);
 
         // Draw percentage text
-        this.ctx.fillStyle = '#DDFFFF'; // Neon blue
-        this.ctx.fillStyle = `rgb(${redIntensity},${redIntensity},${redIntensity})`;
-        this.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(percentage.toFixed(0) + '%', x + this.width / 2, y + this.height / 2 - 10);
+        this.graphics.ctx.fillStyle = '#DDFFFF'; // Neon blue
+        this.graphics.ctx.fillStyle = `rgb(${redIntensity},${redIntensity},${redIntensity})`;
+        this.graphics.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
+        this.graphics.ctx.textAlign = 'center';
+        this.graphics.ctx.textBaseline = 'middle';
+        this.graphics.ctx.fillText(percentage.toFixed(0) + '%', x + this.width / 2, y + this.height / 2 - 10);
 
         // Draw label text
-        this.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
-        this.ctx.fillText(this.label, x + this.width / 2, y + this.height / 2 + 10);
+        this.graphics.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
+        this.graphics.ctx.fillText(this.label, x + this.width / 2, y + this.height / 2 + 10);
     }
 }

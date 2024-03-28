@@ -63,13 +63,18 @@ class events {
             if (this.kb.is_pressed('s') || this.kb.is_pressed('S')) this.G.level.spaceship.decelerate();
             //if (this.kb.is_pressed('Escape')) this.G.level.spaceship.pause();
 
-
+            if (this.kb.is_pressed('Shift')) this.G.level.spaceship.boost();
+            
+            if (this.kb.just_stopped('Shift')) this.G.level.spaceship.stop_boost();
+            if (this.kb.just_stopped('+')) this.G.level.volume(+1);
+            if (this.kb.just_stopped('-')) this.G.level.volume(-1);
+            
             if (this.kb.just_stopped('ArrowLeft')) this.G.level.spaceship.stop_playing();
             if (this.kb.just_stopped('ArrowRight')) this.G.level.spaceship.stop_playing();
             if (this.kb.just_stopped('ArrowUp')) this.G.level.spaceship.stop_playing();
             if (this.kb.just_stopped('ArrowDown')) this.G.level.spaceship.stop_playing();
 
-            if (this.kb.just_stopped('m') || this.kb.just_stopped('M')) this.G.toggle_sound();
+            if (this.kb.just_stopped('m') || this.kb.just_stopped('M')) this.G.ui.toggle_sound();
 
         }
 

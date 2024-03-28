@@ -12,17 +12,22 @@
 
 ## Controls
 
-- Q Quit the game
-- Arrow Left - bank left
-- Arrow Right - bank right
-- Arrow Up  - accelerate
-- Arrow Down - decellerate
-- STRAFING - WASD
-- Space - Fire lasers
-- Enter - Fire Missiles
-- M for sound
-- Escape toggles  Pause
-- CTRL + Escape will turn on boss mode, Escape will exit
+| Key           | Action                 |
+|---------------|------------------------|
+| Q             | Quit the game          |
+| Arrow Left    | Bank left              |
+| Arrow Right   | Bank right             |
+| Arrow Up      | Accelerate             |
+| Arrow Down    | Decelerate             |
+| STRAFING      | WASD                   |
+| Space         | Fire lasers            |
+| Enter         | Fire Missiles          |
+| M             | Sound                  |
+| +             | Volume up              |
+| -             | Volume down            |
+| Escape        | Toggle Pause           |
+| CTRL + Escape | Turn on boss mode      |
+| Escape        | Exit (from boss mode)  |
 
 ## Play
 

@@ -48,13 +48,14 @@ class GamePage {
         this.ui = new ui(this.ctx, this);
         this.level = new level(this);
         this.level.load('https://aijobwars.com/static/levels/level.json');
-        this.laser_bar=new PercentageBar(this.ctx,10,10,200,40,"Laser");
-        this.laser_timeout=new PercentageBar(this.ctx,10,50,200,40,"Laser Timeout");
-
-        this.missile_bar     =new PercentageBar(this.ctx,220,10,200,40,"Missle");
-        this.missile_timeout =new PercentageBar(this.ctx,220,50,200,40,"Missle Timeout");
-        this.health_bar      =new PercentageBar(this.ctx,430,10,200,40,"Health");
-
+        this.laser_bar = new PercentageBar(this.graphics, 10, 10, 200, 40, "Laser");
+        this.laser_timeout = new PercentageBar(this.graphics, 10, 50, 200, 40, "Laser Timeout");
+        this.missile_bar = new PercentageBar(this.graphics, 220, 10, 200, 40, "Missle");
+        this.missile_timeout = new PercentageBar(this.graphics, 220, 50, 200, 40, "Missle Timeout");
+        this.booster_bar = new PercentageBar(this.graphics, 430, 10, 200, 40, "Booster");
+        this.booster_timeout = new PercentageBar(this.graphics, 430, 50, 200, 40, "Booster Timeout");
+        this.health_bar = new PercentageBar(this.graphics, 640, 10, 200, 40, "Health");
+        this.font = new sprite_font(this.ctx, "https://aijobwars.com/static/fonts/obitron-blue.png");
         this.startRendering();
     }
 
@@ -78,17 +79,17 @@ class GamePage {
                 if (obj1.check_collision(obj2)) {
                     let center = obj1.get_combine_center(obj2);
 
-                    obj1.orient( { x: 0, y: window.y1 });
+                    obj1.orient({ x: 0, y: window.y1 });
                     obj1.render(); //( 'rgba(255, 0, 0, 0.5)');
                     obj1.de_orient();
 
-                    obj2.orient( { x: 0, y: window.y1 });
+                    obj2.orient({ x: 0, y: window.y1 });
                     obj2.render(); // 'rgba(255, 0, 0, 0.5)');
                     obj2.de_orient();
 
-                    let exp = new Explosion(this.graphics,center.x, center.y);
+                    let exp = new Explosion(this.graphics, center.x, center.y);
 
-                    exp.orient( { x: 0, y: window.y1 });
+                    exp.orient({ x: 0, y: window.y1 });
                     exp.render(); //'rgba(0, 255, 0, 0.5)');
                     exp.de_orient();
 
@@ -101,7 +102,7 @@ class GamePage {
         }
 
 
-        let obj1=this.level.spaceship;
+        let obj1 = this.level.spaceship;
         for (let j = 0; j < this.level.npc.length; j++) {
             const obj2 = this.level.npc[j];
             if (obj2.position.y < window.y1 || obj2.position.y > window.y2) continue;
@@ -110,17 +111,17 @@ class GamePage {
             if (obj1.check_collision(obj2)) {
                 let center = obj1.get_combine_center(obj2);
 
-                obj1.orient( { x: 0, y: window.y1 });
+                obj1.orient({ x: 0, y: window.y1 });
                 obj1.render(); //( 'rgba(255, 0, 0, 0.5)');
                 obj1.de_orient();
 
-                obj2.orient( { x: 0, y: window.y1 });
+                obj2.orient({ x: 0, y: window.y1 });
                 obj2.render(); // 'rgba(255, 0, 0, 0.5)');
                 obj2.de_orient();
 
-                let exp = new Explosion(this.graphics,center.x, center.y);
-
-                exp.orient( { x: 0, y: window.y1 });
+                let exp = new Explosion(this.graphics, center.x, center.y,this.play_sounds,this.level.master_volume);
+                exp.play("destroy");
+                exp.orient({ x: 0, y: window.y1 });
                 exp.render(); //'rgba(0, 255, 0, 0.5)');
                 exp.de_orient();
 
@@ -129,14 +130,10 @@ class GamePage {
                 //obj2.impact(obj1);
                 //console.log("Impact");
             }
-    
+
         }
     }
 
-
-    //3.7,15552
-    //0  ,15616 
-    // 32 ,15616
 
     updateFrame() {
         // Calculate deltaTime (time since last frame)
@@ -153,13 +150,15 @@ class GamePage {
             this.level_start = false;
         }
 
-        let window = { y1: this.level.position.y , 
-                       y2: this.level.position.y +this.graphics.viewport.virtual.height }
+        let window = {
+            y1: this.level.position.y,
+            y2: this.level.position.y + this.graphics.viewport.virtual.height
+        }
         for (let b = 0; b < this.level.npc.length; b++) {
 
             if (this.level.npc[b].position.y > window.y1 && this.level.npc[b].position.y < window.y2) {
                 this.level.npc[b].update_frame(deltaTime)
-                this.level.npc[b].orient(   { x: 0, y: window.y1 });
+                this.level.npc[b].orient({ x: 0, y: window.y1 });
                 this.level.npc[b].render();
                 this.level.npc[b].de_orient();
             }
@@ -171,7 +170,7 @@ class GamePage {
             if (this.level.explosions[b].position.y > window.y1 && this.level.explosions[b].position.y < window.y2) {
                 this.level.explosions[b].update_frame(deltaTime)
                 this.level.explosions[b].orient({ x: 0, y: window.y1 });
-                this.level.explosions[b].render(  );
+                this.level.explosions[b].render();
                 this.level.explosions[b].de_orient();
                 if (this.level.explosions[b].loop_complete()) {
                     this.level.explosions.splice(b, 1); // Remove the projectile from the array
@@ -181,24 +180,29 @@ class GamePage {
             }
 
         }
-        
-        let percentage1=this.level.spaceship.laser_fire_control.get_cooldown_percentage();
+        let percentage1 = this.level.spaceship.laser_fire_control.get_cooldown_percentage();
         this.laser_bar.render(percentage1);
-        let percentage2=this.level.spaceship.laser_fire_control.timeout_percentage();
+        let percentage2 = this.level.spaceship.laser_fire_control.timeout_percentage();
         this.laser_timeout.render(percentage2);
 
-        let percentage3=this.level.spaceship.missile_fire_control.get_cooldown_percentage();
+        let percentage3 = this.level.spaceship.missile_fire_control.get_cooldown_percentage();
         this.missile_bar.render(percentage3);
-        let percentage4=this.level.spaceship.missile_fire_control.timeout_percentage();
+        let percentage4 = this.level.spaceship.missile_fire_control.timeout_percentage();
         this.missile_timeout.render(percentage4);
 
-        let percentage5=this.level.spaceship.get_life_percentage();
+        let percentage5 = this.level.spaceship.get_life_percentage();
         this.health_bar.render(percentage5);
+
+
+        let percentage6 = this.level.spaceship.boost_fire_control.get_cooldown_percentage();
+        this.booster_bar.render(percentage6);
+        let percentage7 = this.level.spaceship.boost_fire_control.timeout_percentage();
+        this.booster_timeout.render(percentage7);
 
 
         this.check_collisions();
         this.level.spaceship.update_frame(deltaTime);
-        this.level.spaceship.render(  { x: 0, y: window.y1 });
+        this.level.spaceship.render({ x: 0, y: window.y1 });
     }
 
 

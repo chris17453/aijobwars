@@ -19,31 +19,57 @@ class Ship extends GameObject {
                 break;
 
         }
+        this.boost_fire_control=new fire_control(3);
         this.laser_fire_control=new fire_control(3);
         this.missile_fire_control=new fire_control(10);
         this.thrusters = []
         this.projectiles = []
-        var thruster1 = new Projectile(this.graphics,+26, 65, 180, "thruster");
+        this.booster = new Projectile(this.graphics,+0, 100, 0, "booster",this.volume);
+        this.thrusters.push(this.booster);
+        var thruster1 = new Projectile(this.graphics,+30, 55, 0, "thruster",this.volume);
         this.thrusters.push(thruster1);
-        var thruster2 = new Projectile(this.graphics,-26, 65, 180, "thruster");
+        var thruster2 = new Projectile(this.graphics,-30, 55, 0, "thruster",this.volume);
         this.thrusters.push(thruster2);
 
     }
 
+    set_volume(volume){
+        super.set_volume(volume);
+        for (let thruster of this.thrusters) {
+            thruster.volume=volume;
+        }
+        for (let projectile of this.projectiles) {
+            projectile.volume=volume;
+        }
+    }
+
+    boost(){
+        if (this.boost_fire_control.can_fire()) {
+            this.booster.set_visible(true);
+            this.accelerate(10);
+            //this.accelerate();
+            console.log("BOOST");
+        }
+    } 
+
+    stop_boost(){
+        this.boost_fire_control.stop_firing();
+        this.booster.set_visible(false);
+    }
 
     
 
     fire_lazer() {
         if (this.laser_fire_control.can_fire()) {
             let lazer1 = this.get_relative_position(-60, -35)
-            var projectile = new Projectile(this.graphics,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, "lazer", this.play_sounds);
+            var projectile = new Projectile(this.graphics,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, "lazer", this.play_sounds,this.volume);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             projectile.accelerate();
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
-            var projectile = new Projectile(this.graphics,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, "lazer", this.play_sounds);
+            var projectile = new Projectile(this.graphics,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, "lazer", this.play_sounds,this.volume);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             projectile.accelerate();
@@ -57,7 +83,7 @@ class Ship extends GameObject {
     fire_missle() {
         if(this.missile_fire_control.can_fire()){
             let missle1 = this.get_relative_position(0, -80)
-            var projectile = new Projectile(this.graphics,this.position.x + missle1.x, this.position.y + missle1.y, this.rotation, "bolt", this.play_sounds);
+            var projectile = new Projectile(this.graphics,this.position.x + missle1.x, this.position.y + missle1.y, this.rotation, "bolt", this.play_sounds,this.volume);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             this.projectiles.push(projectile);
@@ -70,6 +96,8 @@ class Ship extends GameObject {
         super.update_frame(deltaTime);
         this.laser_fire_control.update_frame();
         this.missile_fire_control.update_frame();
+        this.boost_fire_control.update_frame();
+        
         const timestamp = Date.now(); // Corrected method to get current timestamp in milliseconds
 
         for (let i = this.projectiles.length - 1; i >= 0; i--) {

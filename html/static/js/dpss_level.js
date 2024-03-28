@@ -7,7 +7,25 @@ class level{
         this.explosions = [];
         this.data=null;
         this.spaceship =null;
+        this.track=null;
+        this.speed=null;
+        this.rows=0;
+        this.columns=0;
+        this.master_volume=.5;
     }
+
+    volume(level){
+        this.master_volume+=level/10;
+        if(this.master_volume<0) {
+            this.master_volume=0;
+        }
+        if(this.master_volume>1){
+            this.master_volume=1;
+        }
+        this.track.volume=this.master_volume;
+        this.spaceship.set_volume(this.master_volume);
+    }
+
 
     load(level) {
         fetch(level)
@@ -70,5 +88,4 @@ class level{
             });
 
         }
-
 }
