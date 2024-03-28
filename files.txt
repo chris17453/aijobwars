@@ -1,4 +1,5 @@
 html/favicon.png
+html/static/js/dpss_render.png
 html/static/scene/bg_stars.png
 html/static/explosion/exp_9_128x128_35frames_strip35.png
 html/static/js/dpss_collision_manager.js

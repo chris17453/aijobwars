@@ -1,6 +1,7 @@
 class GameObject {
-    constructor(x = 0, y = 0, width=64, height=64,mass = 100, rotation = 0, rotation_speed = 4, sound = false) {
+    constructor(graphics,x = 0, y = 0, width=64, height=64,mass = 100, rotation = 0, rotation_speed = 4, sound = false) {
         //sounds for the object
+        this.graphics=graphics;
         this.type=null;
         this.sounds = { left: null, right: null, accel: null, decel: null };
         this.width=width;
@@ -31,6 +32,8 @@ class GameObject {
         this.loop_done=false;
         this.loop=true;
         this.center={x:0,y:0};
+        this.life=100;
+        this.max_life=100;
     }
     set_loop(loop){
         this.loop=loop;
@@ -39,10 +42,18 @@ class GameObject {
         return  this.loop_done;
     }
     damage(damage){
-        this.health-=damage;
-        if(this.health<0) this.destroy();
+        this.life-=damage;
+        if(this.life<0) this.destroy();
 
     }
+    set_max_life(max_life){
+        this.max_life=max_life;
+        this.life=max_life;
+    }
+    get_life_percentage(){
+        return parseInt((this.life/this.max_life)*100);
+    }
+
     destroy(){
         this.destroy_object=true;
     }
@@ -50,6 +61,11 @@ class GameObject {
         this.type=type;
     }
 
+    set_velocity(velocity){
+        this.velocity.x=velocity.x;
+        this.velocity.y=velocity.y;
+        
+    }
     set_dimensions(width, height) {
         this.width = width;
         this.height = height;
@@ -237,22 +253,34 @@ class GameObject {
         this.playActions();
     }//end update frame
 
-    orient(ctx, window = null) {
-        ctx.save();
-        let offsetx=100;
-        let offsety=100;
-        if (window) {
-            ctx.translate(this.position.x - window.x+offsetx, this.position.y - window.y+offsety);
-        } else {
-            ctx.translate(this.position.x+offsetx, this.position.y+offsety);
+    orient(window = null) {
+        
+        this.graphics.ctx.save();
+        let scale=this.graphics.viewport.scale.x;
+
+        let x=this.position.x ;
+        let y=this.position.y ;
+        if (window!=null){
+            x-= window.x;
+            y-= window.y;
+            x+=this.graphics.viewport.given.x;
+            y+=this.graphics.viewport.given.y;
         }
+        //x-=this.center.x ;
+        //y-=this.center.y ;
+
+        x*=scale;
+        y*=scale;
+        
+        this.graphics.ctx.translate(x,y);
+
         var radians = ((this.rotation + this.image_rotation) % 360) * Math.PI / 180;
-        ctx.rotate(radians);
+        this.graphics.ctx.rotate(radians);
 
     }
 
-    de_orient(ctx) {
-        ctx.restore(ctx);
+    de_orient() {
+        this.graphics.ctx.restore();
     }
 
 
@@ -284,22 +312,32 @@ class GameObject {
     }
 
 
-    render(ctx) {
-        if (this.image_frames > 1) {
+    render() {
             // Define the source rectangle
-            let sourceX = this.image_frame * this.frame_width;
+      
+            let sourceX =0;
             let sourceY = 0;
-            let sourceWidth = this.frame_width;
-            let sourceHeight = this.height;
+            let sourceWidth = this.width; //*this.graphics.viewport.scale.x
+            let sourceHeight = this.height; //*this.graphics.viewport.scale.x
+            if (this.image_frames>1) {
+                sourceX=this.image_frame * this.frame_width;
+                sourceWidth=this.frame_width;
+            }
+            let dest_height=sourceHeight*this.graphics.viewport.scale.x;
+            let dest_width=sourceWidth*this.graphics.viewport.scale.x;
+            let scale=this.graphics.viewport.scale.x;
+            this.graphics.ctx.drawImage(this.img, 
+                sourceX, sourceY, sourceWidth, sourceHeight,
+                -this.center.x*scale, -this.center.y*scale, dest_width, dest_height);
 
-            ctx.drawImage(this.img, sourceX, sourceY, sourceWidth, sourceHeight,
-                -this.center.x, -this.center.y, sourceWidth, sourceHeight);
+  //      } else {
+//            this.graphics.ctx.drawImage(this.img,  -this.center.x, -this.center.y, sourceWidth, sourceHeight,
+//                                        -this.center.x, -this.center.y, sourceWidth, sourceHeight);
 
-        } else {
-            ctx.drawImage(this.img, -this.center.x, -this.center.y);
-        }
+                                        //this.graphics.ctx.drawImage(this.img, -this.center.x, -this.center.y);
+    //    }
     }
-    renderWithOverlay(ctx, overlayColor) {
+    renderWithOverlay(overlayColor) {
         // Render the object normally
         if (this.image_frames > 1) {
             // Define the source rectangle
@@ -309,43 +347,43 @@ class GameObject {
             let sourceHeight = this.height;
     
             // Save the current context state
-            ctx.save();
+            this.graphics.ctx.save();
     
             // Clip to the region of the drawn imagery
-            ctx.beginPath();
-            ctx.rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
-            ctx.clip();
+            this.graphics.ctx.beginPath();
+            this.graphics.ctx.rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
+            this.graphics.ctx.clip();
     
             // Draw the image onto the canvas
-            ctx.drawImage(this.img, sourceX, sourceY, sourceWidth, sourceHeight, 
+            this.graphics.ctx.drawImage(this.img, sourceX, sourceY, sourceWidth, sourceHeight, 
                                    -this.center.x, -this.center.y, sourceWidth, sourceHeight);
     
             // Apply the overlay color to the drawn imagery
-            ctx.globalCompositeOperation = 'source-atop';
-            ctx.fillStyle = overlayColor;
-            ctx.fillRect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
+            this.graphics.ctx.globalCompositeOperation = 'source-atop';
+            this.graphics.ctx.fillStyle = overlayColor;
+            this.graphics.ctx.fillRect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
     
             // Restore the previous context state
-            ctx.restore();
+            this.graphics.ctx.restore();
         } else {
             // Save the current context state
-            ctx.save();
+            this.graphics.ctx.save();
     
             // Clip to the region of the drawn imagery
-            ctx.beginPath();
-            ctx.rect(-this.center.x, -this.center.y, this.width, this.height);
-            ctx.clip();
+            this.graphics.ctx.beginPath();
+            this.graphics.ctx.rect(-this.center.x, -this.center.y, this.width, this.height);
+            this.graphics.ctx.clip();
     
             // Draw the image onto the canvas
-            ctx.drawImage(this.img, -this.center.x, -this.center.y);
+            this.graphics.ctx.drawImage(this.img, -this.center.x, -this.center.y);
     
             // Apply the overlay color to the drawn imagery
-            ctx.globalCompositeOperation = 'source-atop';
-            ctx.fillStyle = overlayColor;
-            ctx.fillRect(-this.center.x, -this.center.y, this.width, this.height);
+            this.graphics.ctx.globalCompositeOperation = 'source-atop';
+            this.graphics.ctx.fillStyle = overlayColor;
+            this.graphics.ctx.fillRect(-this.center.x, -this.center.y, this.width, this.height);
     
             // Restore the previous context state
-            ctx.restore();
+            this.graphics.ctx.restore();
         }
     }
     
