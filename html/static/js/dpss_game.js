@@ -1,3 +1,41 @@
+class window_manager {
+    constructor(graphics) {
+      this.graphics = graphics;
+      this.windows = [];
+    }
+    has_windows(){
+        if( this.windows.length>0) return true;
+        return false;
+    }
+  
+    create_modal(title,text, x,y,cancel = false, ok = true) {
+      const modalInstance = new modal(this.graphics, x, y, title, text, cancel, ok);
+  
+      // Listen for the 'close' event to remove the modal
+      modalInstance.on('close', () => {
+        this.close_modal(modalInstance);
+      });
+  
+      this.windows.push(modalInstance);
+      return modalInstance;
+    }
+  
+    close_modal(modalInstance) {
+      const index = this.windows.indexOf(modalInstance);
+      if (index > -1) {
+        this.windows.splice(index, 1); // Remove the modal from the array
+        // Additional cleanup if necessary
+      }
+    }
+  
+    render() {
+      this.windows.forEach(window => window.render());
+    }
+  }
+
+  
+
+
 class GamePage {
     constructor(elementIds, initialWidth, initialHeight) {
 
@@ -55,8 +93,44 @@ class GamePage {
         this.booster_bar = new PercentageBar(this.graphics, 430, 10, 200, 40, "Booster");
         this.booster_timeout = new PercentageBar(this.graphics, 430, 50, 200, 40, "Booster Timeout");
         this.health_bar = new PercentageBar(this.graphics, 640, 10, 200, 40, "Health");
-        this.font = new sprite_font(this.ctx, "https://aijobwars.com/static/fonts/obitron-blue.png");
         this.startRendering();
+        
+        this.window_manager=new window_manager(this.graphics);
+
+    }
+
+
+
+
+    help(){
+
+        let help_text="| Key           | Action                 |\n"+
+                        "|---------------|------------------------|\n"+
+                        "| Q             | Quit the game          |\n"+
+                        "| Arrow Left    | Bank left              |\n"+
+                        "| Arrow Right   | Bank right             |\n"+
+                        "| Arrow Up      | Accelerate             |\n"+
+                        "| Arrow Down    | Decelerate             |\n"+
+                        "| STRAFING      | WASD                   |\n"+
+                        "| Space         | Fire lasers            |\n"+
+                        "| Enter         | Fire Missiles          |\n"+
+                        "| M             | Sound                  |\n"+
+                        "| +             | Volume up              |\n"+
+                        "| -             | Volume down            |\n"+
+                        "| Escape        | Toggle Pause           |\n"+
+                        "| CTRL + Escape | Turn on boss mode      |\n"+
+                        "| Escape        | Exit (from boss mode)  |\n";
+        let m=this.window_manager.create_modal("HELP",help_text, null,null,true,true ) ;
+        // Subscribe to the 'ok' and 'cancel' events
+        m.on('ok', (event) => {
+            console.log("OK button clicked");
+            event.instance.close();
+        });
+        
+        m.on('cancel', (event) => {
+            console.log("Cancel button clicked");
+            event.instance.close();
+        });
     }
 
 
@@ -87,7 +161,7 @@ class GamePage {
                     obj2.render(); // 'rgba(255, 0, 0, 0.5)');
                     obj2.de_orient();
 
-                    let exp = new Explosion(this.graphics, center.x, center.y);
+                    let exp = new Explosion(this.graphics, center.x, center.y,this.play_sounds,this.master_volume);
 
                     exp.orient({ x: 0, y: window.y1 });
                     exp.render(); //'rgba(0, 255, 0, 0.5)');
@@ -210,10 +284,17 @@ class GamePage {
     startRendering() {
         setInterval(() => {
 
-            this.events.handle_keys();
-            if (this.level_start == true && this.pause_game == false) {
-                this.updateFrame();
+            this.graphics.recalc_canvas();
+            if(this.window_manager.has_windows()>0) {
+                this.window_manager.render();
+            } else {
+                this.events.handle_keys();
+                if (this.level_start == true && this.pause_game == false) {
+                    this.updateFrame();
+                }
             }
+
+
         }, 1000 / 24); // FPS
 
         //setInterval(() => {

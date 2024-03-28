@@ -40,5 +40,5 @@ function blipEffect() {
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    blipEffect(); // Start the blipping effect when the document is ready
+    //blipEffect(); // Start the blipping effect when the document is ready
   });

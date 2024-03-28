@@ -2,10 +2,13 @@ class graphics{
     constructor(canvas=null,ctx=null){
         this.canvas=canvas
         this.ctx=ctx;
+        this.font = new sprite_font(this.ctx, "https://aijobwars.com/static/fonts/obitron-blue.png");
+        this.sprites=new sprites(ctx);
         this.backround=null
         this.viewport=new viewport(1920,window.innerHeight);
         this.frame_background_color='#222';
         this.background_color='#000000';
+
     }
 
     set_background(image_url){
@@ -13,7 +16,16 @@ class graphics{
         this.backround.src=image_url;
     }
 
+    recalc_canvas(){
+        this.viewport.calculate();
 
+        //reset canvas dimentions
+        this.canvas.windowWidth = this.viewport.frame.width;
+        this.canvas.windowHeight = this.viewport.frame.height;
+        this.canvas.width = this.viewport.frame.width;
+        this.canvas.height = this.viewport.frame.height;
+
+    }
 
 
     updateCanvasSizeAndDrawImage(level_position) {
@@ -22,7 +34,6 @@ class graphics{
             return;
         }
         //this corrects the window every frame.. no need for an event.. tho maybe less resource intensive
-        this.viewport.calculate();
         let srcX=0;
         let srcY=0;//increment for scroll (start at bottom)
         // make it src bg width and window height
@@ -40,11 +51,6 @@ class graphics{
         position_percentage=level_position.y/(level_position.height-this.viewport.virtual.height);
         srcY=position_percentage*(this.backround.height-this.viewport.virtual.height);
         
-        //reset canvas dimentions
-        this.canvas.windowWidth = this.viewport.frame.width;
-        this.canvas.windowHeight = this.viewport.frame.height;
-        this.canvas.width = this.viewport.frame.width;
-        this.canvas.height = this.viewport.frame.height;
         
         this.ctx.save();
         this.ctx.fillStyle = this.frame_background_color;

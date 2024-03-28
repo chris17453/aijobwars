@@ -1,7 +1,7 @@
 
 
 class Explosion extends GameObject {
-    constructor(graphics,x, y,play_sound,volume) {
+    constructor(graphics,x, y,play_sound,volume=0) {
                 super(graphics,x, y,128,128,
                     0,                    // mass
                     0,                      // rotation

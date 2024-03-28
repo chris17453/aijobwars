@@ -73,17 +73,57 @@ class sprite_font {
         return this.char_data.find(char_data => char_data.character === char);
     }
 
+    get_bounds(text){
+        let x = 0,y=0;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            // Use get_character to retrieve character data
+            if(char==" ")  {
+                x+=15;
+                continue;
+            }
+            if(char=="\n")  {
+                y+=30;
+                continue;
+            }
+            const char_data = this.get_character(char);
+           
+            if (!char_data) continue;
+            x += char_data.width;
+        }
+        if (y==0)y=30;
 
-    draw_text(x, y, text) {
+        return {x:x,y:y};
+    }
+    draw_text(x, y, text,centered=false) {
+        let lines=text.split("\n");
+        for (let line in lines){
+            this.draw_single_text(x,y,lines[line],centered)
+            y+=30;
+        }
+
+    }
+    draw_single_text(x, y, text,centered=false) {
         if (!this.chars_per_row) {
             console.error("Image not loaded");
             return;
         }
 
         let pos_x = x;
+        if(centered){
+            let bounds=this.get_bounds(text);
+            pos_x-=bounds.x/2;
+            y-=bounds.y/2;
+        }
+
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             // Use get_character to retrieve character data
+            if(char==" ")  {
+                pos_x+=15;
+                continue;
+            }
+            if (char=="\n") return;
             const char_data = this.get_character(char);
             if (!char_data) continue;
             this.ctx.drawImage(

@@ -74,6 +74,8 @@ class events {
             if (this.kb.just_stopped('ArrowUp')) this.G.level.spaceship.stop_playing();
             if (this.kb.just_stopped('ArrowDown')) this.G.level.spaceship.stop_playing();
 
+            if (this.kb.just_stopped('h') ||this.kb.just_stopped('H')) this.G.help();
+
             if (this.kb.just_stopped('m') || this.kb.just_stopped('M')) this.G.ui.toggle_sound();
 
         }
