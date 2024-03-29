@@ -37,14 +37,13 @@ class ui{
     }
 
     toggle_sound(){
-        if(this.G.play_sounds){
+        if(this.G.audio_manager.playing()){
             this.G.level.track.pause();
-            this.G.level.spaceship.sound_off();
-            this.G.play_sounds=false;
+            this.G.audio_manager.sound_off();
+
         } else {
             this.G.level.track.play();
-            this.G.level.spaceship.sound_on();
-            this.G.play_sounds=true;
+            this.G.audio_manager.sound_on();
         }
     }
 

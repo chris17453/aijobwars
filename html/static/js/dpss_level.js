@@ -60,13 +60,13 @@ class level{
                         var x = col * 64;
                         var y = line * 64;
                         switch (c) {
-                            case '.': block = new Derbis(this.G.graphics,x, y, "block"); break;
-                            case 't': block = new Ship(this.G.graphics,x, y, "teams"); break;
-                            case 'p': block = new Derbis(this.G.graphics,x, y, "pdf"); break;
-                            case 'e': block = new Derbis(this.G.graphics,x, y, "email"); break;
-                            case 'c': block = new Derbis(this.G.graphics,x, y, "call"); break;
-                            case 'w': block = new Derbis(this.G.graphics,x, y, "webex"); break;
-                            case 'P': this.spaceship = new Ship(this.G.graphics,x,y, "user"); break;
+                            case '.': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "block"); break;
+                            case 't': block = new Ship(this.G.graphics,this.G.audio_manager,x, y, "teams"); break;
+                            case 'p': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "pdf"); break;
+                            case 'e': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "email"); break;
+                            case 'c': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "call"); break;
+                            case 'w': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "webex"); break;
+                            case 'P': this.spaceship = new Ship(this.G.graphics,this.G.audio_manager,x,y, "user"); break;
                         }
                         this.npc.push(block);
 
@@ -79,7 +79,6 @@ class level{
                 this.position.height = this.rows * 64;
                 this.position.width = this.columns * 64;
                 
-                this.spaceship.sound_off();
                 this.spaceship.set_max_life(5000);
                 this.G.start_level();
                 // You can access other properties similarly

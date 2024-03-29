@@ -16,10 +16,15 @@ class sprites {
         this.add("percentage-empty", "static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
     }
 
-    add(key, imagePath, x, y, width, height) {
+    add(key, imagePath=null, x=0, y=0, width=null, height=null) {
+        //dont double add it...        
+        if (this.sprites[key]){
+            return this.sprites[key].image;
+        }
+        if (imagePath==null) imagePath=key;
+        
         const img = new Image();
         img.src = imagePath;
-
         this.sprites[key] = {
             image: img,
             url: imagePath,
@@ -28,9 +33,16 @@ class sprites {
             width: width,
             height: height
         };
+    
+        if (width == null || height == null) {
+            img.onload = () => {
+                if (width == null) this.sprites[key].width = img.width;
+                if (height == null) this.sprites[key].height = img.height;
+            };
+        }
+        return img;
     }
-
-    //dest is a x,y,width,height
+        //dest is a x,y,width,height
     render(key, dest, intensity = 1) {
         const s = this.sprites[key];
         if (!s) {
@@ -49,6 +61,15 @@ class sprites {
         // Restore the original global alpha value
         this.ctx.globalAlpha = originalAlpha;
 
+    }
+
+    get(key){
+        const s = this.sprites[key];
+        if (!s) {
+            console.log("Missing image: " + key);
+            return;
+        }
+      return s;
     }
 
     slice_9(key, dest) {

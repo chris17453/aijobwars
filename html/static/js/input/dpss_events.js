@@ -69,10 +69,10 @@ class events {
             if (this.kb.just_stopped('+')) this.G.level.volume(+1);
             if (this.kb.just_stopped('-')) this.G.level.volume(-1);
             
-            if (this.kb.just_stopped('ArrowLeft')) this.G.level.spaceship.stop_playing();
-            if (this.kb.just_stopped('ArrowRight')) this.G.level.spaceship.stop_playing();
-            if (this.kb.just_stopped('ArrowUp')) this.G.level.spaceship.stop_playing();
-            if (this.kb.just_stopped('ArrowDown')) this.G.level.spaceship.stop_playing();
+            if (this.kb.just_stopped('ArrowLeft')) this.G.audio_manager.sound_off();
+            if (this.kb.just_stopped('ArrowRight')) this.G.audio_manager.sound_off();
+            if (this.kb.just_stopped('ArrowUp')) this.G.audio_manager.sound_off();
+            if (this.kb.just_stopped('ArrowDown')) this.G.audio_manager.sound_off();
 
             if (this.kb.just_stopped('h') ||this.kb.just_stopped('H')) this.G.help();
 

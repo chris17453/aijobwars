@@ -12,6 +12,8 @@ class viewport {
         this.requested = { width: width, height: height };
         this.virtual = { width: 0, height: 0 };
         this.given = { x: 0, y: 0, width: 0, height: 0 };
+        this.world = { x:0,y:0,width: 0, height: 0 };
+
         this.scale = { x: 1, y: 1 };
         this.calculate();
     }
@@ -33,6 +35,8 @@ class viewport {
         this.given.y = (this.frame.height - this.given.height) / 2;
 
         this.calculate_scale();
+        this.world.height=this.virtual.height;
+        this.world.width=this.virtual.height;
 
     }
 

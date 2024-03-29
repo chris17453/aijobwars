@@ -1,7 +1,7 @@
 
 
 class Derbis extends GameObject {
-    constructor(graphics,x, y, type) {
+    constructor(graphics,audio,x, y, type) {
         let speed=.5 + Math.random() * 1;
         let default_action =
             [
@@ -18,7 +18,7 @@ class Derbis extends GameObject {
 
         switch (type) {
             case 'email':
-                super(graphics,x, y,64,64,
+                super(graphics,audio,x, y,64,64,
                     500,                    // mass
                     0,                      // rotation
                     10);                     // ropration speed
@@ -35,7 +35,7 @@ class Derbis extends GameObject {
                 this.action_list = email_action;
                 break;
             case 'pdf':
-                super(graphics,x, y,64,64,
+                super(graphics,audio,x, y,64,64,
                     200,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
@@ -52,7 +52,7 @@ class Derbis extends GameObject {
                 this.action_list= pdf_action;                
                 break;
             case 'call':
-                super(graphics,x, y,64,64,
+                super(graphics,audio,x, y,64,64,
                     200,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
@@ -67,7 +67,7 @@ class Derbis extends GameObject {
                 break;
 
             case 'webex':
-                super(graphics,x, y,64,64,
+                super(graphics,audio,x, y,64,64,
                     200,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
@@ -76,7 +76,7 @@ class Derbis extends GameObject {
                 this.action_list = default_action;
                 break;
             case 'block':
-                super(graphics,x, y,64,64,
+                super(graphics,audio,x, y,64,64,
                     10000,                    // mass
                     0,                      // rotation
                     0);                     // ropration speed

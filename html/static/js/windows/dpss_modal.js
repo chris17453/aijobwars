@@ -1,3 +1,40 @@
+class window_manager {
+    constructor(graphics) {
+      this.graphics = graphics;
+      this.windows = [];
+    }
+    has_windows(){
+        if( this.windows.length>0) return true;
+        return false;
+    }
+  
+    create_modal(title,text, position,cancel = false, ok = true) {
+      const modalInstance = new modal(this.graphics, position, title, text, cancel, ok);
+  
+      // Listen for the 'close' event to remove the modal
+      modalInstance.on('close', () => {
+        this.close_modal(modalInstance);
+      });
+  
+      this.windows.push(modalInstance);
+      return modalInstance;
+    }
+  
+    close_modal(modalInstance) {
+      const index = this.windows.indexOf(modalInstance);
+      if (index > -1) {
+        this.windows.splice(index, 1); // Remove the modal from the array
+        // Additional cleanup if necessary
+      }
+    }
+  
+    render() {
+      this.windows.forEach(window => window.render());
+    }
+  }
+
+  
+  
 class modal {
     constructor(graphics, position, title, text, cancel = false, ok = true) {
         let ok_up = "button-up-cyan";

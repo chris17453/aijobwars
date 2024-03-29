@@ -1,17 +1,16 @@
 class GameObject {
-    constructor(graphics, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4, sound = false) {
-        //sounds for the object
+    constructor(graphics,audio_manager, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4) {
+        
+        this.audio_manager=audio_manager;
         this.graphics = graphics;
-        this.type = null;
+        this.type = "block";
         this.sounds = { left: null, right: null, accel: null, decel: null, destroy: null };
         this.width = width;
         this.height = height;
-        // img for the object
-        this.imgURL = null;
         this.img = null;
         this.rotation = rotation;
         this.rotation_speed = rotation_speed;
-        this.position = { x: x, y: y };
+        this.position = new rect(x, y,width,height);
         this.acceleration = { x: 0, y: 0 };
         this.velocity = { x: 0, y: 0 };
         this.mass = mass;
@@ -19,12 +18,11 @@ class GameObject {
         this.velocity_loss = .7; // momentum slow down
         this.image_frame = 0;
         this.image_frames = 1;
-        this.image_rotation = 0;  //roptate the image seperate from the acceleration factor... for images made in diff directions
+        this.image_rotation = 0;  //rotate the image seperate from the acceleration factor... for images made in diff directions
         this.anchor_points = []
         this.top_level = true;
         this.created = Date.now();
         this.expires = null;
-        this.play_sounds = sound;
         this.action_list = null;
         this.action_position = { frame: 0, row: 0 };
         this.health = 100;
@@ -35,7 +33,7 @@ class GameObject {
         this.life = 100;
         this.max_life = 100;
         this.visible = true;
-        this.volume = .5; //default to the middle
+        this.explosions=[];
     }
     set_rotation_speed(speed){
         this.rotation_speed=speed;
@@ -45,31 +43,10 @@ class GameObject {
     }
 
     play(action) {
-        if (this.play_sounds == false) return;
-        switch (action) {
-            case 'left': if (this.sounds.left != null) this.sounds.left.play(); break;
-            case 'right': if (this.sounds.right != null) this.sounds.right.play(); break;
-            case 'accel': if (this.sounds.accel != null) this.sounds.accel.play(); break;
-            case 'decel': if (this.sounds.decel != null) this.sounds.decel.play(); break;
-            case 'destroy': if (this.sounds.destroy != null) this.sounds.destroy.play(); break;
-            default:
-                console.log("Unknown sound position")
-        }
-
+        let s=this.audio_manager.get(this.type+action);
+        if(s) s.play();
     }
-    set_volume(volume) {
-        if (volume == null) {
-            volume = 0;
-            console.log("Volume Error");
-        }
-        this.volume = volume;
-        if (this.sounds.left != null) this.sounds.left.volume = this.volume;
-        if (this.sounds.right != null) this.sounds.right.volume = this.volume;
-        if (this.sounds.accel != null) this.sounds.accel.volume = this.volume;
-        if (this.sounds.decel != null) this.sounds.decel.volume = this.volume;
-        if (this.sounds.destroy != null) this.sounds.destroy.volume = this.volume;
-
-    }
+    
     set_loop(loop) {
         this.loop = loop;
     }
@@ -138,17 +115,7 @@ class GameObject {
         this.image_rotation = rotation;
         this.image_frames = frames;
         this.frame_width = frame_width;
-        this.img = new Image();
-        this.img.src = img_URL;
-        // Wait for the image to load completely
-        this.img.onload = () => {
-            if (frames != 1) {
-                //this.center.x = frame_width / 2;
-            } else {
-                //this.center.x = this.img.width / 2;
-            }
-            this.center.y = this.img.height / 2;
-        };
+        this.img=this.graphics.sprites.add(img_URL);
     }
 
     image_rotate(rotation) {
@@ -157,29 +124,9 @@ class GameObject {
 
 
     set_sound(position, sound_URL) {
-        switch (position) {
-            case 'left': this.sounds.left = new Audio(sound_URL); break;
-            case 'right': this.sounds.right = new Audio(sound_URL); break;
-            case 'accel': this.sounds.accel = new Audio(sound_URL); break;
-            case 'decel': this.sounds.decel = new Audio(sound_URL); break;
-            case 'destroy': this.sounds.destroy = new Audio(sound_URL); break;
-            default:
-                console.log("Unknown sound position")
-        }
+        this.audio_manager.add(this.type+position, sound_URL);
     }
 
-    stop_playing() {
-        if (this.sounds.left != null)
-            this.sounds.left.pause();
-        if (this.sounds.right != null)
-            this.sounds.right.pause();
-        if (this.sounds.accel != null)
-            this.sounds.accel.pause();
-        if (this.sounds.decel != null)
-            this.sounds.decel.pause();
-        if (this.sounds.destroy != null)
-            this.sounds.destroy.pause();
-    }
 
 
     async move_player(direction, speed) {
@@ -197,49 +144,24 @@ class GameObject {
         this.rotation -= this.rotation_speed;
         if (this.rotation < 0)
             this.rotation += 360;
-        if (this.play_sounds && this.sounds.left != null) {
-            try {
-                await this.sounds.left.play();
-            } catch (e) {
-                // Handle the error properly here.
-            }
-        }
+        this.audio_manager.play(this.type+"bank_left");
     }
 
     async bank_right() {
         this.rotation += this.rotation_speed;
         this.rotation %= 360;
-        if (this.play_sounds && this.sounds.right != null) {
-            try {
-                await this.sounds.right.play();
-            } catch (e) {
-                // Handle the error properly here.
-            }
-        }
+        this.audio_manager.play(this.type+"bank_right");
+
     }
 
     async accelerate(speed = null) {
-        if (this.play_sounds && this.sounds.accel != null && this.sounds.accel.paused) {
-            this.sounds.accel.currentTime = 0;
-            try {
-                await this.sounds.accel.play();
-            } catch (e) {
-                // Handle the error properly here.
-            }
-        }
+        this.audio_manager.play(this.type+"accel");
         if (speed == null) speed = 1;
         this.move_player(this.rotation, speed);
     }
 
     async decelerate(speed = null) {
-        if (this.play_sounds && this.sounds.decel != null && this.sounds.decel.paused) {
-            this.sounds.decel.currentTime = 0;
-            try {
-                await this.sounds.decel.play();
-            } catch (e) {
-                // Handle the error properly here.
-            }
-        }
+        this.audio_manager.play(this.type+"decel");
 
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 180, speed);
@@ -248,11 +170,15 @@ class GameObject {
     async strafe_left(speed = null) {
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 270, speed);
+        this.audio_manager.play(this.type+"bank_left");
+
     }
 
     async strafe_right(speed = null) {
         if (speed == null) speed = 1;
+        this.audio_manager.play(this.type+"bank_right");
         this.move_player(this.rotation + 90, speed);
+
     }
 
     async rotate(rotation) {
@@ -291,7 +217,19 @@ class GameObject {
                 this.velocity.y *= this.velocity_loss;
 
             }
+
+            
+
         }
+
+
+        for (let b = 0; b < this.explosions.length; b++) {
+            this.explosions[b].update_frame(deltaTime)
+            if (this.explosions[b].loop_complete()) {
+                this.explosions.splice(b, 1); // Remove the projectile from the array
+            }
+        }
+
         this.playActions();
     }//end update frame
 
@@ -379,6 +317,9 @@ class GameObject {
 
         //this.graphics.ctx.drawImage(this.img, -this.center.x, -this.center.y);
         //    }
+        for(let i=0;i<this.explosions.length;i++){
+            this.explosions[i].render(); 
+        }
     }
     renderWithOverlay(overlayColor) {
         // Render the object normally
@@ -431,14 +372,6 @@ class GameObject {
     }
 
 
-    sound_off() {
-        this.play_sounds = false;
-        this.stop_playing();
-    }
-
-    sound_on() {
-        this.play_sounds = true;
-    }
 
     get_combine_center(otherObject) {
         // Calculate the center coordinates of this object
@@ -599,6 +532,9 @@ class GameObject {
     async wait(frames) {
         return new Promise(resolve => setTimeout(resolve, frames * millisecondsPerFrame));
     }
-
+    explosion(){
+        let exp = new Explosion(this.graphics,this.audio_manager, 0,0,this.play_sounds,this.volume);
+        this.explosions.push(exp);
+    }
 
 }

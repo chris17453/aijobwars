@@ -79,6 +79,7 @@ html/index.html
 
 
 
+html/static/js/bundle.js
 html/static/js/dpss_audio.js
 html/static/js/dpss_client.js
 html/static/js/dpss_game.js
