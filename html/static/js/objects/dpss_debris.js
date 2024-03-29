@@ -18,7 +18,7 @@ class Derbis extends GameObject {
 
         switch (type) {
             case 'email':
-                super(graphics,x, y,
+                super(graphics,x, y,64,64,
                     500,                    // mass
                     0,                      // rotation
                     10);                     // ropration speed
@@ -71,7 +71,7 @@ class Derbis extends GameObject {
                     200,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/webex.png');
+                this.set_image('static/debris/webex2.png');
                 this.set_type("webex");
                 this.action_list = default_action;
                 break;

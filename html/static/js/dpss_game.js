@@ -114,7 +114,7 @@ class GamePage {
                         "| STRAFING      | WASD                   |\n"+
                         "| Space         | Fire lasers            |\n"+
                         "| Enter         | Fire Missiles          |\n"+
-                        "| M             | Sound                  |\n"+
+                        "| M             | Toggle Sound           |\n"+
                         "| +             | Volume up              |\n"+
                         "| -             | Volume down            |\n"+
                         "| Escape        | Toggle Pause           |\n"+
@@ -231,12 +231,20 @@ class GamePage {
             y2: this.level.position.y + this.graphics.viewport.virtual.height
         }
         for (let b = 0; b < this.level.npc.length; b++) {
-
-            if (this.level.npc[b].position.y > window.y1 && this.level.npc[b].position.y < window.y2) {
-                this.level.npc[b].update_frame(deltaTime)
-                this.level.npc[b].orient({ x: 0, y: window.y1 });
-                this.level.npc[b].render();
-                this.level.npc[b].de_orient();
+            let npc=this.level.npc[b];
+                
+            if (npc.position.y > window.y1-50 && npc.position.y < window.y2) {
+                if (npc.type=="ship"){
+                    //console.log("Found it");
+                    npc.update_frame(deltaTime)
+                    npc.render({ x: 0, y: window.y1 });
+                    
+                } else {
+                    npc.update_frame(deltaTime)
+                    npc.orient({ x: 0, y: window.y1 });
+                    npc.render();
+                    npc.de_orient();
+                }
             }
 
         }

@@ -37,6 +37,12 @@ class GameObject {
         this.visible = true;
         this.volume = .5; //default to the middle
     }
+    set_rotation_speed(speed){
+        this.rotation_speed=speed;
+    }
+    set_rotation(rotation){
+        this.rotation=rotation;
+    }
 
     play(action) {
         if (this.play_sounds == false) return;
@@ -587,8 +593,6 @@ class GameObject {
             case 'skip':
 
                 break;
-            default:
-                console.log("Unknown action type");
         }
     }
 

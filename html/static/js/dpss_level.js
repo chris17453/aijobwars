@@ -61,6 +61,7 @@ class level{
                         var y = line * 64;
                         switch (c) {
                             case '.': block = new Derbis(this.G.graphics,x, y, "block"); break;
+                            case 't': block = new Ship(this.G.graphics,x, y, "teams"); break;
                             case 'p': block = new Derbis(this.G.graphics,x, y, "pdf"); break;
                             case 'e': block = new Derbis(this.G.graphics,x, y, "email"); break;
                             case 'c': block = new Derbis(this.G.graphics,x, y, "call"); break;

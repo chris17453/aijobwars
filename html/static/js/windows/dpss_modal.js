@@ -13,12 +13,13 @@ class modal {
         this.text = text;
         this.position = position;
         let modal_sprite = this.sprites.sprites["window"];
+        let title_sprite = this.sprites.sprites["window-title"];
         if (this.position.width == null) this.position.width = modal_sprite.width;
         if (this.position.height == null) this.position.height = modal_sprite.height;
         if (this.position.x == null) this.position.x = (window.innerWidth -this.position.width) / 2;
         if (this.position.y == null) this.position.y = (window.innerHeight -this.position.height) / 2;
 
-
+        this.title_position=new rect(this.position.x+100,this.position.y-15,this.position.width-100*2,title_sprite.height);
         let b1_x = this.position.left + 50;
         let b1_y = this.position.bottom - 130;
         let b2_x = this.position.right - 260;
@@ -57,9 +58,11 @@ class modal {
 
     render() {
         this.sprites.slice_9("window", this.position);
+        this.sprites.slice_3("window-title", this.title_position);
         if (this.ok_button) this.ok_button.render();
         if (this.cancel_button) this.cancel_button.render();
-        this.graphics.font.draw_text(this.position.x + this.position.width / 2, this.position.y + 50, this.title, true, true);
+        
+        this.graphics.font.draw_text(this.position.x + this.position.width / 2, this.position.y +25, this.title, true, true);
         this.graphics.font.draw_text(this.position.x + this.position.width / 2, this.position.y + 90, this.text, true, true);
 
     }

@@ -7,7 +7,7 @@ class sprite_font {
         this.image.crossOrigin = 'anonymous'; // Set CORS policy
 
         this.mono_char_width = 22;
-        this.mono_char_height = 24;
+        this.mono_char_height = 27;
         this.char_width = 46;
         this.char_height = 43;
         this.chars_per_row = 5;
