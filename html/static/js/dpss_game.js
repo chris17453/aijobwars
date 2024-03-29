@@ -8,8 +8,8 @@ class window_manager {
         return false;
     }
   
-    create_modal(title,text, x,y,cancel = false, ok = true) {
-      const modalInstance = new modal(this.graphics, x, y, title, text, cancel, ok);
+    create_modal(title,text, position,cancel = false, ok = true) {
+      const modalInstance = new modal(this.graphics, position, title, text, cancel, ok);
   
       // Listen for the 'close' event to remove the modal
       modalInstance.on('close', () => {
@@ -120,7 +120,9 @@ class GamePage {
                         "| Escape        | Toggle Pause           |\n"+
                         "| CTRL + Escape | Turn on boss mode      |\n"+
                         "| Escape        | Exit (from boss mode)  |\n";
-        let m=this.window_manager.create_modal("HELP",help_text, null,null,true,true ) ;
+        
+        let position=new rect(null,null,1024,700);
+        let m=this.window_manager.create_modal("HELP",help_text, position,false,true ) ;
         // Subscribe to the 'ok' and 'cancel' events
         m.on('ok', (event) => {
             console.log("OK button clicked");

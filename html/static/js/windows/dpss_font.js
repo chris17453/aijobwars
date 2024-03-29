@@ -6,6 +6,8 @@ class sprite_font {
         this.image.src = image_path;
         this.image.crossOrigin = 'anonymous'; // Set CORS policy
 
+        this.mono_char_width = 22;
+        this.mono_char_height = 24;
         this.char_width = 46;
         this.char_height = 43;
         this.chars_per_row = 5;
@@ -73,45 +75,52 @@ class sprite_font {
         return this.char_data.find(char_data => char_data.character === char);
     }
 
-    get_bounds(text){
-        let x = 0,y=0;
+    get_bounds(text,monospace=false){
+        let x = 0,y=0,max_x=0;
+
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             // Use get_character to retrieve character data
             if(char==" ")  {
-                x+=15;
+                x+=this.mono_char_width;
                 continue;
             }
             if(char=="\n")  {
-                y+=30;
+                y+=this.mono_char_height;
+                max_x=Math.max(max_x, x);
+                x=0;
                 continue;
             }
             const char_data = this.get_character(char);
            
             if (!char_data) continue;
-            x += char_data.width;
+            if(monospace) x+=this.mono_char_width;
+            else x += char_data.width;
         }
-        if (y==0)y=30;
+        if (y==0)y=this.mono_char_height;
+        max_x=Math.max(max_x, x);
 
-        return {x:x,y:y};
+        return {x:max_x,y:y};
     }
-    draw_text(x, y, text,centered=false) {
+    draw_text(x, y, text,centered=false,monospace=false) {
+        //var bounds=this.get_bounds(text);
+
         let lines=text.split("\n");
         for (let line in lines){
-            this.draw_single_text(x,y,lines[line],centered)
-            y+=30;
+            this.draw_single_text(x,y,lines[line],centered,monospace);
+            y+=this.mono_char_height;
         }
 
     }
-    draw_single_text(x, y, text,centered=false) {
+    draw_single_text(x, y, text,centered=false,monospace=false) {
         if (!this.chars_per_row) {
             console.error("Image not loaded");
             return;
         }
 
-        let pos_x = x;
+        let pos_x = x,padding=0;
         if(centered){
-            let bounds=this.get_bounds(text);
+            let bounds=this.get_bounds(text,monospace);
             pos_x-=bounds.x/2;
             y-=bounds.y/2;
         }
@@ -120,24 +129,28 @@ class sprite_font {
             const char = text[i];
             // Use get_character to retrieve character data
             if(char==" ")  {
-                pos_x+=15;
+                pos_x+=this.mono_char_width;
                 continue;
             }
             if (char=="\n") return;
             const char_data = this.get_character(char);
             if (!char_data) continue;
+            if(monospace) padding=(this.mono_char_width-char_data.stride)/2;
             this.ctx.drawImage(
                 this.image,
                 char_data.left,
                 char_data.top,
                 char_data.width,
                 char_data.height,
-                pos_x,
+                pos_x+padding,
                 y + char_data.baseline,
                 char_data.width,
                 char_data.height
             );
+            if(monospace) pos_x+=this.mono_char_width;
+            else 
             pos_x += char_data.width;
+            padding=0;
         }
     }
 }
