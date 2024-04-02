@@ -1,0 +1,12 @@
+{
+    "saveAndRun": {
+    "commands": [
+      {
+        "match": ".js",
+        "cmd": "make update",
+        "useShortcut": false,
+        "silent": false
+      },
+    ]
+  }
+}

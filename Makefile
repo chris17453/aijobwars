@@ -9,3 +9,7 @@ update_file_list:
 
 update: update_file_list	
 	@rsync -avz --files-from=files.txt . root@10.90.0.45:/web/aijobwars.com/
+
+
+bundle:
+	@scripts/bundle.sh

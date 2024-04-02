@@ -25,6 +25,7 @@ class sprites extends events{
             this.add("percentage-empty", this.base_domain+"static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
             this.add("menu",this.base_domain+"static/UI/menu.webp");
             this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
+            this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
 
             // Resolve the main promise when all image promises are resolved
             Promise.all(Object.values(this.images)).then(() => {

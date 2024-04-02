@@ -100,6 +100,11 @@ class rect {
         return new rect(this._x, this._y, this._width, this._height, this._x_mode, this._y_mode);
     }
 
+    add(rect2){
+        this._x+=rect2.x;
+        this._y+=rect2.y;
+    }
+
 }
 
 class grid {

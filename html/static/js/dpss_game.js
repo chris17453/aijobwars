@@ -51,26 +51,50 @@ class GamePage {
     }
 
     create_master_menu() {
-        let position = new rect(50, null, 500, 650,"left","top");
+        let h=(this.graphics.viewport.frame.height-600)/2;
+        let w=this.graphics.viewport.frame.width;
+        let position = new rect(50, h, 500, 650,"left","top");
         const masterMenu = this.window_manager.create_modal("Main Menu", null, position, false, false);
         this.window_manager.set_background("menu");
 
-        let x = 20;//masterMenu.internal_rect.width/2;
+        let x = 30;//masterMenu.internal_rect.width/2;
         let y = 0;
-        let button_spacing = 90,button_width=masterMenu.internal_rect.width-40;
+        let button_spacing = 80,button_width=masterMenu.internal_rect.width-60;
         let button_position1=new rect(x,y,button_width,null,"left","top");
         let button_position2=new rect(x,y+=button_spacing,button_width,null,"left","top");
         let button_position3=new rect(x,y+=button_spacing,button_width,null,"left","top");
         let button_position4=new rect(x,y+=button_spacing,button_width,null,"left","top");
-        let button_position5=new rect(x,y+=button_spacing,button_width,null,"left","top");
-        let mode="center";
+        let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
+        let button_position6=new rect(w/2-200,10,1024,236,"left","top");
+        
+        masterMenu.add_image(button_position6,"title");
+        masterMenu.add_button("New Game",button_position1,null, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Story So Far", button_position2,null, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("High Scores", button_position3,null, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Credits", button_position4,this.credits_menu_callback,"button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Exit", button_position5,this.exit_callback, "button-up-red", "button-down-red");
 
-        masterMenu.add_button("New Game",button_position1, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Story So Far", button_position2, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("High Scores", button_position3, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Credits", button_position4,"button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Exit", button_position5, "button-up-red", "button-down-red");
+    }
+    exit_callback(){
+        alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
+    }
 
+    credits_menu_callback(event) {
+        let position = new rect(50, null, 500, 650,"left","top");
+        let credits="Created By: Charles Watkins";
+        const masterMenu = this.window_manager.create_modal("Main Menu", credits, position, false, false);
+        this.window_manager.set_background("menu");
+
+        let x = 30;
+        let button_width=masterMenu.internal_rect.width-60;
+        let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
+
+        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback, "button-up-red", "button-down-red");
+
+    }
+
+    credits_exit_callback(event){
+        event.close();
     }
 
 
@@ -245,6 +269,7 @@ class GamePage {
 
             this.graphics.recalc_canvas();
             if (this.window_manager.has_windows() > 0) {
+                this.window_manager.resize();
                 this.window_manager.render();
             } else {
                 this.events.handle_keys();

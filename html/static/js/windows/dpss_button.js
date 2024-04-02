@@ -1,6 +1,7 @@
 
 class button {
-  constructor(graphics, label,position, up_image, down_image) {
+  constructor(parent,graphics, label,position,anchor_position, callback, up_image, down_image) {
+    this.parent=parent;
     this.graphics = graphics;
     this.ctx = graphics.ctx;
     this.sprites = graphics.sprites;
@@ -11,19 +12,30 @@ class button {
     this.is_hover = false;
     this.monospaced=false;
     this.centered = false;
-    let bounds=this.graphics.font.get_bounds(label,this.monospaced);
+    
+    
     let x_pad=20;
     let y_pad=20;
+    let bounds=this.graphics.font.get_bounds(label,this.monospaced);
     if (position.width==null) position.width=bounds.width+x_pad*2;
     if (position.height==null) position.height=bounds.height+y_pad*2;
-    this.inner=new rect(position.x+(position.width-bounds.width)/2,position.y+(position.height-bounds.height)/2,bounds.width,bounds.height);
-    this.position = position;
+    this.inner=new rect((position.width-bounds.width)/2,(position.height-bounds.height)/2,bounds.width,bounds.height);
+        this.position = position;  
+    this.anchor_position=anchor_position;
+    if(this.anchor_position==null) console.log("OMG!");
+
 
     this.events = {}; // Object to hold events
 
     graphics.canvas.addEventListener('mousedown', this.handle_mouse_down.bind(this));
     graphics.canvas.addEventListener('mouseup', this.handle_mouse_up.bind(this));
     graphics.canvas.addEventListener('mousemove', this.handle_mouse_move.bind(this));
+    this.callback=callback;
+   // this.resize();
+  }
+
+  resize(anchor_position){
+    this.anchor_position=anchor_position;
   }
 
   on(event_name, callback) {
@@ -34,15 +46,17 @@ class button {
   }
 
   emit(event_name, data) {
+    data.parent=parent;
     if (this.events[event_name]) {
       this.events[event_name].forEach(callback => callback(data));
     }
   }
 
   render() {
-    
     let relative_position = this.position.clone();
     let relative_inner = this.inner.clone();
+    relative_position.add(this.anchor_position)
+    relative_inner.add(relative_position)
     //relative_position._x_mode="left";
     //relative_position._y_mode="top";
     let img=this.up_image;
@@ -72,6 +86,7 @@ class button {
   handle_mouse_up(event) {
     if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
       this.is_down = false;
+      this.callback({parent:this.parent,event:event});
       this.emit('click', event); // Emit 'click' event
     }
   }
@@ -88,7 +103,10 @@ class button {
   }
 
   is_inside(mouse_x, mouse_y) {
-    return mouse_x >= this.position.x && mouse_x <= this.position.x + this.position.width &&
-      mouse_y >= this.position.y && mouse_y <= this.position.y + this.position.height;
+    let relative_position = this.position.clone();
+    relative_position.add(this.anchor_position)
+
+    return mouse_x >= relative_position.x && mouse_x <= relative_position.x + relative_position.width &&
+      mouse_y >= relative_position.y && mouse_y <= relative_position.y + relative_position.height;
   }
 }

@@ -18,13 +18,13 @@ class window_manager {
     }
   
     create_modal(title,text, position,cancel = false, ok = true) {
-      const modal_instance = new modal(this.graphics, position, title, text, cancel, ok);
+      const modal_instance = new modal(this,this.graphics, position, title, text, cancel, ok);
   
       // Listen for the 'close' event to remove the modal
       modal_instance.on('close', () => {
         this.close_modal(modal_instance);
       });
-  
+      
       this.windows.push(modal_instance);
       this.active_modal=modal_instance
       return modal_instance;
@@ -37,7 +37,10 @@ class window_manager {
         // Additional cleanup if necessary
       }
     }
-  
+    resize(){
+      for(let i=0;i<this.windows.length;i++) this.windows[i].resize();
+    }
+
     render() {
         if (this.background){
             this.graphics.sprites.render(this.background,this.graphics.viewport.given,1,"contain");
