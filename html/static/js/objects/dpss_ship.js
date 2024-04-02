@@ -23,6 +23,9 @@ class Ship extends GameObject {
                 this.set_sound("right", 'static/audio/ship/static.mp3')
                 this.set_sound("accel", 'static/audio/ship/static.mp3')
                 this.set_sound("decel", 'static/audio/ship/static.mp3')
+                this.set_sound("lazer", 'static/audio/projectiles/sfx_wpn_laser6.wav')
+                this.set_sound("missile", 'static/audio/projectiles/sfx_weapon_singleshot13.wav')
+            
                 this.set_image('static/ships/ship1.png');
                 this.set_center(64, 64);
                 this.booster = new Projectile(this.graphics,audio, +0, 100, 0, "booster");
@@ -39,6 +42,7 @@ class Ship extends GameObject {
                 this.set_sound("right", 'static/audio/ship/static.mp3')
                 this.set_sound("accel", 'static/audio/ship/static.mp3')
                 this.set_sound("decel", 'static/audio/ship/static.mp3')
+                this.set_sound("lazer", 'static/audio/ship/static.mp3')
                 this.set_image('static/ships/teams.png',64,1,270);
                 //this.set_image('static/projectiles/Arcane Bolt.png', 16, 5, 270);
                 this.set_rotation(270);
@@ -102,6 +106,8 @@ class Ship extends GameObject {
             projectile.accelerate();
             projectile.accelerate();
             this.projectiles.push(projectile);
+            this.play("lazer");
+            
         }
     }
     stop_firing_lazer() {

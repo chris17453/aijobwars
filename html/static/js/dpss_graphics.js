@@ -1,14 +1,22 @@
-class graphics{
+class graphics extends events{
+
     constructor(canvas=null,ctx=null){
+        super();    
         this.canvas=canvas
         this.ctx=ctx;
-        this.font = new sprite_font(this.ctx, "https://aijobwars.com/static/fonts/obitron-blue.png");
+        this.font=null;
         this.sprites=new sprites(ctx);
-        this.backround=null
+        this.sprites.on("complete", () => this.load_font()); // Using arrow function to preserve 'this'
+        this.backround=null;
         this.viewport=new viewport(1920,window.innerHeight);
         this.frame_background_color='#222';
         this.background_color='#000000';
 
+    }
+    load_font(){
+        let font=new sprite_font(this.ctx,this.sprites, "blue_font");
+        this.font = font;
+        this.emit('complete');
     }
 
     set_background(image_url){
@@ -84,4 +92,17 @@ class graphics{
                             scaledDestWidth, scaledDestHeight);
     }
 
+    fade_images(percentage) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+        // Draw the first image
+        ctx.globalAlpha = 1; // Reset to full opacity
+        ctx.drawImage(image1, 0, 0, canvas.width, canvas.height);
+
+        // Draw the second image on top with adjusted opacity
+        ctx.globalAlpha = percentage / 100; // Convert percentage to [0,1] range for alpha
+        ctx.drawImage(image2, 0, 0, canvas.width, canvas.height);
+
+        ctx.globalAlpha = 1; // Reset alpha to full opacity
+    }
 }

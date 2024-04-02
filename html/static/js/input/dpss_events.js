@@ -1,4 +1,4 @@
-class events {
+class game_events {
     constructor(game_object) {
         this.G = game_object;
         this.kb = new key_states();

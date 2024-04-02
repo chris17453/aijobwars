@@ -21,13 +21,22 @@ class GamePage {
         this.boss_mode_activated = false;
         this.pause_game = false;
         // control plane
+        
         this.graphics = new graphics(this.canvas, this.ctx); //drawing the main level logic
-        this.events = new events(this);   //kb events and socket etc..
-        this.audio_manager=new audio_manager();
-        this.window_manager=new window_manager(this.graphics);
+        this.events = new game_events(this);   //kb events and socket etc..
+        this.audio_manager = new audio_manager();
+        this.window_manager = new window_manager(this.graphics);
         this.ui = new ui(this.ctx, this);
         this.level = new level(this);
         this.level.load('https://aijobwars.com/static/levels/level.json');
+
+        this.graphics.on('complete', ()=> this.init());
+        
+
+
+    }
+
+    init(){
         this.laser_bar = new PercentageBar(this.graphics, 10, 10, 200, 40, "Laser");
         this.laser_timeout = new PercentageBar(this.graphics, 10, 50, 200, 40, "Laser Timeout");
         this.missile_bar = new PercentageBar(this.graphics, 220, 10, 200, 40, "Missle");
@@ -35,41 +44,64 @@ class GamePage {
         this.booster_bar = new PercentageBar(this.graphics, 430, 10, 200, 40, "Booster");
         this.booster_timeout = new PercentageBar(this.graphics, 430, 50, 200, 40, "Booster Timeout");
         this.health_bar = new PercentageBar(this.graphics, 640, 10, 200, 40, "Health");
+
+
+        this.create_master_menu();
         this.startRendering();
-        
+    }
+
+    create_master_menu() {
+        let position = new rect(50, null, 500, 650,"left","top");
+        const masterMenu = this.window_manager.create_modal("Main Menu", null, position, false, false);
+        this.window_manager.set_background("menu");
+
+        let x = 20;//masterMenu.internal_rect.width/2;
+        let y = 0;
+        let button_spacing = 90,button_width=masterMenu.internal_rect.width-40;
+        let button_position1=new rect(x,y,button_width,null,"left","top");
+        let button_position2=new rect(x,y+=button_spacing,button_width,null,"left","top");
+        let button_position3=new rect(x,y+=button_spacing,button_width,null,"left","top");
+        let button_position4=new rect(x,y+=button_spacing,button_width,null,"left","top");
+        let button_position5=new rect(x,y+=button_spacing,button_width,null,"left","top");
+        let mode="center";
+
+        masterMenu.add_button("New Game",button_position1, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Story So Far", button_position2, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("High Scores", button_position3, "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Credits", button_position4,"button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Exit", button_position5, "button-up-red", "button-down-red");
 
     }
 
 
 
+    help() {
 
-    help(){
+        let help_text = "| Key           | Action                 |\n" +
+            "|---------------|------------------------|\n" +
+            "| Q             | Quit the game          |\n" +
+            "| Arrow Left    | Bank left              |\n" +
+            "| Arrow Right   | Bank right             |\n" +
+            "| Arrow Up      | Accelerate             |\n" +
+            "| Arrow Down    | Decelerate             |\n" +
+            "| STRAFING      | WASD                   |\n" +
+            "| Space         | Fire lasers            |\n" +
+            "| Enter         | Fire Missiles          |\n" +
+            "| M             | Toggle Sound           |\n" +
+            "| +             | Volume up              |\n" +
+            "| -             | Volume down            |\n" +
+            "| Escape        | Toggle Pause           |\n" +
+            "| CTRL + Escape | Turn on boss mode      |\n" +
+            "| Escape        | Exit (from boss mode)  |\n";
 
-        let help_text="| Key           | Action                 |\n"+
-                        "|---------------|------------------------|\n"+
-                        "| Q             | Quit the game          |\n"+
-                        "| Arrow Left    | Bank left              |\n"+
-                        "| Arrow Right   | Bank right             |\n"+
-                        "| Arrow Up      | Accelerate             |\n"+
-                        "| Arrow Down    | Decelerate             |\n"+
-                        "| STRAFING      | WASD                   |\n"+
-                        "| Space         | Fire lasers            |\n"+
-                        "| Enter         | Fire Missiles          |\n"+
-                        "| M             | Toggle Sound           |\n"+
-                        "| +             | Volume up              |\n"+
-                        "| -             | Volume down            |\n"+
-                        "| Escape        | Toggle Pause           |\n"+
-                        "| CTRL + Escape | Turn on boss mode      |\n"+
-                        "| Escape        | Exit (from boss mode)  |\n";
-        
-        let position=new rect(null,null,1024,700);
-        let m=this.window_manager.create_modal("HELP",help_text, position,false,true ) ;
+        let position = new rect(null, null, 1024, 700);
+        let m = this.window_manager.create_modal("HELP", help_text, position, false, true);
         // Subscribe to the 'ok' and 'cancel' events
         m.on('ok', (event) => {
             console.log("OK button clicked");
             event.instance.close();
         });
-        
+
         m.on('cancel', (event) => {
             console.log("Cancel button clicked");
             event.instance.close();
@@ -129,7 +161,7 @@ class GamePage {
                 obj2.render(); // 'rgba(255, 0, 0, 0.5)');
                 obj2.de_orient();
 
-                
+
 
                 obj1.explosion();
                 obj2.explosion();
@@ -157,20 +189,20 @@ class GamePage {
             this.level_start = false;
         }
 
-        this.graphics.viewport.world.y=this.level.position.y;
+        this.graphics.viewport.world.y = this.level.position.y;
         let window = {
             y1: this.level.position.y,
             y2: this.level.position.y + this.graphics.viewport.virtual.height
         }
         for (let b = 0; b < this.level.npc.length; b++) {
-            let npc=this.level.npc[b];
-                
-            if (npc.position.y > window.y1-50 && npc.position.y < window.y2) {
-                if (npc.type=="ship"){
+            let npc = this.level.npc[b];
+
+            if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
+                if (npc.type == "ship") {
                     //console.log("Found it");
                     npc.update_frame(deltaTime)
                     npc.render({ x: 0, y: window.y1 });
-                    
+
                 } else {
                     npc.update_frame(deltaTime)
                     npc.orient({ x: 0, y: window.y1 });
@@ -212,7 +244,7 @@ class GamePage {
         setInterval(() => {
 
             this.graphics.recalc_canvas();
-            if(this.window_manager.has_windows()>0) {
+            if (this.window_manager.has_windows() > 0) {
                 this.window_manager.render();
             } else {
                 this.events.handle_keys();

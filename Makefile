@@ -4,5 +4,8 @@
 run:
 	@python -m dpss.server
 
-update:
+update_file_list:
+	@scripts/update_files.sh
+
+update: update_file_list	
 	@rsync -avz --files-from=files.txt . root@10.90.0.45:/web/aijobwars.com/

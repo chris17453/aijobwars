@@ -1,104 +1,92 @@
-html/favicon.png
-
-
-html/static/fonts/obitron-blue.png
-html/static/fonts/obitron-grey.png
-html/static/fonts/obitron-red.png
-html/static/ships/booster.png
-html/static/explosion/sfx_exp_shortest_soft9.wav
-
-html/static/scene/bg_stars.png
-html/static/explosion/exp_9_128x128_35frames_strip35.png
-html/static/blocks/block.png
-html/static/scene/paused.png
-html/static/boss_mode/boss-mode.png
-html/static/audio/sfx_exp_short_hard12.wav
-html/static/audio/sfx_exp_medium5.wav
-html/static/audio/sfx_wpn_sword1.wav
-html/static/audio/sfx_exp_shortest_soft8.wav
-html/static/audio/projectiles/sfx_wpn_laser6.wav
-html/static/audio/projectiles/sfx_weapon_singleshot13.wav
-html/static/audio/cliploop.mp3
-html/static/audio/sfx_exp_short_hard13.wav
-html/static/audio/sfx_sounds_button3.wav
-html/static/audio/ship/ScatterNoise1.mp3
-html/static/audio/ship/sfx_vehicle_helicopterloop1.wav
-html/static/audio/ship/sfx_vehicle_helicopterloop3.wav
-html/static/audio/ship/satic.mp3
-html/static/audio/ship/static.mp3
-html/static/audio/ship/sfx_vehicle_helicopterloop2.wav
-html/static/audio/sfx_exp_short_hard10.wav
-html/static/audio/sfx_sounds_impact11.wav
-html/static/audio/sfx_wpn_sword2.wav
-html/static/audio/sfx_sounds_button11.wav
-html/static/audio/sfx_exp_short_hard11.wav
-html/static/audio/sfx_wpn_punch4.wav
-html/static/intro/bg2.png
-html/static/intro/AI-JOB-WARS-3-24-2024.png
-html/static/intro/image.png
-html/static/ships/ship1.png
-html/static/ships/resume1.png
-html/static/ships/Water Bolt.png
-html/static/ships/chatgpt.png
-html/static/ships/resume.png
-html/static/ships/teams.png
-html/static/ships/linkedin.png
-html/static/fonts/ProFontWindows-demo.html
-html/static/fonts/ProFontWindows-webfont.woff
-html/static/fonts/stylesheet.css
-html/static/fonts/ProFont Redistribution Terms.txt
-html/static/fonts/ProFontWindows.ttf
-html/static/projectiles/Firebomb.png
-html/static/projectiles/Light Bolt.png
-html/static/projectiles/Ice Lance.png
-html/static/projectiles/Magic Orb.png
-html/static/projectiles/Arcane Bolt.png
-html/static/ending/cred-card.png
-html/static/ending/cred-card-chris.png
-html/static/debris/webex.png
-html/static/debris/webex2.png
-html/static/debris/phone.png
-html/static/debris/pdf.png
-html/static/debris/email.png
-html/static/avatars/avatar2.png
-html/static/avatars/avatar3.png
-html/static/avatars/avatar4.png
-html/static/avatars/avatar5.png
-html/static/avatars/avatar1.png
-html/static/css/dpss.css
-html/static/scene/space2.png
-html/static/scene/space1.png
-html/static/levels/level.txt
-html/static/levels/level.json
-html/static/UI/UI1.png
-html/static/UI/UI2.png
-html/static/UI/UI3.png
-html/static/UI/UI4.png
-html/static/UI/UI5.png
-html/index.html
-
-
-
-html/static/js/bundle.js
-html/static/js/dpss_audio.js
-html/static/js/dpss_client.js
-html/static/js/dpss_game.js
-html/static/js/dpss_graphics.js
-html/static/js/dpss_intro.js
-html/static/js/dpss_level.js
-html/static/js/dpss_ui.js
-html/static/js/dpss_viewport.js
-html/static/js/input/dpss_events.js
-html/static/js/input/dpss_kb.js
-html/static/js/logic/dpss_collision_manager.js
-html/static/js/logic/dpss_fire_control.js
-html/static/js/objects/dpss_debris.js
-html/static/js/objects/dpss_explosion.js
-html/static/js/objects/dpss_missiles.js
-html/static/js/objects/dpss_object.js
-html/static/js/objects/dpss_projectile.js
-html/static/js/objects/dpss_ship.js
-html/static/js/windows/dpss_button.js
-html/static/js/windows/dpss_font.js
-html/static/js/windows/dpss_modal.js
-html/static/js/windows/dpss_sprites.js
+./html/static/intro/bg2.png
+./html/static/intro/AI-JOB-WARS-3-24-2024.png
+./html/static/intro/image.png
+./html/static/ships/ship1.png
+./html/static/ships/booster.png
+./html/static/ships/resume1.png
+./html/static/ships/Water Bolt.png
+./html/static/ships/chatgpt.png
+./html/static/ships/resume.png
+./html/static/ships/teams.png
+./html/static/ships/linkedin.png
+./html/static/fonts/obitron-blue.png
+./html/static/fonts/obitron-grey.png
+./html/static/fonts/obitron-red.png
+./html/static/projectiles/Firebomb.png
+./html/static/projectiles/Light Bolt.png
+./html/static/projectiles/Ice Lance.png
+./html/static/projectiles/Magic Orb.png
+./html/static/projectiles/Arcane Bolt.png
+./html/static/ending/cred-card.png
+./html/static/ending/cred-card-chris.png
+./html/static/explosion/exp_9_128x128_35frames_strip35.png
+./html/static/avatars/avatar2.png
+./html/static/avatars/avatar3.png
+./html/static/avatars/avatar4.png
+./html/static/avatars/avatar5.png
+./html/static/avatars/avatar1.png
+./html/static/js/bundle.js
+./html/static/js/bundle.min.js
+./html/static/js/logic/dpss_collision_manager.js
+./html/static/js/logic/dpss_fire_control.js
+./html/static/js/input/dpss_kb.js
+./html/static/js/input/dpss_events.js
+./html/static/js/dpss_client.js
+./html/static/js/objects/dpss_ship.js
+./html/static/js/objects/dpss_explosion.js
+./html/static/js/objects/dpss_projectile.js
+./html/static/js/objects/dpss_object.js
+./html/static/js/objects/dpss_debris.js
+./html/static/js/objects/dpss_missiles.js
+./html/static/js/maybe/dpss_scene.js
+./html/static/js/ui/dpss_menu.js
+./html/static/js/windows/dpss_button.js
+./html/static/js/windows/dpss_modal.js
+./html/static/js/windows/dpss_font.js
+./html/static/js/windows/dpss_viewport.js
+./html/static/js/windows/dpss_window_manager.js
+./html/static/js/windows/dpss_sprites.js
+./html/static/js/windows/dpss_events.js
+./html/static/js/windows/dpss_audio.js
+./html/static/js/windows/dpss_containers.js
+./html/static/js/dpss_intro.js
+./html/static/js/dpss_game.js
+./html/static/js/dpss_ui.js
+./html/static/js/dpss_graphics.js
+./html/static/js/dpss_level.js
+./html/static/debris/webex.png
+./html/static/debris/phone.png
+./html/static/debris/webex2.png
+./html/static/debris/pdf.png
+./html/static/debris/email.png
+./html/static/scene/space2.png
+./html/static/scene/space1.png
+./html/static/scene/paused.png
+./html/static/scene/bg_stars.png
+./html/static/storyboard/ hd/Intro-2.webp
+./html/static/storyboard/ hd/Intro-4.webp
+./html/static/storyboard/ hd/8.webp
+./html/static/storyboard/ hd/7 .webp
+./html/static/storyboard/ hd/Intro-3.webp
+./html/static/storyboard/ hd/Intro-1.webp
+./html/static/storyboard/ hd/Intro-5.webp
+./html/static/storyboard/ hd/6.webp
+./html/static/storyboard/wide/5.webp
+./html/static/storyboard/wide/1.webp
+./html/static/storyboard/wide/4.webp
+./html/static/storyboard/wide/3.webp
+./html/static/storyboard/wide/2.webp
+./html/static/storyboard/wide/6.webp
+./html/static/storyboard/wide/7.webp
+./html/static/boss_mode/boss-mode.png
+./html/static/blocks/block.png
+./html/static/UI/Small Window.png
+./html/static/UI/UI3.png
+./html/static/UI/UI5.png
+./html/static/UI/UI2.png
+./html/static/UI/UI1.png
+./html/static/UI/UI4.png
+./html/static/UI/menu.webp
+./html/static/fonts/ProFontWindows-demo.html
+./html/index2.html
+./html/index.html

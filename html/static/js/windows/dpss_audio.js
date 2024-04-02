@@ -1,8 +1,8 @@
 class audio_manager {
     constructor() {
         this.play_sounds = false;
-        this.volime=.4;
-        this.audio = [];
+        this.volume=.4;
+        this.audio = {};
     }
 
     add(key, audio_path = null) {

@@ -1,17 +1,23 @@
 
 class button {
-  constructor(graphics, label, x, y, up_image, down_image) {
+  constructor(graphics, label,position, up_image, down_image) {
     this.graphics = graphics;
     this.ctx = graphics.ctx;
     this.sprites = graphics.sprites;
     this.up_image = up_image;
     this.down_image = down_image;
     this.label = label;
-
     this.is_down = false;
     this.is_hover = false;
-    let btn = this.sprites.sprites[up_image];
-    this.position = { x: x, y: y, width: btn.width, height: btn.height };
+    this.monospaced=false;
+    this.centered = false;
+    let bounds=this.graphics.font.get_bounds(label,this.monospaced);
+    let x_pad=20;
+    let y_pad=20;
+    if (position.width==null) position.width=bounds.width+x_pad*2;
+    if (position.height==null) position.height=bounds.height+y_pad*2;
+    this.inner=new rect(position.x+(position.width-bounds.width)/2,position.y+(position.height-bounds.height)/2,bounds.width,bounds.height);
+    this.position = position;
 
     this.events = {}; // Object to hold events
 
@@ -34,18 +40,28 @@ class button {
   }
 
   render() {
+    
+    let relative_position = this.position.clone();
+    let relative_inner = this.inner.clone();
+    //relative_position._x_mode="left";
+    //relative_position._y_mode="top";
+    let img=this.up_image;
     if (this.is_down) {
-      this.sprites.render(this.down_image, this.position);
-      this.graphics.font.draw_text(this.position.x + this.position.width / 2, this.position.y + this.position.height / 2, this.label, true);
+      img=this.down_image;
     } else if (this.is_hover) {
-      let hover_pos = { x: this.position.x + 2, y: this.position.y + 2 };
-      this.sprites.render(this.up_image, hover_pos);
-      this.graphics.font.draw_text(hover_pos.x + this.position.width / 2, hover_pos.y + this.position.height / 2, this.label, true);
-    } else {
-      this.sprites.render(this.up_image, this.position);
-      this.graphics.font.draw_text(this.position.x + this.position.width / 2, this.position.y + this.position.height / 2, this.label, true);
+      relative_position.x+=2;
+      relative_position.y+=2;
+      relative_inner.x+=2;  
+      relative_inner.y+=2;
     }
-  }
+
+    this.sprites.slice_9(img,relative_position ,10,10);
+    
+    //this.sprites.draw_colored_rectangle(relative_position,"red");
+    //this.sprites.draw_colored_rectangle(relative_inner,"blue");
+    this.graphics.font.draw_text(relative_inner, this.label,this.centered, this.monospaced);
+
+}
 
   handle_mouse_down(event) {
     if (this.is_inside(event.offsetX, event.offsetY)) {

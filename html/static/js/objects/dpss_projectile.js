@@ -11,7 +11,6 @@ class Projectile extends GameObject {
                     rotation,                      // rotation
                     4,
                     );                     // ropration speed
-                this.set_sound("accel", 'static/audio/projectiles/sfx_wpn_laser6.wav')
                 this.set_image('static/projectiles/Arcane Bolt.png', 16, 5, 270);
                 this.set_velocity_loss_off();
                 this.set_center(8, 8);
@@ -27,7 +26,6 @@ class Projectile extends GameObject {
                     rotation,                      // rotation
                     4,
                     );                     // ropration speed
-                this.set_sound("accel", 'static/audio/projectiles/sfx_weapon_singleshot13.wav')
                 this.set_image('static/projectiles/Firebomb.png', 16, 5, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
