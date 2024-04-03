@@ -1,6 +1,7 @@
 
-class button {
+class button extends events{
   constructor(parent,graphics, label,position,anchor_position, callback, up_image, down_image) {
+    super();
     this.parent=parent;
     this.graphics = graphics;
     this.ctx = graphics.ctx;
@@ -25,8 +26,6 @@ class button {
     if(this.anchor_position==null) console.log("OMG!");
 
 
-    this.events = {}; // Object to hold events
-
     graphics.canvas.addEventListener('mousedown', this.handle_mouse_down.bind(this));
     graphics.canvas.addEventListener('mouseup', this.handle_mouse_up.bind(this));
     graphics.canvas.addEventListener('mousemove', this.handle_mouse_move.bind(this));
@@ -38,19 +37,6 @@ class button {
     this.anchor_position=anchor_position;
   }
 
-  on(event_name, callback) {
-    if (!this.events[event_name]) {
-      this.events[event_name] = [];
-    }
-    this.events[event_name].push(callback);
-  }
-
-  emit(event_name, data) {
-    data.parent=parent;
-    if (this.events[event_name]) {
-      this.events[event_name].forEach(callback => callback(data));
-    }
-  }
 
   render() {
     let relative_position = this.position.clone();
@@ -86,7 +72,7 @@ class button {
   handle_mouse_up(event) {
     if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
       this.is_down = false;
-      this.callback({parent:this.parent,event:event});
+      this.callback({parent:this.parent,event:event,instance:this});
       this.emit('click', event); // Emit 'click' event
     }
   }

@@ -42,8 +42,15 @@ class window_manager {
     }
 
     render() {
+      var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.frame.height);
+      gradient.addColorStop(0, 'black');
+      gradient.addColorStop(.7, 'lightgrey');
+      gradient.addColorStop(.8, 'darkgrey');
+      gradient.addColorStop(1, 'black');
+
+        this.graphics.sprites.clear(gradient,this.graphics.viewport.frame);
         if (this.background){
-            this.graphics.sprites.render(this.background,this.graphics.viewport.given,1,"contain");
+            this.graphics.sprites.render(this.background,null,this.graphics.viewport.given,1,"contain");
         }
         if (this.active_modal) {
             this.active_modal.render();

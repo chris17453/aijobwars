@@ -127,7 +127,12 @@ class modal {
         this.buttons.forEach(button => button.render());
         for(let i=0;i<this.images.length;i++) {
             let image=this.images[i];
-            this.graphics.sprites.render(image.key, image.position, 1,'none') ;
+            let image_pos=image.position.clone();
+            if (this.graphics.viewport.given)
+            {
+                image_pos.add(this.graphics.viewport.given);
+            }
+            this.graphics.sprites.render(image.key, image_pos, 1,'none') ;
         }
 
         // Render title and text

@@ -68,36 +68,66 @@ class GamePage {
         let button_position6=new rect(w/2-200,10,1024,236,"left","top");
         
         masterMenu.add_image(button_position6,"title");
-        masterMenu.add_button("New Game",button_position1,null, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Story So Far", button_position2,null, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("High Scores", button_position3,null, "button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Credits", button_position4,this.credits_menu_callback,"button-up-cyan", "button-down-cyan");
-        masterMenu.add_button("Exit", button_position5,this.exit_callback, "button-up-red", "button-down-red");
+        masterMenu.add_button("New Game",button_position1,this.new_game.bind(this), "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Story So Far", button_position2,this.story.bind(this), "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("High Scores", button_position3,this.high_scoress_menu.bind(this), "button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Credits", button_position4,this.credits_menu.bind(this),"button-up-cyan", "button-down-cyan");
+        masterMenu.add_button("Exit", button_position5,this.exit.bind(this), "button-up-red", "button-down-red");
 
     }
-    exit_callback(){
+    exit(event ){
         alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
     }
 
-    credits_menu_callback(event) {
+    credits_menu(event) {
         let position = new rect(50, null, 500, 650,"left","top");
-        let credits="Created By: Charles Watkins";
-        const masterMenu = this.window_manager.create_modal("Main Menu", credits, position, false, false);
+        let credits="";
+        const masterMenu = this.window_manager.create_modal("Credits", credits, position, false, false);
         this.window_manager.set_background("menu");
-
         let x = 30;
         let button_width=masterMenu.internal_rect.width-60;
         let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
 
-        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback, "button-up-red", "button-down-red");
+        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback.bind(this), "button-up-red", "button-down-red");
 
     }
+
+    high_scoress_menu(event) {
+        let position = new rect(50, null, 500, 650,"left","top");
+        let credits="Created By: Charles Watkins";
+        const masterMenu = this.window_manager.create_modal("Credits", credits, position, false, false);
+        this.window_manager.set_background("menu");
+        let x = 30;
+        let button_width=masterMenu.internal_rect.width-60;
+        let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
+
+        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback.bind(this), "button-up-red", "button-down-red");
+
+    }
+
+    story(event) {
+        let position = new rect(50, null, 500, 650,"left","top");
+        let credits="Created By: Charles Watkins";
+        const masterMenu = this.window_manager.create_modal("Credits", credits, position, false, false);
+        this.window_manager.set_background("menu");
+        let x = 30;
+        let button_width=masterMenu.internal_rect.width-60;
+        let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
+
+        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback.bind(this), "button-up-red", "button-down-red");
+
+    }
+
 
     credits_exit_callback(event){
-        event.close();
+        event.parent.close();
+        this.create_master_menu();
     }
 
-
+    new_game(event){
+        event.parent.close();
+        this.start_level();
+    }
 
     help() {
 

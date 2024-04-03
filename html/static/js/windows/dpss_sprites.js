@@ -142,12 +142,13 @@ class sprites extends events{
     }
        
     // Other methods like render, slice_9, slice_3...
-    render(key, dest, intensity = 1, mode = 'fill') {
+    render(key, src,dest, intensity = 1, mode = 'fill') {
         const s = this.sprites[key];
         if (!s) {
             console.log("Missing image: " + key);
             return;
         }
+        if (src==null) src=new rect(s.x,s.y,s.width,s.height);
 
         // Save the current context state
         this.ctx.save();
@@ -220,7 +221,7 @@ class sprites extends events{
         }
 
         // Draw the image according to calculated size and position
-        this.ctx.drawImage(s.image, s.x, s.y, s.width, s.height, dx, dy, dWidth, dHeight);
+        this.ctx.drawImage(s.image, src.x, src.y, src.width, src.height, dx, dy, dWidth, dHeight);
 
         // Restore the context state
         this.ctx.restore();
@@ -328,6 +329,11 @@ class sprites extends events{
             }
         }
     }
+    clear(color,position){
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(position.x, position.y, position.width, position.height); // Fill the entire canvas with the selected color
+    }
+    
 
 
 

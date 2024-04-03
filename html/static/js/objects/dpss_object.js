@@ -115,7 +115,8 @@ class GameObject {
         this.image_rotation = rotation;
         this.image_frames = frames;
         this.frame_width = frame_width;
-        this.img=this.graphics.sprites.add(img_URL);
+        this.img=img_URL;
+        this.graphics.sprites.add(img_URL);
     }
 
     image_rotate(rotation) {
@@ -307,9 +308,11 @@ class GameObject {
         let dest_height = sourceHeight * this.graphics.viewport.scale.x;
         let dest_width = sourceWidth * this.graphics.viewport.scale.x;
         let scale = this.graphics.viewport.scale.x;
-        this.graphics.ctx.drawImage(this.img,
-            sourceX, sourceY, sourceWidth, sourceHeight,
-            -this.center.x * scale, -this.center.y * scale, dest_width, dest_height);
+        
+        let src= new rect(sourceX, sourceY, sourceWidth, sourceHeight);
+        let dest=new rect(-this.center.x * scale, -this.center.y * scale, dest_width, dest_height);
+        this.graphics.sprites.render(this.img,src,dest,1,'none'); 
+        
 
         //      } else {
         //            this.graphics.ctx.drawImage(this.img,  -this.center.x, -this.center.y, sourceWidth, sourceHeight,
