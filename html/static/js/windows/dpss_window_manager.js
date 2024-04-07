@@ -18,6 +18,7 @@ class window_manager {
     }
   
     create_modal(title,text, position,cancel = false, ok = true) {
+      console.log("Creating Modal");
       const modal_instance = new modal(this,this.graphics, position, title, text, cancel, ok);
   
       // Listen for the 'close' event to remove the modal
@@ -25,16 +26,26 @@ class window_manager {
         this.close_modal(modal_instance);
       });
       
+      this.windows.forEach(modal=> modal.set_active(false));
       this.windows.push(modal_instance);
+      console.log("Window Manager: Active instance");
+      
       this.active_modal=modal_instance
       return modal_instance;
     }
   
     close_modal(modal_instance) {
+      console.log("Window Manager: Close Modal");
       const index = this.windows.indexOf(modal_instance);
       if (index > -1) {
         this.windows.splice(index, 1); // Remove the modal from the array
         // Additional cleanup if necessary
+      }
+      if(this.windows.length>0) {
+        let last_modal= this.windows[this.windows.length - 1];
+        last_modal.set_active(true);
+        this.active_modal=last_modal;
+
       }
     }
     resize(){

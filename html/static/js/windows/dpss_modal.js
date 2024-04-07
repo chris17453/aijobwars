@@ -10,12 +10,12 @@ class modal {
         this.title = title;
         this.text = text;
         this.position = position;
-        
+        this.external_render_callback=null;
         
         this.buttons = [];
         this.images=[];
 
-
+        this.active=true;
         this.resize();
         this.add_buttons()
     }
@@ -58,11 +58,15 @@ class modal {
 
 
         // Calculate internal rectangle position with padding
+        
+        let x_padding=34;
+        let y_padding=[30,50] ;
+        let y_offset=0;
         this.internal_rect = new rect(
-            20,
-            70,
-            this.position.width - 20*2,
-            this.position.height- 70-30,
+            x_padding,
+            y_offset+y_padding[0],
+            this.position.width - x_padding*2,
+            this.position.height- y_offset - y_padding[0]-y_padding[1],
             "left","top"
         );
 
@@ -93,11 +97,28 @@ class modal {
         newButton.on('click', () => { this.emit('click', { instance: this }); });
         this.buttons.push(newButton);
     }
-    add_image(position, key){
-        this.images.push({position:position,key:key});
-    }
 
+    add_image(position, key){
+        let image = { position: position, key: key };
+        this.images.push(image);
+        return image;
+    }
+    
+    del_image(image){
+        const index = this.images.findIndex(img => img.key === image.key);
+        if (index !== -1) {
+            this.images.splice(index, 1);
+            return true; // Return true if the image was successfully removed
+        }
+        return false; // Return false if the image was not found
+    }
+    render_callback(callback){
+        this.external_render_callback=callback;
+
+    }
     handle_key_down(event) {
+        if(this.active!=true) return;
+        
         // Handle keydown event
         this.emit('keydown', { instance: this, event: event });
     }
@@ -116,8 +137,10 @@ class modal {
     }
 
     render() {
-        
+        if (this.active==false) return;
+        //if you want to do some direct drawing on the canvas... from external of the windo manager
         this.sprites.slice_9("window",this.render_position);
+        if (this.external_render_callback!=null) this.external_render_callback(this.render_internal_rect);
         this.sprites.slice_3("window-title",this.render_title_position);
         let internal=this.internal_rect.clone();
 
@@ -141,10 +164,56 @@ class modal {
           this.graphics.font.draw_text(internal,this.text, true, true);
         }
     }
+    set_active(active){
+        this.active=active;
+        this.buttons.forEach(button => button.set_active(active));
+        //this.images.forEach(button => button.set_active(active));
+    }
 
     close() {
+        if(this.active!=true) return;
+
         // Close the modal and clean up if necessary
         this.emit('close', { instance: this });
+        console.log("Modal: Close Window");
         document.removeEventListener('keydown', this.handle_key_down.bind(this));
     }
+
+
+    close() {
+        //if(this.active != true) return;
+    
+        // Close the modal and clean up if necessary
+        this.emit('close', { instance: this });
+        console.log("Modal: Close Window");
+    
+       this.delete();
+    }
+    delete(){
+        
+        // Remove all event listeners
+        document.removeEventListener('keydown', this.handle_key_down.bind(this));
+        
+        // Clear the events object
+        this.events = {};
+    
+        // Delete the objects
+        this.buttons.forEach(button=>button.delete());
+        delete this.parent;
+        delete this.graphics;
+        delete this.canvas;
+        delete this.sprites;
+        delete this.ok;
+        delete this.cancel;
+        delete this.title;
+        delete this.text;
+        delete this.position;
+        delete this.external_render_callback;
+        delete this.buttons;
+        delete this.images;
+        delete this.images;
+        // Set active to false
+        this.active = false;
+    }
+
 }

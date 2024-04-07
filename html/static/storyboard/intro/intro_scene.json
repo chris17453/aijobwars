@@ -1,0 +1,134 @@
+[
+  {
+    "slide": 1,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/1.webp",
+        "timestamp": 0
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-1.mp3",
+        "timestamp": 0,
+        "length": 16.666063
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/2.webp",
+        "timestamp": 17.666063
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-2.mp3",
+        "timestamp": 17.666063,
+        "length": 16.796688
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/3.webp",
+        "timestamp": 35.462751
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-3.mp3",
+        "timestamp": 35.462751,
+        "length": 14.288938
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/4.webp",
+        "timestamp": 50.751689
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-4.mp3",
+        "timestamp": 50.751689,
+        "length": 13.322438
+      },
+      {
+        "path": "static/storyboard/intro/tracks/track-4-2.mp3",
+        "timestamp": 65.074127,
+        "length": 4.310188
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/5.webp",
+        "timestamp": 70.384315
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-5.mp3",
+        "timestamp": 70.384315,
+        "length": 15.307750
+      },
+      {
+        "path": "static/storyboard/intro/tracks/track-5-2.mp3",
+        "timestamp": 86.692065,
+        "length": 12.852188
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/6.webp",
+        "timestamp": 100.544253
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-6.mp3",
+        "timestamp": 100.544253,
+        "length": 16.848938
+      },
+      {
+        "path": "static/storyboard/intro/tracks/track-6-2.mp3",
+        "timestamp": 118.393191,
+        "length": 4.205688
+      }
+    ]
+  },
+  {
+    "slide": 7,
+    "images": [
+      {
+        "path": "static/storyboard/intro/wide/7.webp",
+        "timestamp": 123.598879
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/storyboard/intro/tracks/track-7.mp3",
+        "timestamp": 123.598879,
+        "length": 10.475063
+      },
+      {
+        "path": "static/storyboard/intro/tracks/track-7-2.mp3",
+        "timestamp": 135.073942,
+        "length": 5.146063
+      }
+    ]
+  }
+]

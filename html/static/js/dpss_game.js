@@ -37,6 +37,7 @@ class GamePage {
     }
 
     init(){
+        console.log("Init main menu");
         this.laser_bar = new PercentageBar(this.graphics, 10, 10, 200, 40, "Laser");
         this.laser_timeout = new PercentageBar(this.graphics, 10, 50, 200, 40, "Laser Timeout");
         this.missile_bar = new PercentageBar(this.graphics, 220, 10, 200, 40, "Missle");
@@ -58,7 +59,7 @@ class GamePage {
         this.window_manager.set_background("menu");
 
         let x = 30;//masterMenu.internal_rect.width/2;
-        let y = 0;
+        let y = 30;
         let button_spacing = 80,button_width=masterMenu.internal_rect.width-60;
         let button_position1=new rect(x,y,button_width,null,"left","top");
         let button_position2=new rect(x,y+=button_spacing,button_width,null,"left","top");
@@ -75,6 +76,7 @@ class GamePage {
         masterMenu.add_button("Exit", button_position5,this.exit.bind(this), "button-up-red", "button-down-red");
 
     }
+
     exit(event ){
         alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
     }
@@ -106,22 +108,20 @@ class GamePage {
     }
 
     story(event) {
-        let position = new rect(50, null, 500, 650,"left","top");
-        let credits="Created By: Charles Watkins";
-        const masterMenu = this.window_manager.create_modal("Credits", credits, position, false, false);
-        this.window_manager.set_background("menu");
-        let x = 30;
-        let button_width=masterMenu.internal_rect.width-60;
-        let button_position5=new rect(x,masterMenu.internal_rect.height-110,button_width,null,"left","top");
-
-        masterMenu.add_button("Exit", button_position5,this.credits_exit_callback.bind(this), "button-up-red", "button-down-red");
-
+        console.log("Prologue");
+        let position = new rect(null, null, 800, 600,"center","center");
+        let player= new scene(this.graphics,this.audio_manager,"static/storyboard/intro/intro_scene.json");
+     
+        const story = this.window_manager.create_modal("Story", "", position, false, false);
+        story.render_callback(player.update_frame.bind(player))
+        
+        
     }
 
 
     credits_exit_callback(event){
         event.parent.close();
-        this.create_master_menu();
+        //this.create_master_menu();
     }
 
     new_game(event){
@@ -296,7 +296,7 @@ class GamePage {
 
     startRendering() {
         setInterval(() => {
-
+            if(this.scene) return;
             this.graphics.recalc_canvas();
             if (this.window_manager.has_windows() > 0) {
                 this.window_manager.resize();

@@ -10,38 +10,29 @@ class sprites extends events{
     }
 
     preload(){
-        return new Promise((resolve, reject) => {
-            this.add("window", this.base_domain+"static/UI/UI1.png", 67, 67, 565, 332);
-            this.add("window-title", this.base_domain+"static/UI/UI1.png", 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
-            this.add("button-down-red", this.base_domain+"static/UI/UI1.png", 683, 77, 206, 68);
-            this.add("button-up-red", this.base_domain+"static/UI/UI1.png", 683, 161, 206, 68);
-            this.add("button-down-yellow", this.base_domain+"static/UI/UI1.png", 928, 77, 206, 68);
-            this.add("button-up-yellow", this.base_domain+"static/UI/UI1.png", 927, 161, 206, 68);
-            this.add("button-down-cyan", this.base_domain+"static/UI/UI1.png", 683, 281, 206, 68);
-            this.add("button-up-cyan", this.base_domain+"static/UI/UI1.png", 683, 365, 206, 68);
-            this.add("button-down-gray", this.base_domain+"static/UI/UI1.png", 928, 281, 206, 68);
-            this.add("button-up-gray", this.base_domain+"static/UI/UI1.png", 927, 365, 206, 68);
-            this.add("percentage-full", this.base_domain+"static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-            this.add("percentage-empty", this.base_domain+"static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-            this.add("menu",this.base_domain+"static/UI/menu.webp");
-            this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
-            this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
+        this.add("window", this.base_domain+"static/UI/UI1.png", 67, 67, 565, 332);
+        this.add("window-title", this.base_domain+"static/UI/UI1.png", 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
+        this.add("button-down-red", this.base_domain+"static/UI/UI1.png", 683, 77, 206, 68);
+        this.add("button-up-red", this.base_domain+"static/UI/UI1.png", 683, 161, 206, 68);
+        this.add("button-down-yellow", this.base_domain+"static/UI/UI1.png", 928, 77, 206, 68);
+        this.add("button-up-yellow", this.base_domain+"static/UI/UI1.png", 927, 161, 206, 68);
+        this.add("button-down-cyan", this.base_domain+"static/UI/UI1.png", 683, 281, 206, 68);
+        this.add("button-up-cyan", this.base_domain+"static/UI/UI1.png", 683, 365, 206, 68);
+        this.add("button-down-gray", this.base_domain+"static/UI/UI1.png", 928, 281, 206, 68);
+        this.add("button-up-gray", this.base_domain+"static/UI/UI1.png", 927, 365, 206, 68);
+        this.add("percentage-full", this.base_domain+"static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("percentage-empty", this.base_domain+"static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("menu",this.base_domain+"static/UI/menu.webp");
+        this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
+        this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
+        this.on_load();
 
-            // Resolve the main promise when all image promises are resolved
-            Promise.all(Object.values(this.images)).then(() => {
-                this.loaded = true;
-                this.emit('complete'); // Emit 'complete' event when all images are loaded
-                resolve();
-            }).catch((error) => {
-                console.error("Error preloading images:", error);
-                reject(error);
-            });
-        });
     }
 
     add(key, imagePath = null, x = 0, y = 0, width = null, height = null) {
         // Check if the key already exists
         if (this.sprites[key]) {
+            //console.warn(`Image with key '${key}' already exists.`);
             return this.sprites[key].image;
         }
 
@@ -53,8 +44,6 @@ class sprites extends events{
             this.images[imagePath] = new Promise((resolve, reject) => {
                 const img = new Image();
                 //img.crossorigin = `Anonymous`;
-
-
                 
                 // Add event listener for image load
                 img.onload = () => {
@@ -82,8 +71,21 @@ class sprites extends events{
                 width: width || image.width,
                 height: height || image.height
             };
+
         });
     }
+
+    on_load(callback){
+        // Resolve the main promise when all image promises are resolved
+        Promise.all(Object.values(this.images)).then(() => {
+            this.loaded = true;
+            this.emit('complete'); // Emit 'complete' event when all images are loaded
+            console.log("Loaded Images");
+            if(callback) callback();
+        }).catch((error) => {
+            console.error("Error preloading images:", error);
+        });
+    }    
 
     get_bounds(key,position){
         let data=this.get_data(key,position);

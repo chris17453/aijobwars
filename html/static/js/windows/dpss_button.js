@@ -13,6 +13,7 @@ class button extends events{
     this.is_hover = false;
     this.monospaced=false;
     this.centered = false;
+    this.active=true;
     
     
     let x_pad=20;
@@ -39,6 +40,7 @@ class button extends events{
 
 
   render() {
+    if(this.active!=true) return;
     let relative_position = this.position.clone();
     let relative_inner = this.inner.clone();
     relative_position.add(this.anchor_position)
@@ -64,20 +66,34 @@ class button extends events{
 }
 
   handle_mouse_down(event) {
+    if(this.active!=true) return;
+
+    if(this.is_down) return;
     if (this.is_inside(event.offsetX, event.offsetY)) {
       this.is_down = true;
+
     }
   }
 
   handle_mouse_up(event) {
+
+    if(this.active!=true) return;
+    //console.log("Button: IN Clicked");
     if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
-      this.is_down = false;
-      this.callback({parent:this.parent,event:event,instance:this});
-      this.emit('click', event); // Emit 'click' event
+      if(this.is_down == true) {
+        console.log("Button: Clicked");
+        this.callback({parent:this.parent,event:event,instance:this});
+        //this.emit('click', event); // Emit 'click' event
+      }
     }
+    this.is_down=false;
+    //console.log("Button: OUT  Clicked");
+    
   }
 
   handle_mouse_move(event) {
+    if(this.active!=true) return;
+
     let previously_hover = this.is_hover;
     this.is_hover = this.is_inside(event.offsetX, event.offsetY);
 
@@ -95,4 +111,32 @@ class button extends events{
     return mouse_x >= relative_position.x && mouse_x <= relative_position.x + relative_position.width &&
       mouse_y >= relative_position.y && mouse_y <= relative_position.y + relative_position.height;
   }
+  set_active(active){
+    this.active=active;
+  }
+  delete(){
+      // Remove all event listeners
+      this.graphics.canvas.removeEventListener('mousedown', this.handle_mouse_down.bind(this));
+      this.graphics.canvas.removeEventListener('mouseup', this.handle_mouse_up.bind(this));
+      this.graphics.canvas.removeEventListener('mousemove', this.handle_mouse_move.bind(this));
+
+      // Clear other properties
+      delete this.parent;
+      delete this.graphics;
+      delete this.ctx;
+      delete this.sprites;
+      delete this.up_image;
+      delete this.down_image;
+      delete this.label;
+      delete this.is_down;
+      delete this.is_hover;
+      delete this.monospaced;
+      delete this.centered;
+      delete this.active;
+      delete this.inner;
+      delete this.position;
+      delete this.anchor_position;
+      delete this.callback;
+  }
+
 }

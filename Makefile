@@ -13,3 +13,6 @@ update: update_file_list
 
 bundle:
 	@scripts/bundle.sh
+
+intro_scene:
+	@scripts/scene.sh |jq '. | sort_by(.slide)'>html/static/storyboard/intro/intro_scene.json

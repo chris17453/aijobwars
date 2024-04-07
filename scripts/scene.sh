@@ -1,4 +1,6 @@
 #!/bin/bash
+SCENE_WEB_PATH="static/storyboard/intro"
+SCENE_LOCAL_PATH="html/$SCENE_WEB_PATH"
 
 # Define the function to extract components
 extract_components() {
@@ -25,34 +27,36 @@ extract_components() {
 }
 
 # List files in the tracks directory
-track_files=$(ls -v html/static/storyboard/tracks/)
+track_files=$(ls -v $SCENE_LOCAL_PATH/tracks/)
 
 # Declare an empty associative array to store the track results by scene
 declare -A track_scenes
-
+declare -A track_time
 # Declare variable to keep track of cumulative duration
 cumulative_duration=0
 
 # Loop through each track file
+duration=0
 for track_file in $track_files; do
     # Call the function to extract components
     components=$(extract_components "$track_file")
     # Split the components into variables
     read -r scene part <<< "$components"
     # Calculate the duration of the track
-    duration=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "html/static/storyboard/tracks/$track_file")
-    # If it's the first part, set cumulative duration to 0
-    if [ "$part" -eq 1 ]; then
-        cumulative_duration=0
-    fi
-    # Add the duration to the cumulative duration
-    cumulative_duration=$(echo "$cumulative_duration + $duration" | bc)
     # Add the track file to the corresponding scene with the cumulative timestamp
-    track_scenes[$scene,$part]+="{\"path\":\"static/storyboard/tracks/$track_file\",\"timestamp\":$cumulative_duration,\"length\":$duration},"
+    
+    duration=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$SCENE_LOCAL_PATH/tracks/$track_file")
+    track_scenes[$scene]+="{\"path\":\"$SCENE_WEB_PATH/tracks/$track_file\",\"timestamp\":$cumulative_duration,\"length\":$duration},"
+    
+    track_time[$scene-$part]=$cumulative_duration
+    
+    # Add the duration to the cumulative duration
+    cumulative_duration=$(echo "$cumulative_duration + $duration" + 1 | bc)
+
 done
 
 # List files in the images directory
-image_files=$(ls -v html/static/storyboard/wide/)
+image_files=$(ls -v $SCENE_LOCAL_PATH/wide/)
 
 # Declare an empty associative array to store the image results by scene
 declare -A image_scenes
@@ -63,26 +67,22 @@ for image_file in $image_files; do
     components=$(extract_components "$image_file")
     # Split the components into variables
     read -r scene part <<< "$components"
-    # Add the image file to the corresponding scene
-    image_scenes[$scene,$part]+="{\"path\":\"static/storyboard/wide/$image_file\",\"timestamp\":0},"
+    # Add the image file to the corresponding scene with the scene timestamp
+    image_scenes[$scene]+="{\"path\":\"$SCENE_WEB_PATH/wide/$image_file\",\"timestamp\":${track_time[$scene-1]}},"
 done
-
 # Print the JSON array
 echo "["
 # Loop through each scene
-for scene_number_part in "${!track_scenes[@]}"; do
-    # Extract scene number and part number
-    scene_number=$(echo "$scene_number_part" | cut -d ',' -f 1)
-    part_number=$(echo "$scene_number_part" | cut -d ',' -f 2)
+for scene_number in "${!track_scenes[@]}"; do
     echo "    {"
-    echo "        \"slideNumber\": $scene_number,"
+    echo "        \"slide\": $scene_number,"
     echo "        \"images\": ["
-    # Print images for the scene and part
-    echo -n "${image_scenes[$scene_number,$part_number]}" | sed 's/,$//'
+    # Print images for the scene
+    echo -n "${image_scenes[$scene_number]}" | sed 's/,$//'
     echo "        ],"
-    echo "        \"audio_files\": ["
-    # Print tracks for the scene and part
-    echo -n "${track_scenes[$scene_number,$part_number]}" | sed 's/,$//'
+    echo "        \"audio\": ["
+    # Print tracks for the scene
+    echo -n "${track_scenes[$scene_number]}" | sed 's/,$//'
     echo "        ]"
     echo "    },"
 done | sed '$s/,$//'

@@ -1,6 +1,6 @@
 class audio_manager {
     constructor() {
-        this.play_sounds = false;
+        this.play_sounds = true;
         this.volume=.4;
         this.audio = {};
     }
@@ -20,6 +20,10 @@ class audio_manager {
         };
 
 
+    }
+    is_playing(key){
+        if(this.audio[key].sound.paused) return false;
+        else return true;
     }
 
     get(key) {
