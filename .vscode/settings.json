@@ -7,6 +7,12 @@
         "useShortcut": false,
         "silent": false
       },
+      {
+        "match": ".html",
+        "cmd": "make update",
+        "useShortcut": false,
+        "silent": false
+      },
     ]
   }
 }

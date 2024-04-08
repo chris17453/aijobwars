@@ -47,24 +47,24 @@ class menu extends modal{
     }
 
     credits(event) {
-        let modal=new credits(this.window_manager,this.graphics,this.audio_manager);
+        let modal=new credits();
         this.window_manager.add(modal)
     }
 
     high_scoress(event) {
-        let modal=new high_scores(this.window_manager,this.graphics,this.audio_manager);
+        let modal=new high_scores();
         this.window_manager.add(modal)
     }
 
     story(event) {
-        let modal=new prologue(this.window_manager,this.graphics,this.audio_manager);
+        let modal=new prologue();
         this.window_manager.add(modal)
     }
+
     new_game(){
-
+        let modal=new game();
+        this.window_manager.add(modal)
     }
-
-
 
 
 }

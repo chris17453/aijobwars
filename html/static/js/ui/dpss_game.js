@@ -1,27 +1,27 @@
-class credits extends modal{
-    constructor(){
-        let ok=false,cancel=false,close=true;
-        let title="Level - 1";
-        let text="";
-        let window_width=800;
-        let window_height=600;
-        
-        let x=(graphics.viewport.given.width-window_width)/2;
-        let y=(graphics.viewport.given.height-window_height)/2;
-        let position = new rect(x, y, window_width,window_height,"left","top");
-        super(position,title,text, ok,cancel,close);
-        this.audio_manager=audio_manager;
+class game extends modal{
+    layout(){
+        this.active=true;
+        this.ok=false
+        this.cancel=false
+        this.close=true;
+        this.title="Level - 1";
+        this.text="";
+        let x=0;//this.graphics.viewport.given.x;
+        let y=this.graphics.viewport.given.y;
+        let window_width=this.graphics.viewport.given.width;;
+        let window_height=this.graphics.viewport.given.height;
+        this.position = new rect(x, y, window_width,window_height,"left","top");
+        this.video_buffer=document.createElement('canvas');
+        this.video_ctx=this.video_buffer.getContext("2d");
+        this.resize();
+        this.add_buttons();
+
         
         this.ui = new ui(this.ctx, this);
-        this.level = new level(this);
+        this.level = new level(this.window_manager);
         this.level.load('https://aijobwars.com/static/levels/level.json');
+        this.level.on("loaded",this.start_level.bind(this));
 
-    }
-
-
-
-    init(){
-        console.log("Init main menu");
         this.laser_bar = new PercentageBar(this.graphics, 10, 10, 200, 40, "Laser");
         this.laser_timeout = new PercentageBar(this.graphics, 10, 50, 200, 40, "Laser Timeout");
         this.missile_bar = new PercentageBar(this.graphics, 220, 10, 200, 40, "Missle");
@@ -29,7 +29,12 @@ class credits extends modal{
         this.booster_bar = new PercentageBar(this.graphics, 430, 10, 200, 40, "Booster");
         this.booster_timeout = new PercentageBar(this.graphics, 430, 50, 200, 40, "Booster Timeout");
         this.health_bar = new PercentageBar(this.graphics, 640, 10, 200, 40, "Health");
+        this.render_callback(this.updateFrame);
+
     }
+
+
+
 
     // Function to update canvas size and draw the background image
 
@@ -96,7 +101,7 @@ class credits extends modal{
 
 
     updateFrame() {
-        this.events.handle_keys();
+        //this.events.handle_keys();
 
         // Calculate deltaTime (time since last frame)
         const currentTime = Date.now();
@@ -104,7 +109,7 @@ class credits extends modal{
         this.lastFrameTime = currentTime;
 
         // Clear any previous drawings
-        this.graphics.updateCanvasSizeAndDrawImage(this.level.position);
+        //this.graphics.updateCanvasSizeAndDrawImage(this.level.position);
         this.level.position.y -= this.level.speed;
 
         //TODO next level stuffs
@@ -135,6 +140,7 @@ class credits extends modal{
             }
 
         }
+        /*
 
         let percentage1 = this.level.spaceship.laser_fire_control.get_cooldown_percentage();
         this.laser_bar.render(percentage1);
@@ -155,10 +161,12 @@ class credits extends modal{
         let percentage7 = this.level.spaceship.boost_fire_control.timeout_percentage();
         this.booster_timeout.render(percentage7);
 
-
+*/
         this.check_collisions();
-        this.level.spaceship.update_frame(deltaTime);
-        this.level.spaceship.render({ x: 0, y: window.y1 });
+        if(this.level.spaceship!=null) {
+            this.level.spaceship.update_frame(deltaTime);
+            this.level.spaceship.render({ x: 0, y: window.y1 });
+        }
     }
 
 

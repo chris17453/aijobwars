@@ -40,6 +40,22 @@ class sprites extends events{
         this.add("menu",this.base_domain+"static/UI/menu.webp");
         this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
         this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
+
+
+        this.add("static/debris/email.png");
+        this.add("static/debris/pdf.png");
+        this.add("static/debris/phone.png");
+        this.add("static/debris/webex2.png");
+        this.add("static/blocks/block.png");
+        this.add("static/explosion/exp_9_128x128_35frames_strip35.png");
+        this.add("static/ships/ship1.png");
+        this.add("static/ships/teams.png");
+        this.add("static/projectiles/Arcane Bolt.png");
+        this.add("static/projectiles/Firebomb.png");
+        this.add("static/ships/Water Bolt.png");
+        this.add("static/ships/booster.png");
+
+
         this.on_load();
 
     }
@@ -158,6 +174,7 @@ class sprites extends events{
         return imageData.data;
     }
        
+
     // Other methods like render, slice_9, slice_3...
     render(key, src,dest, intensity = 1, mode = 'fill') {
         const s = this.sprites[key];

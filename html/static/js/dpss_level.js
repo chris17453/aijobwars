@@ -1,8 +1,9 @@
-class level{
-    constructor(game_object){
-        this.G=game_object;
+class level extends events{
+    constructor(window_manager){
+        super();
         //this.level_url='https://aijobwars.com/static/levels/level.json';
         this.position = { x: 0, y: 0, width: 0, height: 0 }
+        this.window_manager=window_manager;
         this.npc = [];
         this.explosions = [];
         this.data=null;
@@ -42,7 +43,7 @@ class level{
                 this.data = level_data;
                 let bg = this.data['background'];
                 let music = this.data['music'];
-                this.G.graphics.set_background(bg);
+                this.background=(bg);
                 this.track = new Audio(music);
                 this.speed = Number(this.data.speed);
                 this.rows = Number(this.data.rows);
@@ -60,13 +61,13 @@ class level{
                         var x = col * 64;
                         var y = line * 64;
                         switch (c) {
-                            case '.': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "block"); break;
-                            case 't': block = new Ship(this.G.graphics,this.G.audio_manager,x, y, "teams"); break;
-                            case 'p': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "pdf"); break;
-                            case 'e': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "email"); break;
-                            case 'c': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "call"); break;
-                            case 'w': block = new Derbis(this.G.graphics,this.G.audio_manager,x, y, "webex"); break;
-                            case 'P': this.spaceship = new Ship(this.G.graphics,this.G.audio_manager,x,y, "user"); break;
+                            case '.': block = new Derbis(this.window_manager,x, y, "block"); break;
+                            case 't': block = new Ship(this.window_manager,x, y, "teams"); break;
+                            case 'p': block = new Derbis(this.window_manager,x, y, "pdf"); break;
+                            case 'e': block = new Derbis(this.window_manager,x, y, "email"); break;
+                            case 'c': block = new Derbis(this.window_manager,x, y, "call"); break;
+                            case 'w': block = new Derbis(this.window_manager,x, y, "webex"); break;
+                            case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); break;
                         }
                         this.npc.push(block);
 
@@ -80,7 +81,7 @@ class level{
                 this.position.width = this.columns * 64;
                 
                 this.spaceship.set_max_life(5000);
-                this.G.start_level();
+                this.emit("loaded");
                 // You can access other properties similarly
             })
             .catch(error => {

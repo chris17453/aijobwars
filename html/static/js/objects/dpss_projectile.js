@@ -1,12 +1,12 @@
 
-class Projectile extends GameObject {
-    constructor(graphics,audio, x, y, rotation, type, sounds = false) {
+class Projectile extends game_object {
+    constructor(window_manager, x, y, rotation, type, sounds = false) {
         switch (type) {
             case 'lazer':
                 let actions = [
                     { type: "accelerate", frames: 1 }
                 ];
-                super(graphics,audio, x, y, 16, 16,
+                super(window_manager, x, y, 16, 16,
                     800,                    // mass
                     rotation,                      // rotation
                     4,
@@ -21,7 +21,7 @@ class Projectile extends GameObject {
                 break;
 
             case 'bolt':
-                super(graphics, audio,x, y, 16, 16,
+                super(window_manager,x, y, 16, 16,
                     600,                    // mass
                     rotation,                      // rotation
                     4,
@@ -34,7 +34,7 @@ class Projectile extends GameObject {
                 break;
 
             case 'thruster':
-                super(graphics, audio,x, y, 16, 16,
+                super(window_manager,x, y, 16, 16,
                     400,                    // mass
                     rotation,                      // rotation
                     4,
@@ -48,7 +48,7 @@ class Projectile extends GameObject {
                 break;
 
             case 'booster':
-                super(graphics, audio,x, y, 32, 64,
+                super(window_manager,x, y, 32, 64,
                     400,                    // mass
                     rotation,                      // rotation
                     4,

@@ -1,10 +1,11 @@
-class GameObject {
-    constructor(graphics,audio_manager, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4) {
+class game_object {
+    constructor(window_manager, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4) {
         
-        this.audio_manager=audio_manager;
-        this.graphics = graphics;
+        this.window_manager=window_manager;
+        this.audio_manager=window_manager.audio_manager;
+        this.graphics = window_manager.graphics;
         this.type = "block";
-        this.sounds = { left: null, right: null, accel: null, decel: null, destroy: null };
+        this.sounds = { };
         this.width = width;
         this.height = height;
         this.img = null;
@@ -35,6 +36,8 @@ class GameObject {
         this.visible = true;
         this.explosions=[];
     }
+
+
     set_rotation_speed(speed){
         this.rotation_speed=speed;
     }
@@ -42,9 +45,11 @@ class GameObject {
         this.rotation=rotation;
     }
 
-    play(action) {
-        let s=this.audio_manager.get(this.type+action);
-        if(s) s.play();
+    play(sound_name) {
+        if( sound_name in this.sounds) {
+            let s=this.audio_manager.get(sound_name);
+            if(s) s.play();
+        }
     }
     
     set_loop(loop) {
@@ -125,7 +130,10 @@ class GameObject {
 
 
     set_sound(position, sound_URL) {
+        //cache this to save the some ChannelSplitterNode.apply. early  optimization bites you in the ass
+        this.sounds[this.type+position]=sound_URL;
         this.audio_manager.add(this.type+position, sound_URL);
+
     }
 
 
@@ -145,24 +153,24 @@ class GameObject {
         this.rotation -= this.rotation_speed;
         if (this.rotation < 0)
             this.rotation += 360;
-        this.audio_manager.play(this.type+"bank_left");
+        this.play(this.type+"bank_left");
     }
 
     async bank_right() {
         this.rotation += this.rotation_speed;
         this.rotation %= 360;
-        this.audio_manager.play(this.type+"bank_right");
+        this.play(this.type+"bank_right");
 
     }
 
     async accelerate(speed = null) {
-        this.audio_manager.play(this.type+"accel");
+        this.play(this.type+"accel");
         if (speed == null) speed = 1;
         this.move_player(this.rotation, speed);
     }
 
     async decelerate(speed = null) {
-        this.audio_manager.play(this.type+"decel");
+        this.play(this.type+"decel");
 
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 180, speed);
@@ -171,13 +179,13 @@ class GameObject {
     async strafe_left(speed = null) {
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 270, speed);
-        this.audio_manager.play(this.type+"bank_left");
+        this.play(this.type+"bank_left");
 
     }
 
     async strafe_right(speed = null) {
         if (speed == null) speed = 1;
-        this.audio_manager.play(this.type+"bank_right");
+        this.play(this.type+"bank_right");
         this.move_player(this.rotation + 90, speed);
 
     }
@@ -535,8 +543,9 @@ class GameObject {
     async wait(frames) {
         return new Promise(resolve => setTimeout(resolve, frames * millisecondsPerFrame));
     }
+
     explosion(){
-        let exp = new Explosion(this.graphics,this.audio_manager, 0,0,this.play_sounds,this.volume);
+        let exp = new Explosion(this.window_manager, 0,0,this.play_sounds,this.volume);
         this.explosions.push(exp);
     }
 

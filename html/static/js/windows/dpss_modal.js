@@ -12,6 +12,7 @@ class modal {
         this.text = null;
         this.position = null;
         this.external_render_callback=null;
+
         this.buttons = [];
         this.images=[];
     }
@@ -44,8 +45,8 @@ class modal {
 
         if (this.close) {
             var button_position=new rect(this.position.width-80,-30,42,42);
-            let close_instance = this.add_button("", button_position, null,"window-close-up", "window-close-down");
-            close_instance.on('click', () => { this.emit('close', { instance: this }); });
+            this.close = this.create_button("", button_position, null,"window-close-up", "window-close-down");
+            this.close.on('click', () => { this.emit('close', { instance: this }); });
         }
 
 
@@ -110,17 +111,23 @@ class modal {
     }
     
 
-    add_button(label, position,callback, up_image, down_image) {
+    create_button(label, position,callback, up_image, down_image) {
         // Create and setup the new button
         let anchor_position=new rect(0,0,0,0);
         anchor_position.add(this.graphics.viewport.given);
         anchor_position.add(this.position);
         anchor_position.add(this.internal_rect);
         
-        let newButton = new button(this,this.graphics, label, position,anchor_position,callback,up_image, down_image);
-        newButton.on('click', () => { this.emit('click', { instance: this }); });
-        this.buttons.push(newButton);
-        return newButton;
+        let new_button = new button(this,this.graphics, label, position,anchor_position,callback,up_image, down_image);
+        new_button.on('click', () => { this.emit('click', { instance: this }); });
+        return new_button;
+    }
+
+
+    add_button(label, position,callback, up_image, down_image) {
+        let new_button=this.create_button(label, position,callback, up_image, down_image);
+        this.buttons.push(new_button);
+        return new_button;
     }
 
     add_image(position, key){
@@ -163,11 +170,18 @@ class modal {
 
     render() {
         if (this.active==false) return;
+                // Begin the path for the clipping region
         //if you want to do some direct drawing on the canvas... from external of the windo manager
+
         this.sprites.slice_9("window",this.render_position);
-        if (this.external_render_callback!=null) this.external_render_callback(this.render_internal_rect);
-        this.sprites.slice_3("window-title",this.render_title_position);
         let internal=this.internal_rect.clone();
+
+        this.graphics.ctx.save();
+        this.graphics.ctx.beginPath();
+        this.graphics.ctx.rect(this.render_internal_rect.x,this.render_internal_rect.y,this.render_internal_rect.width,this.render_internal_rect.height);
+        this.graphics.ctx.clip(); // Sets the clipping region
+
+        if (this.external_render_callback!=null) this.external_render_callback(this.render_internal_rect);
 
         //this.sprites.draw_colored_rectangle(this.position,"red");
         //this.sprites.draw_colored_rectangle(internal,"blue");
@@ -183,12 +197,17 @@ class modal {
             this.graphics.sprites.render(image.key, image_pos, 1,'none') ;
         }
 
-        // Render title and text
-        this.graphics.font.draw_text(this.render_title_position,this.title, true,false);
+        // Render text
         if (this.text) {
           this.graphics.font.draw_text(internal,this.text, true, true);
         }
+        this.graphics.ctx.restore();
+        //title is the last overlay
+        this.sprites.slice_3("window-title",this.render_title_position);
+        this.graphics.font.draw_text(this.render_title_position,this.title, true,false);
+        if (this.close!=null) this.close.render();
     }
+
     set_active(active){
         this.active=active;
         this.buttons.forEach(button => button.set_active(active));

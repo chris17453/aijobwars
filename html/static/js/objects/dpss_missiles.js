@@ -1,4 +1,4 @@
-class HeatSeekingMissile extends GameObject {
+class HeatSeekingMissile extends game_object {
     constructor(x=0, y=0, mass=100, rotation=0, rotation_speed=4) {
         super(x, y, mass, rotation, rotation_speed);
         this.target = { x: 0, y: 0 }; // Initialize target position
