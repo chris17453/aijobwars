@@ -41,11 +41,11 @@ class audio_manager {
             if (this.playSounds && this.defaultSounds.has(key)) {
                 const defaultSound = this.defaultSounds.get(key); // Get the default audio object
                 const clonedSound = defaultSound.cloneNode(true); // Clone the default audio object
+                this.playingSounds.get(key).push(clonedSound); // Save cloned sound in array
                 
                 await new Promise((resolve) => {
                     clonedSound.addEventListener('loadeddata', resolve);
                 });
-                this.playingSounds.get(key).push(clonedSound); // Save cloned sound in array
                 clonedSound.volume=this.defaultVolume;
                 clonedSound.play(); // Play the cloned audio object
                 console.log("Playing: "+key)
