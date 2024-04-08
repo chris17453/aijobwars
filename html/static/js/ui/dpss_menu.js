@@ -1,10 +1,13 @@
 class menu extends modal{
     constructor(){
         super();
+        
+
 
     }
     layout(){
         //window specifics
+        this.set_background("menu");
         this.ok=false;
         this.cancel=false;
         this.close=true;
@@ -21,6 +24,12 @@ class menu extends modal{
         this.add_buttons();
         
         //layout options
+        
+        this.add_bg_gradient(0, 'black');
+        this.add_bg_gradient(.7, 'lightgrey');
+        this.add_bg_gradient(.8, 'darkgrey');
+        this.add_bg_gradient(1, 'black');
+
 
         let w=this.graphics.viewport.given.width;
         let button_spacing = 80,button_width=this.internal_rect.width-x*2;

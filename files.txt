@@ -51,6 +51,8 @@
 ./html/static/avatars/avatar1.png
 ./html/static/js/logic/dpss_collision_manager.js
 ./html/static/js/logic/dpss_fire_control.js
+./html/static/js/logic/dpss_ui.js
+./html/static/js/logic/dpss_level.js
 ./html/static/js/input/dpss_kb.js
 ./html/static/js/input/dpss_events.js
 ./html/static/js/objects/dpss_ship.js
@@ -75,12 +77,9 @@
 ./html/static/js/windows/dpss_sprites.js
 ./html/static/js/windows/dpss_events.js
 ./html/static/js/windows/dpss_audio.js
+./html/static/js/windows/dpss_graphics.js
 ./html/static/js/windows/dpss_containers.js
 ./html/static/js/dpss_intro.js
-./html/static/js/dpss_game.js
-./html/static/js/dpss_ui.js
-./html/static/js/dpss_graphics.js
-./html/static/js/dpss_level.js
 ./html/static/debris/webex.png
 ./html/static/debris/phone.png
 ./html/static/debris/webex2.png

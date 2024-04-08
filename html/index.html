@@ -21,6 +21,7 @@
     <script src="./static/js/windows/dpss_modal.js"></script>
     <script src="./static/js/windows/dpss_viewport.js"></script>
     <script src="./static/js/windows/dpss_window_manager.js"></script>
+    <script src="./static/js/windows/dpss_graphics.js"></script>
     <script src="./static/js/ui/dpss_menu.js"></script>
     <script src="./static/js/objects/dpss_object.js"></script>
     <script src="./static/js/objects/dpss_explosion.js"></script>
@@ -31,9 +32,8 @@
     <script src="./static/js/input/dpss_events.js"></script>
     <script src="./static/js/logic/dpss_fire_control.js"></script>
     <script src="./static/js/logic/dpss_collision_manager.js"></script>
-    <script src="./static/js/dpss_graphics.js"></script>
-    <script src="./static/js/dpss_level.js"></script>
-    <script src="./static/js/dpss_ui.js"></script>
+    <script src="./static/js/logic/dpss_level.js"></script>
+    <script src="./static/js/logic/dpss_ui.js"></script>
     <script src="./static/js/ui/dpss_game.js"></script>
     <script src="./static/js/ui//dpss_help.js"></script>
     <script src="./static/js/ui/dpss_prologue.js"></script>
@@ -63,7 +63,6 @@
             const wm = new window_manager(elementIds);
             wm.graphics.on("complete",()=> {
 
-              wm.set_background("menu");
               let modal=new menu();
               wm.add(modal);
             });

@@ -45,10 +45,11 @@ class game_object {
         this.rotation=rotation;
     }
 
-    play(sound_name) {
+    play(sound_name,single=false) {
+        sound_name=this.type+sound_name;
         if( sound_name in this.sounds) {
-            let s=this.audio_manager.get(sound_name);
-            if(s) s.play();
+            if (single==true && this.audio_manager.is_playing(sound_name)) return;
+            this.audio_manager.play(sound_name);
         }
     }
     
@@ -129,10 +130,10 @@ class game_object {
     }
 
 
-    set_sound(position, sound_URL) {
+    set_sound(action, sound_URL) {
         //cache this to save the some ChannelSplitterNode.apply. early  optimization bites you in the ass
-        this.sounds[this.type+position]=sound_URL;
-        this.audio_manager.add(this.type+position, sound_URL);
+        this.sounds[this.type+action]=sound_URL;
+        this.audio_manager.add(this.type+action, sound_URL);
 
     }
 
@@ -153,24 +154,26 @@ class game_object {
         this.rotation -= this.rotation_speed;
         if (this.rotation < 0)
             this.rotation += 360;
-        this.play(this.type+"bank_left");
+        
+        
+        this.play("bank_left",true);
     }
 
     async bank_right() {
         this.rotation += this.rotation_speed;
         this.rotation %= 360;
-        this.play(this.type+"bank_right");
+        this.play("bank_right",true);
 
     }
 
     async accelerate(speed = null) {
-        this.play(this.type+"accel");
+        this.play("accel",true);
         if (speed == null) speed = 1;
         this.move_player(this.rotation, speed);
     }
 
     async decelerate(speed = null) {
-        this.play(this.type+"decel");
+        this.play("decel",true);
 
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 180, speed);
@@ -179,13 +182,13 @@ class game_object {
     async strafe_left(speed = null) {
         if (speed == null) speed = 1;
         this.move_player(this.rotation + 270, speed);
-        this.play(this.type+"bank_left");
+        this.play("bank_left",true);
 
     }
 
     async strafe_right(speed = null) {
         if (speed == null) speed = 1;
-        this.play(this.type+"bank_right");
+        this.play("bank_right",true);
         this.move_player(this.rotation + 90, speed);
 
     }

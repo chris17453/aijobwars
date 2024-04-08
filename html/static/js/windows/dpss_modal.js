@@ -11,7 +11,10 @@ class modal {
         this.title = null;
         this.text = null;
         this.position = null;
+        this.skin=true;
         this.external_render_callback=null;
+        this.background=null;
+        this.bg_gradient=null;
 
         this.buttons = [];
         this.images=[];
@@ -21,8 +24,13 @@ class modal {
     init(window_manager){
         this.window_manager=window_manager;
         this.graphics=window_manager.graphics;
+        this.audio_manager=window_manager.audio_manager;
         this.canvas = this.graphics.canvas;
         this.sprites = this.graphics.sprites;
+    }
+    add_bg_gradient(percentage,color){
+        if (this.bg_gradient==null) this.bg_gradient=[];
+        this.bg_gradient.push([percentage,color])
     }
 
     //opverride this for new layout
@@ -37,6 +45,13 @@ class modal {
 
     }
 
+    no_skin(){
+        this.skin=false;
+    }
+    
+    set_background(background){
+        this.background=background;
+    }
 
     add_buttons(){
 
@@ -64,6 +79,10 @@ class modal {
         // Add event listener for keydown event
         document.addEventListener('keydown', this.handle_key_down.bind(this));
     }
+    handle_keys(){
+
+    }
+
     resize(){
         //let modal_sprite = this.sprites.get(["window"]);
         //let title_sprite = this.sprites.get(["window-title"]);
@@ -83,10 +102,17 @@ class modal {
 
 
         // Calculate internal rectangle position with padding
-        
+        //if(this.close!=true && this.close!=null) {
+            //this.close.position=new rect(this.position.width-80,-30,42,42);
+       // }
         let x_padding=34;
         let y_padding=[30,50] ;
         let y_offset=0;
+        if(this.skin==false) {
+            x_padding=0;
+            y_padding=[0,0];
+            y_offset=0;
+        }
         this.internal_rect = new rect(
             x_padding,
             y_offset+y_padding[0],
@@ -173,7 +199,7 @@ class modal {
                 // Begin the path for the clipping region
         //if you want to do some direct drawing on the canvas... from external of the windo manager
 
-        this.sprites.slice_9("window",this.render_position);
+        if (this.skin)this.sprites.slice_9("window",this.render_position);
         let internal=this.internal_rect.clone();
 
         this.graphics.ctx.save();
@@ -202,9 +228,11 @@ class modal {
           this.graphics.font.draw_text(internal,this.text, true, true);
         }
         this.graphics.ctx.restore();
-        //title is the last overlay
-        this.sprites.slice_3("window-title",this.render_title_position);
-        this.graphics.font.draw_text(this.render_title_position,this.title, true,false);
+        if (this.skin) {
+            //title is the last overlay
+            this.sprites.slice_3("window-title",this.render_title_position);
+            this.graphics.font.draw_text(this.render_title_position,this.title, true,false);
+        }
         if (this.close!=null) this.close.render();
     }
 

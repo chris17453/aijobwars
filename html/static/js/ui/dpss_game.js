@@ -6,15 +6,16 @@ class game extends modal{
         this.close=true;
         this.title="Level - 1";
         this.text="";
-        let x=0;//this.graphics.viewport.given.x;
-        let y=this.graphics.viewport.given.y;
-        let window_width=this.graphics.viewport.given.width;;
-        let window_height=this.graphics.viewport.given.height;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
-        this.video_buffer=document.createElement('canvas');
-        this.video_ctx=this.video_buffer.getContext("2d");
         this.resize();
         this.add_buttons();
+        this.no_skin();
+
+
+        this.level_start = false;
+        this.lastFrameTime = Date.now(); //keeping game loop frame time
+        this.boss_mode_activated = false;
+        this.pause_game = false;
+        
 
         
         this.ui = new ui(this.ctx, this);
@@ -31,6 +32,15 @@ class game extends modal{
         this.health_bar = new PercentageBar(this.graphics, 640, 10, 200, 40, "Health");
         this.render_callback(this.updateFrame);
 
+    }
+
+    resize(){
+        let x=0;//this.graphics.viewport.given.x;
+        let y=this.graphics.viewport.given.y;
+        let window_width=this.graphics.viewport.given.width;;
+        let window_height=this.graphics.viewport.given.height;
+        this.position = new rect(x, y, window_width,window_height,"left","top");
+        super.resize();
     }
 
 
@@ -178,5 +188,52 @@ class game extends modal{
         }
     }
 
-    
+
+    handle_keys(kb) {
+        if (this.active==false) return;
+        if (this.level_start == true) {
+            // In your game loop, check keysPressed object to determine actions
+            if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
+            if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
+            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate();
+            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate();
+            if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
+            if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
+            if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle();
+            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left();
+            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right();
+            if (kb.is_pressed('w') || kb.is_pressed('W')) 
+            this.level.spaceship.accelerate();
+            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate();
+            //if (kb.is_pressed('Escape')) this.G.level.spaceship.pause();
+
+            if (kb.is_pressed('Shift')) this.level.spaceship.boost();
+            
+            if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
+            if (kb.just_stopped('+')) this.level.volume(+1);
+            if (kb.just_stopped('-')) this.level.volume(-1);
+            /*
+            if (kb.just_stopped('ArrowLeft')) this.audio_manager.sound_off();
+            if (kb.just_stopped('ArrowRight')) this.audio_manager.sound_off();
+            if (kb.just_stopped('ArrowUp')) this.audio_manager.sound_off();
+            if (kb.just_stopped('ArrowDown')) this.audio_manager.sound_off();
+*/
+            if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
+
+            if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
+
+        }
+
+/*
+        if (kb.just_stopped('Escape')) {
+
+            if (this.G.boss_mode_activated) this.G.ui.boss_mode_off();
+            else if (kb.ctrl()) this.G.ui.boss_mode_on();
+
+            else if (this.G.pause_game == true) this.G.ui.unpause();
+            else this.G.ui.pause();
+            
+        }
+  */
+    } 
 }

@@ -24,7 +24,7 @@ class button extends events{
     this.inner=new rect((position.width-bounds.width)/2,(position.height-bounds.height)/2,bounds.width,bounds.height);
         this.position = position;  
     this.anchor_position=anchor_position;
-    if(this.anchor_position==null) console.log("OMG!");
+    //if(this.anchor_position==null) console.log("OMG!");
 
 
     graphics.canvas.addEventListener('mousedown', this.handle_mouse_down.bind(this));
@@ -81,7 +81,7 @@ class button extends events{
     //console.log("Button: IN Clicked");
     if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
       if(this.is_down == true) {
-        console.log("Button: Clicked");
+        //console.log("Button: Clicked");
         if(this.callback) {
           this.callback.bind(this.parent)({parent:this.parent,event:event,instance:this});
         }

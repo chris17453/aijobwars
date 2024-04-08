@@ -26,6 +26,8 @@ class viewport {
         if (this.requested.width < this.frame.width) {
             this.given.width = this.requested.width;
             this.given.height = this.requested.height;
+            this.given.width = this.frame.width;
+            this.given.height = this.frame.height;
         } else {
             this.given.width = this.frame.width;
             this.given.height = this.frame.height;
