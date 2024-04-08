@@ -6,6 +6,10 @@ name = "pypi"
 [packages]
 websockets = "*"
 pillow = "*"
+pydub = "*"
+speechrecognition = "*"
+vosk = "*"
+wave = "*"
 
 [dev-packages]
 

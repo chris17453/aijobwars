@@ -5,7 +5,6 @@ class window_manager extends events{
       this.ctx = this.canvas.getContext('2d');
 
       this.graphics = new graphics(this.canvas, this.ctx); //drawing the main level logic
-      this.events = new game_events(this);   //kb events and socket etc..
       this.audio_manager = new audio_manager();
       this.modals = [];
       this.active_modal=null;

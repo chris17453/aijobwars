@@ -4,7 +4,7 @@ class sprite_font {
         this.ctx=ctx;
         this.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_~#\"'&()[]|`\\/@" + "°+=*$£€<>";
         this.image =image_key;
-        this.spacing_width=5;
+        this.spacing_width=1;
         this.mono_char_width = 22;
         this.mono_char_height = 27;
         this.char_width = 46;

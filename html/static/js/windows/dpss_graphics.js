@@ -14,7 +14,7 @@ class graphics extends events{
 
     }
     load_font(){
-        let font=new sprite_font(this.ctx,this.sprites, "blue_font");
+        let font=new sprite_font(this.ctx,this.sprites, "grey_font");
         this.font = font;
         this.emit('complete');
 

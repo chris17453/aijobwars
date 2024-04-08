@@ -53,8 +53,6 @@
 ./html/static/js/logic/dpss_fire_control.js
 ./html/static/js/logic/dpss_ui.js
 ./html/static/js/logic/dpss_level.js
-./html/static/js/input/dpss_kb.js
-./html/static/js/input/dpss_events.js
 ./html/static/js/objects/dpss_ship.js
 ./html/static/js/objects/dpss_explosion.js
 ./html/static/js/objects/dpss_projectile.js
@@ -71,6 +69,7 @@
 ./html/static/js/cinematic/dpss_scene.js
 ./html/static/js/windows/dpss_button.js
 ./html/static/js/windows/dpss_modal.js
+./html/static/js/windows/dpss_kb.js
 ./html/static/js/windows/dpss_font.js
 ./html/static/js/windows/dpss_viewport.js
 ./html/static/js/windows/dpss_window_manager.js
@@ -116,6 +115,30 @@
 ./html/static/storyboard/intro/tracks/track-4-2.mp3
 ./html/static/storyboard/intro/tracks/track-4.mp3
 ./html/static/storyboard/intro/tracks/track-6.mp3
+./html/static/storyboard/credits/images/13.webp
+./html/static/storyboard/credits/images/20.webp
+./html/static/storyboard/credits/images/5.webp
+./html/static/storyboard/credits/images/17.webp
+./html/static/storyboard/credits/images/9.webp
+./html/static/storyboard/credits/images/1.webp
+./html/static/storyboard/credits/images/14.webp
+./html/static/storyboard/credits/images/12.webp
+./html/static/storyboard/credits/images/11.webp
+./html/static/storyboard/credits/images/8.webp
+./html/static/storyboard/credits/images/15.webp
+./html/static/storyboard/credits/images/4.webp
+./html/static/storyboard/credits/images/10.webp
+./html/static/storyboard/credits/images/3.webp
+./html/static/storyboard/credits/images/16.webp
+./html/static/storyboard/credits/images/2.webp
+./html/static/storyboard/credits/images/18.webp
+./html/static/storyboard/credits/images/6.webp
+./html/static/storyboard/credits/images/7.webp
+./html/static/storyboard/credits/images/19.webp
+./html/static/storyboard/credits/tracks/output.wav
+./html/static/storyboard/credits/tracks/Code of Dreams.mp3
+./html/static/storyboard/credits/tracks/Code of Dreams-2.mp3
+./html/static/storyboard/credits/credits.json
 ./html/static/boss_mode/boss-mode.png
 ./html/static/levels/level.json
 ./html/static/blocks/block.png

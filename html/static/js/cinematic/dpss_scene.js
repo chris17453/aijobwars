@@ -40,67 +40,94 @@ class scene {
         this.playing=true;
         console.log("Playing Scene");
     }
+
+    get_objects_in_time() {
+        const objectsToShow = [];
+        const properties = ['images', 'audio', 'text'];
+    
+        this.elapsed = Date.now() - this.start_time;
+    
+        for (let property of properties) {
+    
+            for (let i = 0; i < this.scene_data.length; i++) {
+
+                const slide = this.scene_data[i];
+                if (!(property in slide)) continue; // Skip the loop if property doesn't exist in the scene_data
+                for (let j = 0; j < slide[property].length; j++) {
+                    let object = slide[property][j];
+                    let timestamp = object.timestamp * 1000;
+                    let duration = (object.timestamp+object.duration) * 1000;
+                    if(object.duration==0) duration+=9999999;
+    
+                    if (this.elapsed>=timestamp &&  this.elapsed<=duration) {
+                        objectsToShow.unshift({
+                            data: object,
+                            type:property,
+                            timestamp: timestamp
+                        });
+                    }
+                }
+            }
+        }
+    
+        return objectsToShow;
+    }
+
+    
     update_frame(position) {
         if (!this.playing || !this.scene_data) return;
         if(this.start_time==null) {
             this.start_time=Date.now();
         }
 
-        this.elapsed = Date.now() - this.start_time;
+        let objects=this.get_objects_in_time();
     
-        let closest_image = null; // Variable to store the closest image found so far
-    
-        for (let i = 0; i < this.scene_data.length; i++) {
-            const slide = this.scene_data[i];
-            for (let j = 0; j < slide.images.length; j++) {
-                const image = slide.images[j];
-                const image_timestamp = image.timestamp * 1000; // Convert timestamp to milliseconds
-    
-                // Check if the image timestamp is less than or equal to the elapsed time
-                // and closer to the current closest_image (if any)
-                if (image_timestamp <= this.elapsed && (!closest_image || image_timestamp > closest_image.timestamp)) {
-                    closest_image = {
-                        path: image.path,
-                        timestamp: image_timestamp
-                    };
+        
+        for(let i=0;i<objects.length;i++ ) {
+            let object=objects[i];
+            if(object.type=='images') {
+                let current_img = object.data.path;
+                this.graphics.sprites.render(current_img, null, position, 1, "fill");
+            }
+
+        }
+
+        for(let i=0;i<objects.length;i++ ) {
+            let object=objects[i];
+            if(object.type=='audio') {
+                if (this.audio_manager.is_playing(object.data.path) == false) {
+                    this.audio_manager.play(object.data.path);
                 }
             }
         }
-    
-        let closest_audio = null; // Variable to store the closest audio found so far
-    
-        for (let i = 0; i < this.scene_data.length; i++) {
-            const slide = this.scene_data[i];
-            for (let j = 0; j < slide.audio.length; j++) {
-                const audio = slide.audio[j];
-                const audio_timestamp = audio.timestamp * 1000; // Convert timestamp to milliseconds
-                const audio_end = audio_timestamp + audio.length * 1000; // Convert timestamp to milliseconds
-    
-                // Check if the audio timestamp is less than or equal to the elapsed time
-                // and closer to the current closest_audio (if any)
-                if (audio_timestamp <= this.elapsed && audio_end > this.elapsed &&
-                    (!closest_audio || audio_timestamp > closest_audio.timestamp) &&
-                    (!this.last_played_audio_timestamp || audio_timestamp > this.last_played_audio_timestamp)) {
-                    closest_audio = {
-                        path: audio.path,
-                        timestamp: audio_timestamp
-                    };
-                }
+        for(let i=0;i<objects.length;i++ ) {
+            let object=objects[i];
+            if(object.type=='text') {
+
+                let text_position=new rect(position.x+position.width/2,position.y+position.height/4,null,null,"center","center");
+                let bounds=this.graphics.font.get_bounds(object.data.text,false);
+                var line_count = (object.data.text.match(/\n/g) || []).length+1;
+
+                bounds.width=position.width;
+                bounds.height=this.graphics.font.mono_char_height*line_count+30;
+                bounds.x=position.x+0;
+                bounds.y=text_position.y-bounds.height/2;
+                let current_position=this.elapsed-object.timestamp;
+                let percentage=current_position/(object.data.duration*1000);
+                let brightness=0;
+                if(percentage<=0.5) brightness=.3+1.6*percentage;
+                else  brightness=1.7-1.6*(percentage);
+                this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, "+brightness+")");
+
+                this.graphics.font.draw_text(text_position, object.data.text,true,false);
+
+                
             }
         }
-    
-        if (closest_image) {
-            this.current_img = closest_image.path;
-            this.graphics.sprites.render(this.current_img, null, position, 1, "fill");
-        }
-    
-        if (closest_audio && this.audio_manager.is_playing(closest_audio.path) == false) {
-            this.audio_manager.play(closest_audio.path);
-            this.last_played_audio_timestamp = closest_audio.timestamp;
-        }
-    
+
+
     }
-    
+
     
     
     load_slide(slide) {

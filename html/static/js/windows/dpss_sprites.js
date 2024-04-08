@@ -39,6 +39,8 @@ class sprites extends events{
         
         this.add("menu",this.base_domain+"static/UI/menu.webp");
         this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
+        this.add("grey_font",this.base_domain+"static/fonts/obitron-grey.png");
+        this.add("red_font",this.base_domain+"static/fonts/obitron-red.png");
         this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
 
 
@@ -131,7 +133,7 @@ class sprites extends events{
         for (let y = 0; y < position.height; y++) {
             for (let x = 0; x < position.width; x++) {
                 const alpha = data[index];
-                if (alpha != 0) {
+                if ( alpha >0) {
                     found=true;
                     left = Math.min(left, x);
                     top = Math.min(top, y);
@@ -173,7 +175,11 @@ class sprites extends events{
         let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         return imageData.data;
     }
-       
+ 
+    draw_rect(position,color){
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(position.x,position.y,position.width,position.height); // Rectangle position and dimensions
+    }
 
     // Other methods like render, slice_9, slice_3...
     render(key, src,dest, intensity = 1, mode = 'fill') {
