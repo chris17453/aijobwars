@@ -1,19 +1,19 @@
 class rect {
     constructor(x, y, width, height, x_mode = "left", y_mode = "top") {
-        this._x = x;
-        this._y = y;
-        this._width = width;
-        this._height = height;
-        this._y_mode = y_mode;
-        this._x_mode = x_mode;
+        this._x = x !== null ? parseInt(x) : null;
+        this._y = y !== null ? parseInt(y) : null;
+        this._width  = width !== null ? parseInt(width) : null;
+        this._height = height !== null ? parseInt(height) : null;
+        this._y_mode = y_mode !== null ? y_mode : "top";
+        this._x_mode = x_mode !== null ? x_mode : "left";
     }
-
+    
     get x() {
         return this._x;
     }
 
     set x(value) {
-        this._x = value;
+        this._x = parseInt(value);
     }
 
     get y() {
@@ -21,7 +21,7 @@ class rect {
     }
 
     set y(value) {
-                this._y = value;
+                this._y = parseInt(value);
       
     }
 
@@ -31,10 +31,10 @@ class rect {
 
     set width(value) {
         if (value >= 0) {
-            this._width = value;
+            this._width = parseInt(value);
             switch(this._x_mode) {
                 
-                case 'center': this._x-=value/2; break;
+                case 'center': parseInt(this._x-=value/2); break;
             }
         }
     }
@@ -46,19 +46,19 @@ class rect {
 
     set height(value) {
         if (value >= 0) {
-            this._height = value;
+            this._height = parseInt(value);
             switch(this._y_mode) {
-                case 'center': this._y-=value/2; break;
+                case 'center': parseInt(this._y-=value/2); break;
             }
         }
     }
 
     set center_x(value) {
-        this._x = value - this._width / 2;
+        this._x = parseInt(value - this._width / 2);
     }
 
     set center_y(value) {
-        this._y = value - this._height / 2;
+        this._y = parseInt(value - this._height / 2);
     }
 
     get center_x() {

@@ -60,6 +60,12 @@
 ./html/static/js/objects/dpss_debris.js
 ./html/static/js/objects/dpss_missiles.js
 ./html/static/js/ui/dpss_menu.js
+./html/static/js/ui/dpss_credits.js
+./html/static/js/ui/dpss_pause.js
+./html/static/js/ui/dpss_help.js
+./html/static/js/ui/dpss_prologue.js
+./html/static/js/ui/dpss_game.js
+./html/static/js/ui/dpss_high_scores.js
 ./html/static/js/cinematic/dpss_scene.js
 ./html/static/js/windows/dpss_button.js
 ./html/static/js/windows/dpss_modal.js

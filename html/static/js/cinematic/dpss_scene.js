@@ -1,7 +1,7 @@
 class scene {
-    constructor(graphics, audio_manager, scene_url) {
-        this.graphics = graphics;
-        this.audio_manager = audio_manager;
+    constructor(window_manager,scene_url) {
+        this.graphics = window_manager.graphics;
+        this.audio_manager = window_manager.audio_manager;
         this.scene_url = scene_url; // Updated variable name
         this.scene_data = null;
         this.audio = new Audio();
@@ -120,5 +120,16 @@ class scene {
         this.audio.src = audioPath;
         this.audio.currentTime = timestamp;
         this.audio.play();
+    }
+    close(){
+        this.playing=false;
+        //stop all audio playback
+        for (let i = 0; i < this.scene_data.length; i++) {
+            const slide = this.scene_data[i];
+            for (let j = 0; j < slide.audio.length; j++) {
+                const audio = slide.audio[j];
+                this.audio_manager.stop(audio.path);
+            }
+        }
     }
 }

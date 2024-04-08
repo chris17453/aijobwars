@@ -1,33 +1,57 @@
 class modal {
-    constructor(parent,graphics, position, title, text, cancel = false, ok = true) {
-        this.parent=parent;
-        this.graphics = graphics;
-        this.canvas = graphics.canvas;
-        this.sprites = graphics.sprites;
-        this.events = {}; // Object to hold modal events
+    constructor(){
+        this.window_manager=null;
+        this.parent=null;
+        this.graphics = null;
+        this.active=false;
+        this.events = {}; 
+        this.ok=null;
+        this.cancel=null;
+        this.close=null;
+        this.title = null;
+        this.text = null;
+        this.position = null;
+        this.external_render_callback=null;
+        this.buttons = [];
+        this.images=[];
+    }
+    
+    //default init assignemnt from windo manager
+    init(window_manager){
+        this.window_manager=window_manager;
+        this.graphics=window_manager.graphics;
+        this.canvas = this.graphics.canvas;
+        this.sprites = this.graphics.sprites;
+    }
+
+    //opverride this for new layout
+    layout2(position, title, text, cancel = false, ok = true,close=false) {
+        this.active=true;
         this.ok=ok;
         this.cancel=cancel;
+        this.close=close;
         this.title = title;
         this.text = text;
         this.position = position;
-        this.external_render_callback=null;
-        
-        this.buttons = [];
-        this.images=[];
 
-        this.active=true;
-        this.resize();
-        this.add_buttons()
     }
+
 
     add_buttons(){
 
         // Adjust button positions relative to the internal rectangle
         let mode="center";
 
+        if (this.close) {
+            var button_position=new rect(this.position.width-80,-30,42,42);
+            let close_instance = this.add_button("", button_position, null,"window-close-up", "window-close-down");
+            close_instance.on('click', () => { this.emit('close', { instance: this }); });
+        }
+
+
         if (this.ok) {
             var button_position=new rect(this.position.left+100,this.position.bottom-60);
-            let ok_instance = this.add_button("Ok", button_position, mode,"button-up-cyan", "button-down-cyan");
+            let ok_instance = this.add_button("Ok", button_position, null,"button-up-cyan", "button-down-cyan");
             ok_instance.on('click', () => { this.emit('ok', { instance: this }); });
         }
         if (this.cancel) {
@@ -96,6 +120,7 @@ class modal {
         let newButton = new button(this,this.graphics, label, position,anchor_position,callback,up_image, down_image);
         newButton.on('click', () => { this.emit('click', { instance: this }); });
         this.buttons.push(newButton);
+        return newButton;
     }
 
     add_image(position, key){

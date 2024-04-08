@@ -82,8 +82,10 @@ class button extends events{
     if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
       if(this.is_down == true) {
         console.log("Button: Clicked");
-        this.callback({parent:this.parent,event:event,instance:this});
-        //this.emit('click', event); // Emit 'click' event
+        if(this.callback) {
+          this.callback.bind(this.parent)({parent:this.parent,event:event,instance:this});
+        }
+        this.emit('click', event); // Emit 'click' event
       }
     }
     this.is_down=false;

@@ -34,6 +34,10 @@
     <script src="./static/js/dpss_graphics.js"></script>
     <script src="./static/js/dpss_level.js"></script>
     <script src="./static/js/dpss_ui.js"></script>
+    <script src="./static/js/ui/dpss_prologue.js"></script>
+    <script src="./static/js/ui/dpss_high_scores.js"></script>
+    <script src="./static/js/ui/dpss_credits.js"></script>
+    <script src="./static/js/ui/dpss_pause.js"></script>
     <script src="./static/js/cinematic/dpss_scene.js"></script>
     <script src="./static/js/dpss_game.js"></script>
 
@@ -54,7 +58,14 @@
               game_id: 'game',
             };
             
-            const gamePage = new GamePage(elementIds,initialWidth,initialHeight);
+            const wm = new window_manager(elementIds);
+            wm.graphics.on("complete",()=> {
+
+              wm.set_background("menu");
+              let modal=new menu();
+              wm.add(modal);
+            });
+
         }
 
         document.addEventListener('DOMContentLoaded', function () {

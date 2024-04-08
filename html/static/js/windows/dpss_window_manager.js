@@ -1,10 +1,23 @@
-class window_manager {
-    constructor(graphics) {
-      this.graphics = graphics;
+class window_manager extends events{
+    constructor(elements) {
+      super();
+      this.canvas = document.getElementById(elements.canvasId);
+      this.ctx = this.canvas.getContext('2d');
+
+      this.graphics = new graphics(this.canvas, this.ctx); //drawing the main level logic
+      this.events = new game_events(this);   //kb events and socket etc..
+      this.audio_manager = new audio_manager();
       this.windows = [];
       this.active_modal=null;
       this.background=null;
       
+      setInterval(() => {
+          this.graphics.recalc_canvas();
+          if (this.has_windows() > 0) {
+              this.resize();
+              this.render();
+          } 
+        },1000 / 24);
     }
 
     set_background(key,background_url){
@@ -16,11 +29,21 @@ class window_manager {
         if( this.windows.length>0) return true;
         return false;
     }
-  
-    create_modal(title,text, position,cancel = false, ok = true) {
+    add(modal_instance){
+      modal_instance.init(this);
+      modal_instance.layout();
+      this.insert_model(modal_instance);
+      
+    }
+
+
+    create_modal(title,text, position,cancel = false, ok = true,close=false) {
       console.log("Creating Modal");
-      const modal_instance = new modal(this,this.graphics, position, title, text, cancel, ok);
-  
+      const modal_instance = new modal(this,this.graphics, position, title, text, cancel, ok,close);
+      return this.insert_model(modal_instance);
+    }
+    
+    insert_model(modal_instance){
       // Listen for the 'close' event to remove the modal
       modal_instance.on('close', () => {
         this.close_modal(modal_instance);

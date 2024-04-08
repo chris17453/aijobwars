@@ -22,6 +22,21 @@ class sprites extends events{
         this.add("button-up-gray", this.base_domain+"static/UI/UI1.png", 927, 365, 206, 68);
         this.add("percentage-full", this.base_domain+"static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
         this.add("percentage-empty", this.base_domain+"static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("window-thinn", this.base_domain+"static/UI/UI4.png", 1721-10, 154-10, 348 + 10 * 2, 466 + 10 * 2);
+
+        this.add("window-close-up", this.base_domain+"static/UI/UI4.png", 1806, 678, 42,42);
+        this.add("window-close-down", this.base_domain+"static/UI/UI4.png", 1857, 677, 42,42);
+        this.add("window-right-corner", this.base_domain+"static/UI/UI4.png", 1908, 661, 80,73);
+
+        this.add("scroll-down", this.base_domain+"static/UI/UI4.png", 1641, 585, 32,32);
+        this.add("scroll-up", this.base_domain+"static/UI/UI4.png", 1641, 144, 32,32);
+        this.add("scroll-drag", this.base_domain+"static/UI/UI4.png", 1641, 194, 30,54);
+        this.add("scroll-bg", this.base_domain+"static/UI/UI4.png", 1641, 267, 32,300);
+        
+        this.add("bar", this.base_domain+"static/UI/UI4.png", 766, 760, 357,47);
+        this.add("bar-fluid", this.base_domain+"static/UI/UI4.png", 780, 900, 314,34);
+        this.add("portal", this.base_domain+"static/UI/UI4.png", 569, 763, 158,158);
+        
         this.add("menu",this.base_domain+"static/UI/menu.webp");
         this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
         this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
@@ -249,8 +264,8 @@ class sprites extends events{
         let source_inner = new rect(s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2);
 
         let dest_outer = new rect(dest.x, dest.y, dest.width, dest.height);
-        let dest_inner = new rect(dest.x + x_margin - 2, dest.y + y_margin, dest.width - (x_margin) * 2 + 2, dest.height - y_margin * 2);
-
+        let dest_inner = new rect(dest.x + x_margin, dest.y + y_margin, dest.width - x_margin * 2, dest.height - y_margin * 2);
+        
         // Assuming grid class and rect class are properly defined and instantiated
         let source_grid = new grid(source_outer, source_inner, 9);
         let dest_grid = new grid(dest_outer, dest_inner, 9);
@@ -272,7 +287,7 @@ class sprites extends events{
             if ([0, 2, 6, 8].includes(index)) { // Corners
                 this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, sWidth, sHeight);
             }
-            if ([1, 3, 4, 5, 7].includes(index)) { // Other quadrants are tileds
+            if ([1, 3, 4,  5, 7].includes(index)) { // Other quadrants are tileds
 
                 this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 

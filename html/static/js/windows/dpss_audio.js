@@ -25,6 +25,11 @@ class audio_manager {
         if(this.audio[key].sound.paused) return false;
         else return true;
     }
+    stop(key){
+        this.audio[key].sound.pause();
+        this.audio[key].sound.currentTime = 0;
+    }
+
 
     get(key) {
         const s = this.audio[key];
