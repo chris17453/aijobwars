@@ -17,7 +17,7 @@ class Derbis extends game_object {
         switch (type) {
             case 'email':
                 super(window_manager,x, y,64,64,
-                    500,                    // mass
+                    2,                    // mass
                     0,                      // rotation
                     10);                     // ropration speed
                 this.set_image('static/debris/email.png');
@@ -34,7 +34,7 @@ class Derbis extends game_object {
                 break;
             case 'pdf':
                 super(window_manager,x, y,64,64,
-                    200,                    // mass
+                    1,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
                 this.set_image('static/debris/pdf.png');
@@ -51,7 +51,7 @@ class Derbis extends game_object {
                 break;
             case 'call':
                 super(window_manager,x, y,64,64,
-                    200,                    // mass
+                    2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
                 this.set_image('static/debris/phone.png');
@@ -66,7 +66,7 @@ class Derbis extends game_object {
 
             case 'webex':
                 super(window_manager,x, y,64,64,
-                    200,                    // mass
+                    2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
                 this.set_image('static/debris/webex2.png');

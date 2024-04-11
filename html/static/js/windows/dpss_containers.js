@@ -1,3 +1,10 @@
+class point{
+    constructor(x,y){
+        this.x=x;
+        this.y=y;
+    }
+}
+
 class rect {
     constructor(x, y, width, height, x_mode = "left", y_mode = "top") {
         this._x = x !== null ? parseInt(x) : null;
@@ -103,6 +110,21 @@ class rect {
     add(rect2){
         this._x+=rect2.x;
         this._y+=rect2.y;
+    }
+
+    //get the scale for the rect based on another rect.
+    get_scale(dest){
+        let scale_x =  dest.width/this._width ;
+        let scale_y =  dest.height/this._height ;
+        return new point(scale_x,scale_y);
+    }
+
+    //scale the recy by the point given
+    set_scale(dest){
+        if (this._x!=null) this._x=parseInt(this._x*dest.x);
+        if (this._y!=null) this._y=parseInt(this._y*dest.y);
+        if (this._width!=null) this._width=parseInt(this._width*dest.x);
+        if (this._height!=null) this._height=parseInt(this._height*dest.y);
     }
 
 }

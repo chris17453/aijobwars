@@ -6,6 +6,7 @@ class level extends events{
         this.window_manager=window_manager;
         this.npc = [];
         this.explosions = [];
+        this.projectiles =[];
         this.data=null;
         this.spaceship =null;
         this.track=null;
@@ -67,7 +68,7 @@ class level extends events{
                             case 'e': block = new Derbis(this.window_manager,x, y, "email"); break;
                             case 'c': block = new Derbis(this.window_manager,x, y, "call"); break;
                             case 'w': block = new Derbis(this.window_manager,x, y, "webex"); break;
-                            case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); break;
+                            case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); block=this.spaceship; break;
                         }
                         this.npc.push(block);
 

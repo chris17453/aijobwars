@@ -4,16 +4,18 @@ class Ship extends game_object {
 
     constructor(window_manager, x, y, type) {
         super(window_manager, x, y, 128, 153,
-            200,                    // mass
+            1,                    // mass
             0,                      // rotation
             8);                     // ropration speed
         
-        this.boost_fire_control = new fire_control(3);
-        this.laser_fire_control = new fire_control(3);
+        this.boost_fire_control = new fire_control(.02);
+        this.laser_fire_control = new fire_control(.1);
         this.missile_fire_control = new fire_control(10);
         this.thrusters = [];
         this.projectiles = [];
         this.booster=null;
+        this.bolt_type=null;
+        this.missile_type=null;
         let speed=.5 + Math.random() * 4;
 
         switch (type) {
@@ -30,10 +32,12 @@ class Ship extends game_object {
                 this.set_center(64, 64);
                 this.booster = new Projectile(window_manager, +0, 100, 0, "booster");
                 this.thrusters.push(this.booster);
-                var thruster1 = new Projectile(window_manager, +30, 55, 0, "thruster");
+                var thruster1 = new Projectile(window_manager, +30, 75, 0, "thruster");
                 this.thrusters.push(thruster1);
-                var thruster2 = new Projectile(window_manager, -30, 55, 0, "thruster");
+                var thruster2 = new Projectile(window_manager, -30, 75, 0, "thruster");
                 this.thrusters.push(thruster2);
+                this.bolt_type="bolt3";
+                this.missile_type="bolt4";
                 break;
 
             case 'teams':
@@ -49,6 +53,8 @@ class Ship extends game_object {
                 this.set_rotation(270);
                 this.set_center(64, 64);
                 this.set_rotation_speed(10);
+                this.bolt_type="bolt2";
+                this.missile_type="bolt3";
                 let frames=Math.random()*15+10;
                 let actions = [
                     { type: "bank_right", frames: 9,  },
@@ -79,7 +85,7 @@ class Ship extends game_object {
     boost() {
         if (this.boost_fire_control.can_fire()) {
             this.booster.set_visible(true);
-            this.accelerate(10);
+            this.accelerate(100);
             //this.accelerate();
             console.log("BOOST");
         }
@@ -95,14 +101,14 @@ class Ship extends game_object {
     fire_lazer() {
         if (this.laser_fire_control.can_fire()) {
             let lazer1 = this.get_relative_position(-60, -35)
-            var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, "lazer");
+            var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             projectile.accelerate();
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
-            var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, "lazer");
+            var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             projectile.accelerate();
@@ -118,7 +124,7 @@ class Ship extends game_object {
     fire_missle() {
         if (this.missile_fire_control.can_fire()) {
             let missle1 = this.get_relative_position(0, -80)
-            var projectile = new Projectile(this.window_manager,this.position.x + missle1.x, this.position.y + missle1.y, this.rotation, "bolt");
+            var projectile = new Projectile(this.window_manager,this.position.x + missle1.x, this.position.y + missle1.y, this.rotation, this.missile_type);
             projectile.set_velocity(this.velocity);
             projectile.accelerate();
             this.projectiles.push(projectile);

@@ -34,7 +34,10 @@ class sprites extends events{
         this.add("scroll-bg", this.base_domain+"static/UI/UI4.png", 1641, 267, 32,300);
         
         this.add("bar", this.base_domain+"static/UI/UI4.png", 766, 760, 357,47);
-        this.add("bar-fluid", this.base_domain+"static/UI/UI4.png", 780, 900, 314,34);
+        this.add("bar-red-fluid", this.base_domain+"static/UI/UI4.png", 780, 901, 312,33);
+        this.add("bar-green-fluid", this.base_domain+"static/UI/UI4.png", 1097, 901, 312,32);
+        this.add("bar-blue-fluid", this.base_domain+"static/UI/UI4.png", 781, 939, 312,33);
+        this.add("bar-orange-fluid", this.base_domain+"static/UI/UI4.png", 1098, 939, 312,33);
         this.add("portal", this.base_domain+"static/UI/UI4.png", 569, 763, 158,158);
         
         this.add("menu",this.base_domain+"static/UI/menu.webp");
@@ -99,6 +102,7 @@ class sprites extends events{
             this.sprites[key] = {
                 image: image,
                 url: imagePath,
+                position: new rect(x,y,width || image.width,height||image.height),
                 x: x,
                 y: y,
                 width: width || image.width,

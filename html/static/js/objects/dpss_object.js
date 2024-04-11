@@ -1,6 +1,31 @@
-class game_object {
-    constructor(window_manager, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4) {
+class game_object extends motion {
+
+    static  uuid_generator = (function*() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let counter = 0;
         
+        while (true) {
+          let id = '';
+          let currentCounter = counter;
+      
+          // Ensure the counter does not exceed the total number of unique combinations
+          if (currentCounter >= Math.pow(chars.length, 4)) {
+            throw new Error('ID space exhausted');
+          }
+      
+          for (let i = 0; i < 4; i++) {
+            id = chars[currentCounter % chars.length] + id;
+            currentCounter = Math.floor(currentCounter / chars.length);
+          }
+          
+          yield id;
+          counter++;
+        }
+      })();
+
+
+    constructor(window_manager, x = 0, y = 0, width = 64, height = 64, mass = 100, rotation = 0, rotation_speed = 4)  {
+        super(x,y,width,height,mass,rotation);
         this.window_manager=window_manager;
         this.audio_manager=window_manager.audio_manager;
         this.graphics = window_manager.graphics;
@@ -8,15 +33,8 @@ class game_object {
         this.sounds = { };
         this.width = width;
         this.height = height;
-        this.img = null;
-        this.rotation = rotation;
         this.rotation_speed = rotation_speed;
-        this.position = new rect(x, y,width,height);
-        this.acceleration = { x: 0, y: 0 };
-        this.velocity = { x: 0, y: 0 };
-        this.mass = mass;
-        this.damping_factor = .1; // acceleration slow down
-        this.velocity_loss = .7; // momentum slow down
+        this.img = null;
         this.image_frame = 0;
         this.image_frames = 1;
         this.image_rotation = 0;  //rotate the image seperate from the acceleration factor... for images made in diff directions
@@ -26,7 +44,6 @@ class game_object {
         this.expires = null;
         this.action_list = null;
         this.action_position = { frame: 0, row: 0 };
-        this.health = 100;
         this.destroy_object = false;
         this.loop_done = false;
         this.loop = true;
@@ -35,8 +52,12 @@ class game_object {
         this.max_life = 100;
         this.visible = true;
         this.explosions=[];
-    }
+        this.old_acceleration=null;
+        this.old_velocity=null;
+        this.old_position=null;
 
+        this.id=game_object.uuid_generator.next().value;
+    }
 
     set_rotation_speed(speed){
         this.rotation_speed=speed;
@@ -77,6 +98,7 @@ class game_object {
 
     destroy() {
         this.destroy_object = true;
+        console.log("DEstory THIS!");
 
     }
     set_type(type) {
@@ -138,18 +160,6 @@ class game_object {
     }
 
 
-
-    async move_player(direction, speed) {
-        direction %= 360;
-
-        var rotationInRadians = direction * Math.PI / 180;
-        var ax = Math.sin(rotationInRadians) * this.mass * speed;
-        var ay = -Math.cos(rotationInRadians) * this.mass * speed;
-
-        this.acceleration.x += ax;
-        this.acceleration.y += ay;
-    }
-
     async bank_left() {
         this.rotation -= this.rotation_speed;
         if (this.rotation < 0)
@@ -168,33 +178,38 @@ class game_object {
 
     async accelerate(speed = null) {
         this.play("accel",true);
-        if (speed == null) speed = 1;
-        this.move_player(this.rotation, speed);
+        if (speed == null) speed = 10;
+        this.accelerate_object(this.rotation, speed);
     }
 
     async decelerate(speed = null) {
         this.play("decel",true);
 
-        if (speed == null) speed = 1;
-        this.move_player(this.rotation + 180, speed);
+        if (speed == null) speed = 10;
+        this.accelerate_object(this.rotation + 180, speed);
     }
 
     async strafe_left(speed = null) {
-        if (speed == null) speed = 1;
-        this.move_player(this.rotation + 270, speed);
+        if (speed == null) speed = 10;
+        this.accelerate_object(this.rotation + 270, speed);
         this.play("bank_left",true);
 
     }
 
     async strafe_right(speed = null) {
-        if (speed == null) speed = 1;
+        if (speed == null) speed = 10;
         this.play("bank_right",true);
-        this.move_player(this.rotation + 90, speed);
+        this.accelerate_object(this.rotation + 90, speed);
 
     }
 
     async rotate(rotation) {
         this.rotation = rotation;
+    }
+    restore_last_position(){
+        this.acceleration=this.old_acceleration;
+        this.velocity=this.old_velocity;
+        this.position=this.old_position;
     }
 
     update_frame(deltaTime) {
@@ -207,34 +222,9 @@ class game_object {
 
             this.image_frame++;
             this.image_frame %= this.image_frames;
-
         }
 
-        if (deltaTime != 0) {
-
-            this.acceleration.x -= this.acceleration.x * this.damping_factor;
-            this.acceleration.y -= this.acceleration.y * this.damping_factor;
-            // Update velocity based on acceleration
-            this.velocity.x += this.acceleration.x * deltaTime;
-            this.velocity.y += this.acceleration.y * deltaTime;
-
-            // Update position based on velocity
-            this.position.x += this.velocity.x * deltaTime;
-            this.position.y += this.velocity.y * deltaTime;
-
-            if (this.velocity.x != 0) {
-                this.velocity.x *= this.velocity_loss;
-            }
-            if (this.velocity.y != 0) {
-                this.velocity.y *= this.velocity_loss;
-
-            }
-
-            
-
-        }
-
-
+        
         for (let b = 0; b < this.explosions.length; b++) {
             this.explosions[b].update_frame(deltaTime)
             if (this.explosions[b].loop_complete()) {
@@ -386,112 +376,13 @@ class game_object {
     }
 
 
-
-    get_combine_center(otherObject) {
-        // Calculate the center coordinates of this object
-        let thisCenterX = this.position.x + this.width / 2;
-        let thisCenterY = this.position.y + this.height / 2;
-
-        // Calculate the center coordinates of the other object
-        let otherCenterX = otherObject.position.x + otherObject.width / 2;
-        let otherCenterY = otherObject.position.y + otherObject.height / 2;
-
-        // Calculate the combined center coordinates
-        let combinedCenterX = (thisCenterX + otherCenterX) / 2;
-        let combinedCenterY = (thisCenterY + otherCenterY) / 2;
-
-        // Return the combined center coordinates
-        return { x: combinedCenterX, y: combinedCenterY };
-    }
-
-    check_collision(otherObject) {
-        // Calculate the center coordinates of both objects
-        let thisCenterX = this.position.x + this.width / 2;
-        let thisCenterY = this.position.y + this.height / 2;
-        let otherCenterX = otherObject.position.x + otherObject.width / 2;
-        let otherCenterY = otherObject.position.y + otherObject.height / 2;
-
-        // Calculate the distance between the centers of the objects
-        let distanceX = Math.abs(thisCenterX - otherCenterX);
-        let distanceY = Math.abs(thisCenterY - otherCenterY);
-
-        // Calculate the combined width and height of both objects
-        let combinedWidth = (this.width + otherObject.width) / 2;
-        let combinedHeight = (this.height + otherObject.height) / 2;
-
-        // Check if the distance between the centers is less than the combined width and height
-        if (distanceX < combinedWidth && distanceY < combinedHeight) {
-            // Collision detected or adjacent
-            return true;
-        }
-        // No collision
-        return false;
-    }
-
-
-    impact(otherObject) {
-        // Calculate relative velocity
-        let relativeVelocityX = this.velocity.x - otherObject.velocity.x;
-        let relativeVelocityY = this.velocity.y - otherObject.velocity.y;
-
-        // Calculate relative position
-        let relativePositionX = otherObject.position.x - this.position.x;
-        let relativePositionY = otherObject.position.y - this.position.y;
-
-        // Calculate the angle of collision
-        let collisionAngle = Math.atan2(relativePositionY, relativePositionX);
-
-        // Calculate the component of velocities along the collision angle
-        let a1 = relativeVelocityX * Math.cos(collisionAngle) + relativeVelocityY * Math.sin(collisionAngle);
-        let a2 = -relativeVelocityX * Math.cos(collisionAngle) - relativeVelocityY * Math.sin(collisionAngle);
-
-
-        // Calculate the optimized impulse
-        let optimizedP = (2.0 * (a1 - a2)) / (1 / this.mass + 1 / otherObject.mass); // Adjusted for masses
-
-        // Calculate the new velocities after collision
-        let v1x, v1y, v2x, v2y;
-
-        if (this.mass === 10000) {
-            // Objects with mass 10000 maintain their velocities
-            v1x = this.velocity.x;
-            v1y = this.velocity.y;
-        } else {
-            v1x = this.velocity.x - optimizedP * Math.cos(collisionAngle) / this.mass;
-            v1y = this.velocity.y - optimizedP * Math.sin(collisionAngle) / this.mass;
-        }
-        if (otherObject.mass === 10000) {
-            v2x = otherObject.velocity.x;
-            v2y = otherObject.velocity.y;
-        } else {
-            v2x = otherObject.velocity.x + optimizedP * Math.cos(collisionAngle) / otherObject.mass;
-            v2y = otherObject.velocity.y + optimizedP * Math.sin(collisionAngle) / otherObject.mass;
-        }
-
-        let relativeVelocityMagnitude = Math.sqrt(Math.pow(relativeVelocityX, 2) + Math.pow(relativeVelocityY, 2));
-
-        // Calculate damage based on relative velocity, mass, or any other relevant factors
-        let damage = relativeVelocityMagnitude * (1 / this.mass + 1 / otherObject.mass);
-        this.damage(damage);
-
-        // Set the new movement vectors for the objects
-        this.velocity.x = v1x;
-        this.velocity.y = v1y;
-        otherObject.velocity.x = v2x;
-        otherObject.velocity.y = v2y;
-        this.acceleration.x = 0;
-        this.acceleration.y = 0;
-
-    }
-
-
-
+    
 
     async playActions() {
         if (this.action_list == null) return;
         let action = this.action_list[this.action_position.row];
 
-        this.executeAction(action);
+        //this.executeAction(action);
 
         this.action_position.frame++;
         if (this.action_position.frame >= action.frames) {

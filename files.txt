@@ -35,11 +35,15 @@
 ./html/static/fonts/obitron-blue.png
 ./html/static/fonts/obitron-grey.png
 ./html/static/fonts/obitron-red.png
+./html/static/projectiles/P3.png
 ./html/static/projectiles/Firebomb.png
 ./html/static/projectiles/Light Bolt.png
 ./html/static/projectiles/Ice Lance.png
+./html/static/projectiles/P1.png
 ./html/static/projectiles/Magic Orb.png
 ./html/static/projectiles/Arcane Bolt.png
+./html/static/projectiles/P2.png
+./html/static/projectiles/P4.png
 ./html/static/ending/cred-card.png
 ./html/static/ending/cred-card-chris.png
 ./html/static/explosion/exp_9_128x128_35frames_strip35.png
@@ -57,6 +61,8 @@
 ./html/static/js/objects/dpss_explosion.js
 ./html/static/js/objects/dpss_projectile.js
 ./html/static/js/objects/dpss_object.js
+./html/static/js/objects/dpss_engine.js
+./html/static/js/objects/dpss_motion.js
 ./html/static/js/objects/dpss_debris.js
 ./html/static/js/objects/dpss_missiles.js
 ./html/static/js/ui/dpss_menu.js
@@ -66,6 +72,7 @@
 ./html/static/js/ui/dpss_prologue.js
 ./html/static/js/ui/dpss_game.js
 ./html/static/js/ui/dpss_high_scores.js
+./html/static/js/ui-components/dpss_percentage_bar.js
 ./html/static/js/cinematic/dpss_scene.js
 ./html/static/js/windows/dpss_button.js
 ./html/static/js/windows/dpss_modal.js
@@ -135,8 +142,10 @@
 ./html/static/storyboard/credits/images/6.webp
 ./html/static/storyboard/credits/images/7.webp
 ./html/static/storyboard/credits/images/19.webp
+./html/static/storyboard/credits/tracks/Code Of Dreams-Classical.mp3
 ./html/static/storyboard/credits/tracks/output.wav
 ./html/static/storyboard/credits/tracks/Code of Dreams.mp3
+./html/static/storyboard/credits/tracks/Code Of Dreams-Country.mp3
 ./html/static/storyboard/credits/tracks/Code of Dreams-2.mp3
 ./html/static/storyboard/credits/credits.json
 ./html/static/boss_mode/boss-mode.png
