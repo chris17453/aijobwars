@@ -127,7 +127,7 @@ class game extends modal{
 
         // Clear any previous drawings
         //this.graphics.updateCanvasSizeAndDrawImage(this.level.position);
-        //this.level.position.y -= this.level.speed;
+        this.level.position.y -= this.level.speed;
 
         //TODO next level stuffs
         if (this.level.position.y == 0) {
@@ -143,10 +143,13 @@ class game extends modal{
 
         this.level.npc = this.level.npc.filter(npc => !npc.destroy_object);
 
+
+        // looks like we are just updating things that are not in the viewport...
         for (let b = 0; b < this.level.npc.length; b++) {
             let npc = this.level.npc[b];
             if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
                 npc.update_motion(deltaTime);
+
                 let collisions=this.single_collsion(npc,b+1);
                 if(collisions.length!=0) {
                     npc.restore_state();

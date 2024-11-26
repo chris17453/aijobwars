@@ -1,9 +1,10 @@
 
 class Projectile extends game_object {
     constructor(window_manager, x, y, rotation, type, sounds = false) {
+        let actions = [];
         switch (type) {
             case 'lazer':
-                let actions = [
+                actions = [
                     { type: "accelerate", frames: 1 }
                 ];
                 super(window_manager, x, y, 16, 16,
@@ -16,7 +17,7 @@ class Projectile extends game_object {
                 this.set_center(8, 8);
                 this.expire(5);
                 this.set_type("laser");
-                //this.action_list=actions;
+                this.action_list=actions;
 
                 break;
 
@@ -31,6 +32,10 @@ class Projectile extends game_object {
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
+                actions = [
+                    { type: "accelerate", frames: 1, speed: 5 }
+                ];
+                this.action_list=actions;
                 break;
             case 'bolt2':
                 super(window_manager, x, y, 16, 16,
@@ -43,6 +48,10 @@ class Projectile extends game_object {
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
+                actions = [
+                    { type: "accelerate", frames: 1, speed: 5 }
+                ];
+                this.action_list=actions;
                 break;
             case 'bolt3':
                 super(window_manager, x, y, 16, 16,
@@ -55,6 +64,11 @@ class Projectile extends game_object {
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
+                actions = [
+                    { type: "accelerate", frames: 1, speed: 10 }
+                ];
+                //this.action_list=actions;
+
                 break;
             case 'bolt4':
                 super(window_manager, x, y, 16, 16,
@@ -67,6 +81,10 @@ class Projectile extends game_object {
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
+                actions = [
+                    { type: "accelerate", frames: 1, speed: 10 }
+                ];
+                this.action_list=actions;
                 break;
 
 

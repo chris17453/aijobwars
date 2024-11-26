@@ -178,26 +178,25 @@ class game_object extends motion {
 
     async accelerate(speed = null) {
         this.play("accel",true);
-        if (speed == null) speed = 10;
+        speed = speed ?? 10;
         this.accelerate_object(this.rotation, speed);
     }
 
     async decelerate(speed = null) {
         this.play("decel",true);
-
-        if (speed == null) speed = 10;
+        speed = speed ?? 10;
         this.accelerate_object(this.rotation + 180, speed);
     }
 
     async strafe_left(speed = null) {
-        if (speed == null) speed = 10;
+        speed = speed ?? 10;
         this.accelerate_object(this.rotation + 270, speed);
         this.play("bank_left",true);
 
     }
 
     async strafe_right(speed = null) {
-        if (speed == null) speed = 10;
+        speed = speed ?? 10;
         this.play("bank_right",true);
         this.accelerate_object(this.rotation + 90, speed);
 
@@ -213,6 +212,7 @@ class game_object extends motion {
     }
 
     update_frame(deltaTime) {
+        this.update_motion(deltaTime);
         if (this.visible == false) return;
         if (this.image_frames > 1) {
 
@@ -382,7 +382,7 @@ class game_object extends motion {
         if (this.action_list == null) return;
         let action = this.action_list[this.action_position.row];
 
-        //this.executeAction(action);
+        this.executeAction(action);
 
         this.action_position.frame++;
         if (this.action_position.frame >= action.frames) {
@@ -407,9 +407,9 @@ class game_object extends motion {
                 //console.log("Bank Right");
                 break;
             case 'accelerate':
+                console.log("Accel: "+this.type+" "+action.speed);
                 await this.accelerate(action.speed);
-                //console.log("Accel");
-
+                
                 break;
             case 'decelerate':
                 //console.log("Decel");

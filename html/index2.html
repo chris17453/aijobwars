@@ -30,7 +30,13 @@
               game_id: 'game',
             };
             
-            const gamePage = new GamePage(elementIds,initialWidth,initialHeight);
+
+            const wm = new window_manager(elementIds);
+            wm.graphics.on("complete",()=> {
+
+              let modal=new menu();
+              wm.add(modal);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', function () {

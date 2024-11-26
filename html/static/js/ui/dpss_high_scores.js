@@ -13,11 +13,26 @@ class high_scores extends modal{
         this.position = new rect(x, y, window_width,window_height,"left","top");
         this.resize();
         this.add_buttons();
+        this.high_scores=null;
+        this.load_high_scores("static/json/highscores.json");
+        
 
     }
 
-    //render(){
-    //    super.render();
-    //}
+    async load_high_scores(){
+        try {
+                const response = await fetch(jsonFileUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                this.high_scores=data;
+        } catch (error) {
+            console.error("Error loading the JSON file:", error);
+        }
+     }
 
+    
+
+    
 }

@@ -6,7 +6,9 @@ class graphics extends events{
         this.ctx=ctx;
         this.font=null;
         this.sprites=new sprites(ctx);
-        this.sprites.on_load( this.load_font.bind(this)); // Using arrow function to preserve 'this'
+        this.sprites.on("complete",this.load_font.bind(this)); // Using arrow function to preserve 
+        this.sprites.preload();
+        //this.sprites.on_load( this.load_font.bind(this)); // Using arrow function to preserve 'this'
         this.backround=null;
         this.viewport=new viewport(1920,window.innerHeight);
         this.frame_background_color='#222';

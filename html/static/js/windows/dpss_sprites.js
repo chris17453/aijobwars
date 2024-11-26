@@ -6,59 +6,59 @@ class sprites extends events{
         this.sprites = {}; //sprite objects.. many to 1 per image possible.
         this.images={};  //image objects
         this.loaded = false; // Flag to track if all images are loaded
-        this.load_promise = this.preload(); // Start the preload process and store the promise
     }
 
     preload(){
-        this.add("window", this.base_domain+"static/UI/UI1.png", 67, 67, 565, 332);
-        this.add("window-title", this.base_domain+"static/UI/UI1.png", 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
-        this.add("button-down-red", this.base_domain+"static/UI/UI1.png", 683, 77, 206, 68);
-        this.add("button-up-red", this.base_domain+"static/UI/UI1.png", 683, 161, 206, 68);
-        this.add("button-down-yellow", this.base_domain+"static/UI/UI1.png", 928, 77, 206, 68);
-        this.add("button-up-yellow", this.base_domain+"static/UI/UI1.png", 927, 161, 206, 68);
-        this.add("button-down-cyan", this.base_domain+"static/UI/UI1.png", 683, 281, 206, 68);
-        this.add("button-up-cyan", this.base_domain+"static/UI/UI1.png", 683, 365, 206, 68);
-        this.add("button-down-gray", this.base_domain+"static/UI/UI1.png", 928, 281, 206, 68);
-        this.add("button-up-gray", this.base_domain+"static/UI/UI1.png", 927, 365, 206, 68);
-        this.add("percentage-full", this.base_domain+"static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-        this.add("percentage-empty", this.base_domain+"static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-        this.add("window-thinn", this.base_domain+"static/UI/UI4.png", 1721-10, 154-10, 348 + 10 * 2, 466 + 10 * 2);
 
-        this.add("window-close-up", this.base_domain+"static/UI/UI4.png", 1806, 678, 42,42);
-        this.add("window-close-down", this.base_domain+"static/UI/UI4.png", 1857, 677, 42,42);
-        this.add("window-right-corner", this.base_domain+"static/UI/UI4.png", 1908, 661, 80,73);
+        this.add("window", "static/UI/UI1.png", 67, 67, 565, 332);
+        this.add("window-title", "static/UI/UI1.png", 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
+        this.add("button-down-red", "static/UI/UI1.png", 683, 77, 206, 68);
+        this.add("button-up-red", "static/UI/UI1.png", 683, 161, 206, 68);
+        this.add("button-down-yellow", "static/UI/UI1.png", 928, 77, 206, 68);
+        this.add("button-up-yellow", "static/UI/UI1.png", 927, 161, 206, 68);
+        this.add("button-down-cyan", "static/UI/UI1.png", 683, 281, 206, 68);
+        this.add("button-up-cyan", "static/UI/UI1.png", 683, 365, 206, 68);
+        this.add("button-down-gray", "static/UI/UI1.png", 928, 281, 206, 68);
+        this.add("button-up-gray", "static/UI/UI1.png", 927, 365, 206, 68);
+        this.add("percentage-full", "static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("percentage-empty", "static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("window-thinn", "static/UI/UI4.png", 1721-10, 154-10, 348 + 10 * 2, 466 + 10 * 2);
 
-        this.add("scroll-down", this.base_domain+"static/UI/UI4.png", 1641, 585, 32,32);
-        this.add("scroll-up", this.base_domain+"static/UI/UI4.png", 1641, 144, 32,32);
-        this.add("scroll-drag", this.base_domain+"static/UI/UI4.png", 1641, 194, 30,54);
-        this.add("scroll-bg", this.base_domain+"static/UI/UI4.png", 1641, 267, 32,300);
+        this.add("window-close-up", "static/UI/UI4.png", 1806, 678, 42,42);
+        this.add("window-close-down", "static/UI/UI4.png", 1857, 677, 42,42);
+        this.add("window-right-corner", "static/UI/UI4.png", 1908, 661, 80,73);
+
+        this.add("scroll-down", "static/UI/UI4.png", 1641, 585, 32,32);
+        this.add("scroll-up", "static/UI/UI4.png", 1641, 144, 32,32);
+        this.add("scroll-drag", "static/UI/UI4.png", 1641, 194, 30,54);
+        this.add("scroll-bg", "static/UI/UI4.png", 1641, 267, 32,300);
         
-        this.add("bar", this.base_domain+"static/UI/UI4.png", 766, 760, 357,47);
-        this.add("bar-red-fluid", this.base_domain+"static/UI/UI4.png", 780, 901, 312,33);
-        this.add("bar-green-fluid", this.base_domain+"static/UI/UI4.png", 1097, 901, 312,32);
-        this.add("bar-blue-fluid", this.base_domain+"static/UI/UI4.png", 781, 939, 312,33);
-        this.add("bar-orange-fluid", this.base_domain+"static/UI/UI4.png", 1098, 939, 312,33);
-        this.add("portal", this.base_domain+"static/UI/UI4.png", 569, 763, 158,158);
+        this.add("bar", "static/UI/UI4.png", 766, 760, 357,47);
+        this.add("bar-red-fluid", "static/UI/UI4.png", 780, 901, 312,33);
+        this.add("bar-green-fluid", "static/UI/UI4.png", 1097, 901, 312,32);
+        this.add("bar-blue-fluid", "static/UI/UI4.png", 781, 939, 312,33);
+        this.add("bar-orange-fluid", "static/UI/UI4.png", 1098, 939, 312,33);
+        this.add("portal", "static/UI/UI4.png", 569, 763, 158,158);
         
-        this.add("menu",this.base_domain+"static/UI/menu.webp");
-        this.add("blue_font",this.base_domain+"static/fonts/obitron-blue.png");
-        this.add("grey_font",this.base_domain+"static/fonts/obitron-grey.png");
-        this.add("red_font",this.base_domain+"static/fonts/obitron-red.png");
-        this.add("title",this.base_domain+"static/intro/AI-JOB-WARS-3-24-2024.png");
+        this.add("menu","static/UI/menu.webp");
+        this.add("blue_font","static/fonts/obitron-blue.png");
+        this.add("grey_font","static/fonts/obitron-grey.png");
+        this.add("red_font","static/fonts/obitron-red.png");
+        this.add("title","static/intro/AI-JOB-WARS-3-24-2024.png");
 
 
-        this.add("static/debris/email.png");
-        this.add("static/debris/pdf.png");
-        this.add("static/debris/phone.png");
-        this.add("static/debris/webex2.png");
-        this.add("static/blocks/block.png");
-        this.add("static/explosion/exp_9_128x128_35frames_strip35.png");
-        this.add("static/ships/ship1.png");
-        this.add("static/ships/teams.png");
-        this.add("static/projectiles/Arcane Bolt.png");
-        this.add("static/projectiles/Firebomb.png");
-        this.add("static/ships/Water Bolt.png");
-        this.add("static/ships/booster.png");
+        this.add("email",    "static/debris/email.png");
+        this.add("pdf",      "static/debris/pdf.png");
+        this.add("phone",    "static/debris/phone.png");
+        this.add("webex2",   "static/debris/webex2.png");
+        this.add("block",    "static/blocks/block.png");
+        this.add("exp_9",    "static/explosion/exp_9_128x128_35frames_strip35.png");
+        this.add("ship1",    "static/ships/ship1.png");
+        this.add("teams",    "static/ships/teams.png");
+        this.add("Arcane",   "static/projectiles/Arcane Bolt.png");
+        this.add("Firebomb", "static/projectiles/Firebomb.png");
+        this.add("Water",    "static/ships/Water Bolt.png");
+        this.add("booster",  "static/ships/booster.png");
 
 
         this.on_load();
@@ -112,14 +112,14 @@ class sprites extends events{
         });
     }
 
-    on_load(callback){
+    on_load(){
         // Resolve the main promise when all image promises are resolved
         Promise.all(Object.values(this.images)).then(() => {
             this.loaded = true;
-            this.emit('complete'); // Emit 'complete' event when all images are loaded
-            console.log("Loaded Images");
-            if(callback) callback();
-        }).catch((error) => {
+          //  if(callback!==undefined) callback();
+          this.emit('complete'); // Emit 'complete' event when all images are loaded
+          console.log("Loaded Images");
+          }).catch((error) => {
             console.error("Error preloading images:", error);
         });
     }    
