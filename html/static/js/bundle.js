@@ -2320,7 +2320,7 @@ class menu extends modal{
                 //console.log("Bank Right");
                 break;
             case 'accelerate':
-                console.log("Accel: "+this.type+" "+action.speed);
+                //console.log("Accel: "+this.type+" "+action.speed);
                 await this.accelerate(action.speed);
                 
                 break;
@@ -2600,9 +2600,9 @@ class Ship extends game_object {
             0,                      // rotation
             8);                     // ropration speed
         
-        this.boost_fire_control = new fire_control(.02);
-        this.laser_fire_control = new fire_control(.1);
-        this.missile_fire_control = new fire_control(.1);
+        this.boost_fire_control = new fire_control(1);
+        this.laser_fire_control = new fire_control(5);
+        this.missile_fire_control = new fire_control(10);
         this.thrusters = [];
         this.projectiles = [];
         this.booster=null;
@@ -3169,13 +3169,13 @@ class level extends events{
         this.add_buttons();
 
         this.player= new scene(this.window_manager,"static/storyboard/intro/intro_scene.json");
-        this.on("close",()=>{ this.player.close(); })
+        //this.on("close",()=>{ this.player.close(); })
         this.render_callback(this.player.update_frame.bind(this.player));
     }
 
-    //render(){
-    //    super.render();
-    //}
+    render(){
+        super.render();
+    }
 
 }class high_scores extends modal{
     layout(){

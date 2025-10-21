@@ -18,12 +18,12 @@ class prologue extends modal{
         this.add_buttons();
 
         this.player= new scene(this.window_manager,"static/storyboard/intro/intro_scene.json");
-        this.on("close",()=>{ this.player.close(); })
+        //this.on("close",()=>{ this.player.close(); })
         this.render_callback(this.player.update_frame.bind(this.player));
     }
 
-    //render(){
-    //    super.render();
-    //}
+    render(){
+        super.render();
+    }
 
 }

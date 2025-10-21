@@ -8,9 +8,9 @@ class Ship extends game_object {
             0,                      // rotation
             8);                     // ropration speed
         
-        this.boost_fire_control = new fire_control(.02);
-        this.laser_fire_control = new fire_control(.1);
-        this.missile_fire_control = new fire_control(.1);
+        this.boost_fire_control = new fire_control(1);
+        this.laser_fire_control = new fire_control(5);
+        this.missile_fire_control = new fire_control(10);
         this.thrusters = [];
         this.projectiles = [];
         this.booster=null;

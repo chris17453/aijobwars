@@ -407,7 +407,7 @@ class game_object extends motion {
                 //console.log("Bank Right");
                 break;
             case 'accelerate':
-                console.log("Accel: "+this.type+" "+action.speed);
+                //console.log("Accel: "+this.type+" "+action.speed);
                 await this.accelerate(action.speed);
                 
                 break;
