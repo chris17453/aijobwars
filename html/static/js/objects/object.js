@@ -86,6 +86,9 @@ class game_object extends motion {
         return this.loop_done;
     }
     damage(damage) {
+        // Don't apply damage if already destroyed
+        if (this.destroy_object) return;
+
         this.life -= damage;
         if (this.life <= 0) {
             this.life = 0;
@@ -103,9 +106,10 @@ class game_object extends motion {
     }
 
     destroy() {
-        this.destroy_object = true;
-        console.log("DEstory THIS!");
+        // Prevent multiple destroy calls on the same object
+        if (this.destroy_object) return;
 
+        this.destroy_object = true;
     }
     set_type(type) {
         this.type = type;
@@ -152,33 +156,25 @@ class game_object extends motion {
         this.img=img_URL;
         this.graphics.sprites.add(img_URL);
 
-        // Generate collision mask after image is loaded
-        this.generate_collision_mask();
+        // Get or generate collision mask (cached in sprite)
+        this.get_collision_mask();
     }
 
-    generate_collision_mask() {
-        // Wait for sprite to load, then generate mask
+    get_collision_mask() {
+        // Wait for sprite to load, then get or create cached mask
         setTimeout(() => {
             try {
                 const position = new rect(0, 0, this.width, this.height);
 
-                // Get pixel data from sprite
-                const pixelData = this.graphics.sprites.get_data(this.img, position);
-                if (!pixelData) return;
+                // Get cached mask from sprite (or generate if first time)
+                const maskData = this.graphics.sprites.get_or_create_collision_mask(this.img, position);
+                if (!maskData) return;
 
-                // Create boolean mask (true = solid pixel)
-                this.collision_mask = new Array(this.width * this.height);
-                for (let i = 0; i < this.width * this.height; i++) {
-                    const alpha = pixelData[i * 4 + 3]; // Get alpha channel
-                    this.collision_mask[i] = alpha > 50; // Threshold for solid pixels
-                }
-
-                // Calculate tight bounding box from mask
-                this.mask_bounds = this.graphics.sprites.get_bounds(this.img, position);
-
-                console.log(`[${this.type}] Collision mask generated: ${this.width}x${this.height}, bounds:`, this.mask_bounds);
+                // Reference the cached mask (not a copy)
+                this.collision_mask = maskData.collision_mask;
+                this.mask_bounds = maskData.mask_bounds;
             } catch (error) {
-                console.error(`[${this.type}] Failed to generate collision mask:`, error);
+                console.error(`[${this.type}] Failed to get collision mask:`, error);
             }
         }, 100); // Small delay to ensure sprite is loaded
     }
@@ -277,21 +273,14 @@ class game_object extends motion {
         if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
 
         this.graphics.ctx.save();
-        let scale = this.graphics.viewport.scale.x;
 
+        // Work in virtual coordinates - canvas transform handles scaling
         let x = this.position.x;
         let y = this.position.y;
         if (window != null) {
             x -= window.x;
             y -= window.y;
-            x += this.graphics.viewport.given.x;
-            y += this.graphics.viewport.given.y;
         }
-        //x-=this.center.x ;
-        //y-=this.center.y ;
-
-        x *= scale;
-        y *= scale;
 
         this.graphics.ctx.translate(x, y);
 
@@ -335,33 +324,23 @@ class game_object extends motion {
 
     render() {
         if (this.visible == false) return;
-        // Define the source rectangle
 
+        // Work in virtual coordinates - canvas transform handles scaling
         let sourceX = 0;
         let sourceY = 0;
-        let sourceWidth = this.width; //*this.graphics.viewport.scale.x
-        let sourceHeight = this.height; //*this.graphics.viewport.scale.x
+        let sourceWidth = this.width;
+        let sourceHeight = this.height;
         if (this.image_frames > 1) {
             sourceX = this.image_frame * this.frame_width;
             sourceWidth = this.frame_width;
         }
-        let dest_height = sourceHeight * this.graphics.viewport.scale.x;
-        let dest_width = sourceWidth * this.graphics.viewport.scale.x;
-        let scale = this.graphics.viewport.scale.x;
-        
-        let src= new rect(sourceX, sourceY, sourceWidth, sourceHeight);
-        let dest=new rect(-this.center.x * scale, -this.center.y * scale, dest_width, dest_height);
-        this.graphics.sprites.render(this.img,src,dest,1,'none'); 
-        
 
-        //      } else {
-        //            this.graphics.ctx.drawImage(this.img,  -this.center.x, -this.center.y, sourceWidth, sourceHeight,
-        //                                        -this.center.x, -this.center.y, sourceWidth, sourceHeight);
+        let src = new rect(sourceX, sourceY, sourceWidth, sourceHeight);
+        let dest = new rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
+        this.graphics.sprites.render(this.img, src, dest, 1, 'none');
 
-        //this.graphics.ctx.drawImage(this.img, -this.center.x, -this.center.y);
-        //    }
-        for(let i=0;i<this.explosions.length;i++){
-            this.explosions[i].render(); 
+        for(let i = 0; i < this.explosions.length; i++){
+            this.explosions[i].render();
         }
     }
     renderWithOverlay(overlayColor) {

@@ -6,10 +6,6 @@ class game extends modal{
         this.closeButton=true;
         this.title="Level - 1";
         this.text="";
-        this.resize();
-        this.add_buttons();
-        this.no_skin();
-
 
         this.level_start = false;
         this.lastFrameTime = Date.now(); //keeping game loop frame time
@@ -30,15 +26,23 @@ class game extends modal{
         this.level.load('static/levels/level.json');
         this.level.on("loaded",this.start_level.bind(this));
 
-        this.laser_bar   = new percentage_bar_fluid(this.window_manager, new rect(10, 10+1*50, 200, 40), "bar","bar-red-fluid");
-        this.missile_bar = new percentage_bar_fluid(this.window_manager, new rect(30, 10+2*50, 200, 40), "bar","bar-orange-fluid");
-        this.booster_bar = new percentage_bar_fluid(this.window_manager, new rect(30, 10+3*50, 200, 40), "bar","bar-blue-fluid");
-        this.health_bar  = new percentage_bar_fluid(this.window_manager, new rect(10, 10+4*50, 200, 40), "bar","bar-green-fluid");
-        
-        //this.laser_timeout =  new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        //this.missile_timeout =  new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        //this.booster_timeout = new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        this.render_callback(this.updateFrame);
+        // Create HUD bars as children of this modal
+        // Just specify their RELATIVE position - parent will handle absolute positioning
+        this.laser_bar   = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+1*50, 200, 40), "bar", "bar-red-fluid");
+        this.missile_bar = new percentage_bar_fluid(this, this.graphics, new rect(30, 10+2*50, 200, 40), "bar", "bar-orange-fluid");
+        this.booster_bar = new percentage_bar_fluid(this, this.graphics, new rect(30, 10+3*50, 200, 40), "bar", "bar-blue-fluid");
+        this.shield_bar  = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+4*50, 200, 40), "bar", "bar-blue-fluid");
+        this.health_bar  = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+5*50, 200, 40), "bar", "bar-green-fluid");
+
+        // Add bars to parent's ui_components array for automatic management
+        this.ui_components.push(this.laser_bar, this.missile_bar, this.booster_bar, this.shield_bar, this.health_bar);
+
+        // NOW call resize and add_buttons AFTER components are created
+        this.resize();
+        this.add_buttons();
+        this.no_skin();
+
+        this.render_callback(this.updateFrame.bind(this));
 
     }
 
@@ -49,7 +53,28 @@ class game extends modal{
         let window_width = this.graphics.viewport.virtual.width;
         let window_height = this.graphics.viewport.virtual.height;
         this.position = new rect(x, y, window_width, window_height, "left", "top");
-        super.resize();
+
+        // Game window has no_skin(), so internal_rect equals position (no padding)
+        this.internal_rect = new rect(0, 0, this.position.width, this.position.height, "left", "top");
+
+        // Create render positions
+        this.render_position = this.position.clone();
+        this.render_internal_rect = this.internal_rect.clone();
+
+        // Add positions together (in this case, both are at 0,0 so it doesn't change anything)
+        this.render_internal_rect.add(this.render_position);
+
+        // Resize all ui_components with game window position as anchor (no padding)
+        for (let i = 0; i < this.ui_components.length; i++) {
+            if (this.ui_components[i].resize) {
+                this.ui_components[i].resize(this.render_position);
+            }
+        }
+
+        // Resize close button if it exists
+        if (this.closeButton && typeof this.closeButton.resize === 'function') {
+            this.closeButton.resize(this.render_position);
+        }
     }
 
 
@@ -82,6 +107,9 @@ class game extends modal{
             }
 
             // Check spaceship projectiles against NPCs
+            if (this.level.spaceship.projectiles.length > 0 && Math.random() < 0.1) {
+                console.log('[Game] Checking', this.level.spaceship.projectiles.length, 'projectiles against', this.level.npc.length, 'NPCs');
+            }
             for (let p = 0; p < this.level.spaceship.projectiles.length; p++) {
                 const projectile = this.level.spaceship.projectiles[p];
                 for (let i = 0; i < this.level.npc.length; i++) {
@@ -133,7 +161,13 @@ class game extends modal{
                         obj2.apply_to_ship(obj1);
                     } else {
                         // Player ship hit an NPC enemy/debris
-                        obj1.damage(500);  // Collision does heavy damage - 10 collisions to kill
+                        // Apply physics-based collision response (bounce)
+                        obj1.impact2(obj2);
+
+                        // Calculate impact position relative to ship center for shield effect
+                        const impactX = obj2.position.x - obj1.position.x;
+                        const impactY = obj2.position.y - obj1.position.y;
+                        obj1.damage(500, impactX, impactY);  // Collision does heavy damage - 10 collisions to kill
                         obj2.damage(50);
                         obj1.explosion();
                         obj2.explosion();
@@ -146,6 +180,7 @@ class game extends modal{
                         break;
                     }
                     // Player projectile hit NPC
+                    console.log('[Game] Player projectile HIT:', obj2.type, 'Life:', obj2.life, '→', obj2.life - 25);
                     obj1.destroy();
                     obj2.damage(25);
                     obj2.explosion();
@@ -167,8 +202,16 @@ class game extends modal{
 
                 case 'enemy_projectile_ship':
                     // Enemy projectile hit player
+                    // Apply physics collision if shields are up (bounce projectiles)
+                    if (obj2.shield_strength > 0) {
+                        obj1.impact2(obj2);  // Bounce projectile off shields
+                    }
+
+                    // Calculate impact position relative to ship center
+                    const impactX = obj1.position.x - obj2.position.x;
+                    const impactY = obj1.position.y - obj2.position.y;
                     obj1.destroy();
-                    obj2.damage(250);  // Increased damage - should take ~20 hits to kill
+                    obj2.damage(250, impactX, impactY);  // Increased damage - should take ~20 hits to kill
                     obj2.explosion();
                     break;
             }
@@ -181,6 +224,17 @@ class game extends modal{
         const currentTime = Date.now();
         const deltaTime = (currentTime - this.lastFrameTime) / 1000; // Convert to seconds
         this.lastFrameTime = currentTime;
+
+        // window_manager already applies viewport transform, so we work in virtual coordinates
+        const viewport = this.graphics.viewport;
+
+        // Draw green border around game area for debugging
+        this.graphics.ctx.strokeStyle = '#00FF00';
+        this.graphics.ctx.lineWidth = 4;
+        this.graphics.ctx.strokeRect(this.position.x, this.position.y, this.position.width, this.position.height);
+
+        // Modal already handles clipping, so we don't need to save/restore here
+        // Removing ctx.save() and ctx.restore() to preserve viewport transform
 
         // Render scrolling background before everything else
         this.render_background();
@@ -215,6 +269,7 @@ class game extends modal{
                 this.draw_game_over_overlay();
             }
 
+            // No need to restore - modal handles it
             return;
         }
 
@@ -227,7 +282,7 @@ class game extends modal{
             this.level_start = false;
         }
 
-        
+
         this.graphics.viewport.world.y = this.level.position.y;
         let window = {
             y1: this.level.position.y,
@@ -287,16 +342,17 @@ class game extends modal{
 
             this.level.spaceship.update_frame(deltaTime);
             this.level.spaceship.render({ x: 0, y: window.y1 });
+        }
 
-            // Update UI bars
-            let percentage1 = this.level.spaceship.laser_fire_control.get_cooldown_percentage();
-            this.laser_bar.render(percentage1);
-            let percentage3 = this.level.spaceship.missile_fire_control.get_cooldown_percentage();
-            this.missile_bar.render(percentage3);
-            let percentage5 = this.level.spaceship.get_life_percentage();
-            this.health_bar.render(percentage5);
-            let percentage6 = this.level.spaceship.boost_fire_control.get_cooldown_percentage();
-            this.booster_bar.render(percentage6);
+        // No need to restore - modal handles it
+
+        // Update bar percentages (modal will render them automatically after this callback returns)
+        if (this.level.spaceship != null && this.laser_bar && this.missile_bar && this.booster_bar && this.shield_bar && this.health_bar) {
+            this.laser_bar.set_percentage(this.level.spaceship.laser_fire_control.get_cooldown_percentage());
+            this.missile_bar.set_percentage(this.level.spaceship.missile_fire_control.get_cooldown_percentage());
+            this.booster_bar.set_percentage(this.level.spaceship.boost_fire_control.get_cooldown_percentage());
+            this.shield_bar.set_percentage(this.level.spaceship.get_shield_percentage());
+            this.health_bar.set_percentage(this.level.spaceship.get_life_percentage());
         }
 
         // Render score display
@@ -336,12 +392,13 @@ class game extends modal{
         const tiles_needed = Math.ceil(viewport.height / scaled_height) + 1;
         for (let i = -1; i < tiles_needed; i++) {
             const y_pos = i * scaled_height - bg_y_offset;
+            // drawImage with 5 params: image, dx, dy, dWidth, dHeight
             ctx.drawImage(
                 bg_sprite.image,
-                0,
-                y_pos,
-                viewport.width,
-                scaled_height
+                0,              // destination x
+                y_pos,          // destination y
+                viewport.width,  // destination width
+                scaled_height   // destination height
             );
         }
     }
@@ -350,9 +407,9 @@ class game extends modal{
         if (!this.ctx || typeof this.ctx.save !== 'function') return;
 
         const scoreText = `Score: ${this.score}  Kills: ${this.kills}`;
-        // Use virtual viewport dimensions - canvas transform handles scaling
-        const x = this.graphics.viewport.virtual.width - 250;
-        const y = 30;
+        // Position relative to game window
+        const x = this.position.x + this.position.width - 250;
+        const y = this.position.y + 30;
 
         this.ctx.save();
         this.ctx.fillStyle = '#00FF00';
@@ -424,7 +481,9 @@ class game extends modal{
 
     handle_keys(kb) {
         if (this.active==false) return;
-        if (this.level_start == true) {
+
+        // Only accept gameplay input if level has started AND game is not paused
+        if (this.level_start == true && !this.pause_game) {
             // In your game loop, check keysPressed object to determine actions
             if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
             if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
@@ -435,28 +494,23 @@ class game extends modal{
             if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
             if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(50);
             if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(50);
-            if (kb.is_pressed('w') || kb.is_pressed('W')) 
+            if (kb.is_pressed('w') || kb.is_pressed('W'))
             this.level.spaceship.accelerate(50);
             if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(50);
-            //if (kb.is_pressed('Escape')) this.G.level.spaceship.pause();
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
-            
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
-            if (kb.just_stopped('+')) this.level.volume(+1);
-            if (kb.just_stopped('-')) this.level.volume(-1);
-            /*
-            if (kb.just_stopped('ArrowLeft')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowRight')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowUp')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowDown')) this.audio_manager.sound_off();
-*/
-            if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
-
-            if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
-
         }
 
+        // These controls work even when paused
+        if (this.level_start == true) {
+            if (kb.just_stopped('+')) this.level.volume(+1);
+            if (kb.just_stopped('-')) this.level.volume(-1);
+            if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
+            if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
+        }
+
+        // ESC key for pause/unpause
         if (kb.just_stopped('Escape')) {
             // If player is dead, close the game and return to menu
             if (this.level.spaceship && this.level.spaceship.life <= 0) {
@@ -464,16 +518,18 @@ class game extends modal{
                 return;
             }
 
-            if (this.boss_mode_activated) {
-                this.ui.boss_mode_off();
-            } else if (kb.ctrl()) {
-                this.ui.boss_mode_on();
-            } else if (this.pause_game == true) {
+            // Toggle pause
+            if (this.pause_game == true) {
                 this.ui.unpause();
             } else {
                 this.ui.pause();
             }
         }
+    }
+
+    help() {
+        let modal = new help();
+        this.window_manager.add(modal);
     }
 
     delete() {

@@ -80,8 +80,9 @@ class motion{
         direction %= 360;
 
         var rotationInRadians = direction * Math.PI / 180;
-        var ax = Math.sin(rotationInRadians) * this.mass * speed;
-        var ay = -Math.cos(rotationInRadians) * this.mass * speed;
+        // F = ma, so a = F/m (acceleration inversely proportional to mass)
+        var ax = Math.sin(rotationInRadians) * speed / this.mass;
+        var ay = -Math.cos(rotationInRadians) * speed / this.mass;
 
         this.acceleration.x += ax;
         this.acceleration.y += ay;
@@ -131,6 +132,15 @@ class motion{
     }
 
     check_collision(otherObject) {
+        // DEBUG: Check if width/height are defined
+        if (!this.width || !this.height || !otherObject.width || !otherObject.height) {
+            console.error('[Collision] Missing dimensions:', {
+                this: {type: this.type, w: this.width, h: this.height},
+                other: {type: otherObject.type, w: otherObject.width, h: otherObject.height}
+            });
+            return false;
+        }
+
         // First, do a fast bounding box check
         // Use mask_bounds if available for tighter collision
         const thisBounds = this.mask_bounds || {
@@ -163,6 +173,15 @@ class motion{
             return false;
         }
 
+        // DEBUG: Log when AABB passes
+        if (Math.random() < 0.01) { // Only log 1% to avoid spam
+            console.log('[Collision] AABB passed:', {
+                this: this.type,
+                other: otherObject.type,
+                hasMasks: !!(this.collision_mask && otherObject.collision_mask)
+            });
+        }
+
         // If both objects have collision masks, do pixel-perfect check
         if (this.collision_mask && otherObject.collision_mask) {
             return this.check_pixel_collision(otherObject);
@@ -178,12 +197,25 @@ class motion{
         let dy = thisCenterY - otherCenterY;
         let distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Use smaller radii (50% of average dimension) for tighter collisions with masks
-        let thisRadius = Math.min(this.width, this.height) * 0.5;
-        let otherRadius = Math.min(otherObject.width, otherObject.height) * 0.5;
+        // Use larger radii (70% of average dimension) for better collision detection
+        // Small projectiles (16x16) need generous hit zones to feel responsive
+        let thisRadius = Math.min(this.width, this.height) * 0.7;
+        let otherRadius = Math.min(otherObject.width, otherObject.height) * 0.7;
         let combinedRadius = thisRadius + otherRadius;
 
-        return distance < combinedRadius;
+        const isColliding = distance < combinedRadius;
+
+        // DEBUG: Log collisions
+        if (isColliding && Math.random() < 0.05) {
+            console.log('[Collision] CIRCULAR HIT!', {
+                this: this.type,
+                other: otherObject.type,
+                distance: distance.toFixed(2),
+                combinedRadius: combinedRadius.toFixed(2)
+            });
+        }
+
+        return isColliding;
     }
 
     check_pixel_collision(otherObject) {
@@ -199,8 +231,14 @@ class motion{
             otherObject.position.y + otherObject.height
         );
 
-        // Sample pixels in overlap region (every 4 pixels for performance)
-        const step = 4;
+        // Dynamic step size - smaller objects need finer sampling
+        // For 16x16 projectiles, use step=2 (checks 64 pixels)
+        // For larger objects, use step=4 for performance
+        const smallestDimension = Math.min(
+            Math.min(this.width, this.height),
+            Math.min(otherObject.width, otherObject.height)
+        );
+        const step = smallestDimension <= 32 ? 2 : 4;
         for (let y = overlapTop; y < overlapBottom; y += step) {
             for (let x = overlapLeft; x < overlapRight; x += step) {
                 // Get local coordinates for both objects

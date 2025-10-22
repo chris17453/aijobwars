@@ -8,10 +8,10 @@ class Projectile extends game_object {
                     { type: "accelerate", frames: 1 }
                 ];
                 super(window_manager, x, y, 16, 16,
-                    800,                    // mass
-                    rotation,                      // rotation
+                    0.5,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P3.png', 16, 4, 270);
                 this.set_velocity_loss_off();
                 this.set_center(8, 8);
@@ -23,10 +23,10 @@ class Projectile extends game_object {
 
             case 'bolt1':
                 super(window_manager, x, y, 16, 16,
-                    400,                    // mass
-                    rotation,                      // rotation
+                    0.6,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P1.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -39,10 +39,10 @@ class Projectile extends game_object {
                 break;
             case 'bolt2':
                 super(window_manager, x, y, 16, 16,
-                    200,                    // mass
-                    rotation,                      // rotation
+                    0.6,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P2.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -55,10 +55,10 @@ class Projectile extends game_object {
                 break;
             case 'bolt3':
                 super(window_manager, x, y, 16, 16,
-                    800,                    // mass
-                    rotation,                      // rotation
+                    0.5,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P3.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -72,10 +72,10 @@ class Projectile extends game_object {
                 break;
             case 'bolt4':
                 super(window_manager, x, y, 16, 16,
-                    100,                    // mass
-                    rotation,                      // rotation
+                    1,                    // mass (heavier missile, but still light vs ships)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P4.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();

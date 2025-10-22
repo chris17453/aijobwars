@@ -5,7 +5,7 @@ class Enemy extends game_object {
         switch (type) {
             case 'chatgpt':
                 super(window_manager, x, y, 64, 64,
-                    3,                    // mass
+                    5,                    // mass (medium debris)
                     0,                    // rotation
                     12);                  // rotation speed
                 this.set_image('static/debris/email.png'); // Placeholder
@@ -24,7 +24,7 @@ class Enemy extends game_object {
 
             case 'resume':
                 super(window_manager, x, y, 64, 64,
-                    2,                    // mass
+                    4,                    // mass (light debris)
                     0,                    // rotation
                     10);                  // rotation speed
                 this.set_image('static/debris/pdf.png'); // Placeholder
@@ -43,7 +43,7 @@ class Enemy extends game_object {
 
             case 'application':
                 super(window_manager, x, y, 64, 64,
-                    4,                    // mass
+                    6,                    // mass (medium debris)
                     0,                    // rotation
                     8);                   // rotation speed
                 this.set_image('static/debris/phone.png'); // Placeholder

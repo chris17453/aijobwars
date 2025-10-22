@@ -20,6 +20,7 @@ class modal {
       this.bg_gradient = null;
       this.buttons = [];
       this.images = [];
+      this.ui_components = [];  // Array for ui_component-based elements
     } catch (error) {
       this.logger.error(`modal constructor: ${error.message}`);
     }
@@ -189,6 +190,13 @@ class modal {
       if (this.closeButton && typeof this.closeButton.resize === 'function') {
         this.closeButton.resize(this.render_position);
       }
+
+      // Update all ui_component children with render_internal_rect as anchor
+      for (let i = 0; i < this.ui_components.length; i++) {
+        if (this.ui_components[i].resize) {
+          this.ui_components[i].resize(this.render_internal_rect);
+        }
+      }
     } catch (error) {
       this.logger.error(`resize: ${error.message}`);
     }
@@ -309,7 +317,6 @@ class modal {
       if (this.skin) {
         this.sprites.slice_9("window", this.render_position);
       }
-      let internal = this.internal_rect.clone();
 
       ctx.save();
       ctx.beginPath();
@@ -329,23 +336,29 @@ class modal {
       if (this.buttons) {
         this.buttons.forEach((button) => button.render());
       }
-      // Render images (in virtual coordinates - canvas transform handles scaling)
+
+      // Render ui_components
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.render());
+      }
+
+      // Render text using render_internal_rect (absolute position with parent offset)
+      if (this.text) {
+        this.graphics.font.draw_text(this.render_internal_rect, this.text, true, true);
+      }
+
+      // Restore context (using cached ctx reference)
+      ctx.restore();
+
+      // Render images OUTSIDE the clipped region (in virtual coordinates)
       if (this.images) {
         for (let i = 0; i < this.images.length; i++) {
           let image = this.images[i];
           let image_pos = image.position.clone();
           // No viewport.given offset - we're in virtual coordinate space
-          this.graphics.sprites.render(image.key, image_pos, 1, "none");
+          this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
         }
       }
-
-      // Render text
-      if (this.text) {
-        this.graphics.font.draw_text(internal, this.text, true, true);
-      }
-
-      // Restore context (using cached ctx reference)
-      ctx.restore();
 
       if (this.skin && this.sprites && this.graphics.font) {
         this.sprites.slice_3("window-title", this.render_title_position);
@@ -364,6 +377,9 @@ class modal {
       this.active = active;
       if (this.buttons) {
         this.buttons.forEach((button) => button.set_active(active));
+      }
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.set_active(active));
       }
     } catch (error) {
       this.logger.error(`set_active: ${error.message}`);
@@ -392,6 +408,9 @@ class modal {
       this.events = {};
       if (this.buttons) {
         this.buttons.forEach((button) => button.delete());
+      }
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.delete());
       }
       delete this.parent;
       delete this.graphics;

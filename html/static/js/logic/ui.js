@@ -15,12 +15,24 @@ class ui{
         document.getElementById('boss_mode').style.display = 'block';
         this.G.boss_mode_activated=true;
         this.pause_game_mode();
+
+        // Pause background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.pause(this.G.level.track_key);
+        }
     }
     boss_mode_off(){
         document.getElementById('game').style.display = 'block';
         document.getElementById('boss_mode').style.display = 'none';
         this.G.boss_mode_activated=false;
         this.unpause_game_mode();
+
+        // Resume background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.resume(this.G.level.track_key);
+        }
     }
 
     pause(){

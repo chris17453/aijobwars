@@ -21,10 +21,10 @@ class menu extends modal{
         let vw = this.graphics.viewport.virtual.width;
         let vh = this.graphics.viewport.virtual.height;
 
-        // Menu scales with viewport - keep fixed size for now, just center it
+        // Menu scales with viewport - fixed size, left-anchored at 60px
         let window_width = 400;
         let window_height = 600;
-        let x = (vw - window_width) / 2;  // Center horizontally
+        let x = 60;  // Left-anchored at 60 pixels
         let y = (vh - window_height) / 2;  // Center vertically
 
         this.position = new rect(x, y, window_width, window_height, "left", "top");
@@ -80,15 +80,15 @@ class menu extends modal{
     }
 
     resize() {
-        // Recalculate menu position based on new viewport to keep it centered
+        // Recalculate menu position based on new viewport - left-anchored
         if (this.graphics && this.graphics.viewport) {
             let vw = this.graphics.viewport.virtual.width;
             let vh = this.graphics.viewport.virtual.height;
 
-            // Keep menu size fixed, just recenter it
+            // Keep menu size fixed, left-anchored at 60px, vertically centered
             let window_width = 400;
             let window_height = 600;
-            let x = (vw - window_width) / 2;  // Center horizontally
+            let x = 60;  // Left-anchored at 60 pixels
             let y = (vh - window_height) / 2;  // Center vertically
 
             this.position.x = x;

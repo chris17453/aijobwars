@@ -4,20 +4,25 @@ class Ship extends game_object {
 
     constructor(window_manager, x, y, type) {
         super(window_manager, x, y, 128, 153,
-            1,                    // mass
-            0,                      // rotation
-            8);                     // ropration speed
+            10,                   // mass (balanced for responsive movement and collision physics)
+            0,                    // rotation
+            8);                   // rotation speed
         
         this.boost_fire_control = new fire_control(1);
         this.laser_fire_control = new fire_control(5);
         this.missile_fire_control = new fire_control(10);
+        this.shield_fire_control = new fire_control(3, 2000, 2000); // Shield uses fire_control for auto decay/ramp
         this.thrusters = [];
         this.projectiles = [];
         this.booster=null;
         this.bolt_type=null;
         this.missile_type=null;
-        this.shield_active = false;
-        this.shield_end_time = 0;
+
+        // Shield system with decay/ramp
+        this.shield_strength = 100; // 0-100, acts like inverse temperature
+        this.shield_max_strength = 100;
+        this.shield_regen_rate = 1; // Regen per frame when not taking damage
+        this.shield_impacts = []; // Array of {x, y, time, intensity} for impact glow effects
         this.shield_glow_phase = 0; // For animated glow effect
         let speed=5+.5 + Math.random() * 4;
 
@@ -99,19 +104,58 @@ class Ship extends game_object {
         this.booster.set_visible(false);
     }
 
-    activate_shield(duration) {
-        this.shield_active = true;
-        this.shield_end_time = Date.now() + duration;
+    /**
+     * Get shield strength as percentage (0-100)
+     */
+    get_shield_percentage() {
+        return (this.shield_strength / this.shield_max_strength) * 100;
     }
 
-    damage(amount) {
-        // Shield absorbs damage
-        if (this.shield_active) {
-            console.log('[Ship] Shield absorbed ' + amount + ' damage!');
-            return; // No damage taken
+    /**
+     * Take damage - shields deflect damage based on strength percentage
+     * @param {number} amount - Damage amount
+     * @param {number} impactX - X position of impact in world space (optional)
+     * @param {number} impactY - Y position of impact in world space (optional)
+     */
+    damage(amount, impactX = 0, impactY = 0) {
+        // Calculate deflection based on shield strength
+        // 100% shields = 80% deflection (20% damage taken)
+        // 0% shields = 0% deflection (100% damage taken)
+        const maxDeflection = 0.80; // Max 80% deflection at full shields
+        const shieldPercentage = this.shield_strength / this.shield_max_strength;
+        const deflectionPercentage = shieldPercentage * maxDeflection;
+
+        // Calculate actual damage taken
+        const damageDeflected = amount * deflectionPercentage;
+        const damageTaken = amount - damageDeflected;
+
+        // Reduce shield strength based on damage (shields decay when hit)
+        const shieldDecay = amount * 0.15; // Shields lose 15% of incoming damage value
+        this.shield_strength -= shieldDecay;
+        if (this.shield_strength < 0) this.shield_strength = 0;
+
+        // Add impact glow effect at impact point
+        if (shieldPercentage > 0) {
+            // Convert world space impact to ship's local rotated space
+            const rotRad = (this.rotation % 360) * Math.PI / 180;
+            const cos = Math.cos(-rotRad);  // Negative because we're converting TO local space
+            const sin = Math.sin(-rotRad);
+
+            const localX = impactX * cos - impactY * sin;
+            const localY = impactX * sin + impactY * cos;
+
+            this.shield_impacts.push({
+                x: localX,
+                y: localY,
+                time: Date.now(),
+                intensity: Math.min(deflectionPercentage, 1) // Brighter at higher shield strength
+            });
         }
-        // Normal damage
-        super.damage(amount);
+
+        // Apply damage to hull
+        super.damage(damageTaken);
+
+        console.log(`[Ship] Shields at ${(shieldPercentage * 100).toFixed(1)}% deflected ${deflectionPercentage.toFixed(1)}% (${damageDeflected.toFixed(1)} dmg), took ${damageTaken.toFixed(1)} damage`);
     }
 
 
@@ -173,16 +217,22 @@ class Ship extends game_object {
         this.missile_fire_control.update_frame();
         this.boost_fire_control.update_frame();
 
-        // Update shield status
-        if (this.shield_active && Date.now() > this.shield_end_time) {
-            this.shield_active = false;
-            console.log('[Ship] Shield deactivated');
+        // Shield regeneration - automatically ramps back up when not taking damage
+        if (this.shield_strength < this.shield_max_strength) {
+            this.shield_strength += this.shield_regen_rate;
+            if (this.shield_strength > this.shield_max_strength) {
+                this.shield_strength = this.shield_max_strength;
+            }
         }
 
         // Update shield glow animation
-        if (this.shield_active) {
-            this.shield_glow_phase += deltaTime * 3; // Animate shield
-        }
+        this.shield_glow_phase += deltaTime * 3;
+
+        // Remove old impact effects (fade out after 1 second)
+        const currentTime = Date.now();
+        this.shield_impacts = this.shield_impacts.filter(impact =>
+            currentTime - impact.time < 1000
+        );
 
         // Clamp player ship to screen boundaries
         if (this.type === "ship" && this.bolt_type === "bolt3") { // User ship check
@@ -236,8 +286,8 @@ class Ship extends game_object {
     render(window) {
         super.orient(window)
 
-        // Draw shield glow if active
-        if (this.shield_active) {
+        // Only draw shield during impact events (when there are active impacts)
+        if (this.shield_impacts.length > 0) {
             this.render_shield();
         }
 
@@ -254,7 +304,7 @@ class Ship extends game_object {
             projectile.render()
             projectile.de_orient()
         }
-        super.de_orient()
+        // Removed duplicate de_orient() - it was popping the viewport transform off the stack
     }
 
     render_shield() {
@@ -264,27 +314,87 @@ class Ship extends game_object {
 
         ctx.save();
 
-        // Create pulsing shield effect
-        const pulseAlpha = 0.3 + Math.sin(this.shield_glow_phase) * 0.2;
-        const radius = 70 + Math.sin(this.shield_glow_phase) * 5;
+        // Calculate shield opacity based on strength (affects impact brightness)
+        const shieldAlpha = (this.shield_strength / this.shield_max_strength);
 
-        // Outer glow
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-        gradient.addColorStop(0, `rgba(0, 150, 255, 0)`);
-        gradient.addColorStop(0.7, `rgba(0, 200, 255, ${pulseAlpha})`);
-        gradient.addColorStop(1, `rgba(100, 220, 255, ${pulseAlpha * 1.5})`);
+        // Shield bubble radius - the protective sphere around the ship
+        const shieldRadius = 80; // Shield extends beyond ship
 
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.fill();
+        // Render impact glows - show section of shield bubble around impact area
+        const currentTime = Date.now();
+        for (let impact of this.shield_impacts) {
+            const age = currentTime - impact.time;
+            const lifetime = 800;
+            const progress = age / lifetime;
 
-        // Inner shield circle
-        ctx.strokeStyle = `rgba(150, 230, 255, ${pulseAlpha * 2})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, radius - 5, 0, Math.PI * 2);
-        ctx.stroke();
+            // Fade out over time
+            const impactAlpha = (1 - progress) * impact.intensity * shieldAlpha;
+
+            // Pulse effect - oscillates during impact
+            const pulsePhase = (1 - progress) * Math.PI * 4; // 4 pulses over lifetime
+            const pulse = 0.7 + Math.sin(pulsePhase) * 0.3; // Oscillate between 0.4 and 1.0
+
+            // Calculate impact direction (normalize)
+            const distance = Math.sqrt(impact.x * impact.x + impact.y * impact.y) || 1;
+            const dirX = impact.x / distance;
+            const dirY = impact.y / distance;
+
+            // Project impact to shield surface
+            const impactX = dirX * shieldRadius;
+            const impactY = dirY * shieldRadius;
+
+            // Draw the shield arc/section around impact point
+            // Arc size expands over time
+            const arcSize = 60 + (progress * 40); // Angular size in degrees
+            const arcAngle = arcSize * Math.PI / 180;
+
+            // Calculate angle of impact direction
+            const impactAngle = Math.atan2(dirY, dirX);
+
+            // Draw multiple layers for depth - inner bright ring, outer glow
+            for (let layer = 0; layer < 3; layer++) {
+                const layerRadius = shieldRadius + (layer * 15);
+                const layerAlpha = impactAlpha * (1 - layer * 0.3) * pulse;
+
+                // Create gradient along the shield surface - BLUE
+                const gradient = ctx.createRadialGradient(
+                    0, 0, shieldRadius - 5,
+                    0, 0, layerRadius
+                );
+
+                gradient.addColorStop(0, `rgba(100, 150, 255, 0)`);
+                gradient.addColorStop(0.8, `rgba(80, 180, 255, ${layerAlpha * 0.7})`);
+                gradient.addColorStop(1, `rgba(100, 200, 255, ${layerAlpha * 0.9})`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                // Draw arc section around impact point
+                ctx.arc(0, 0, layerRadius,
+                    impactAngle - arcAngle / 2,
+                    impactAngle + arcAngle / 2);
+                ctx.arc(0, 0, shieldRadius - 5,
+                    impactAngle + arcAngle / 2,
+                    impactAngle - arcAngle / 2,
+                    true);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Add bright blue impact flash at center of arc with pulse
+            const flashGradient = ctx.createRadialGradient(
+                impactX, impactY, 0,
+                impactX, impactY, 30
+            );
+            flashGradient.addColorStop(0, `rgba(200, 230, 255, ${impactAlpha * pulse * 1.0})`);
+            flashGradient.addColorStop(0.4, `rgba(100, 180, 255, ${impactAlpha * pulse * 0.8})`);
+            flashGradient.addColorStop(0.7, `rgba(80, 150, 255, ${impactAlpha * pulse * 0.5})`);
+            flashGradient.addColorStop(1, `rgba(60, 120, 255, 0)`);
+
+            ctx.fillStyle = flashGradient;
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.restore();
     }
@@ -304,9 +414,9 @@ class Ship extends game_object {
     }
 
     create_death_explosion() {
-        // Create multiple expanding circular rings of explosions
-        const rings = 4;
-        const explosionsPerRing = 12;
+        // Create more modest explosion effect to prevent browser lockup
+        const rings = 2;  // Reduced from 4 to 2
+        const explosionsPerRing = 6;  // Reduced from 12 to 6
 
         // Get ship's current world position
         const shipX = this.position.x;
@@ -319,40 +429,51 @@ class Ship extends game_object {
             return;
         }
 
-        for (let ring = 0; ring < rings; ring++) {
-            const radius = 30 + (ring * 40); // Expanding rings
-            const delay = ring * 100; // Stagger the rings
-
-            setTimeout(() => {
-                for (let i = 0; i < explosionsPerRing; i++) {
-                    const angle = (i / explosionsPerRing) * Math.PI * 2;
-                    const offsetX = Math.cos(angle) * radius;
-                    const offsetY = Math.sin(angle) * radius;
-
-                    // Create explosion as world object
-                    let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
-                    exp.set_sub();  // Mark as sub-object so it doesn't collide
-                    level.level.npc.push(exp);  // Add to level's NPC list
-                }
-
-                // Add some random explosions in the middle for each ring
-                for (let i = 0; i < 5; i++) {
-                    const randomAngle = Math.random() * Math.PI * 2;
-                    const randomRadius = Math.random() * radius;
-                    const offsetX = Math.cos(randomAngle) * randomRadius;
-                    const offsetY = Math.sin(randomAngle) * randomRadius;
-
-                    let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
-                    exp.set_sub();
-                    level.level.npc.push(exp);
-                }
-            }, delay);
-        }
-
-        // Add a big central explosion at ship position
+        // Add a big central explosion at ship position immediately
         let centerExp = new Explosion(this.window_manager, shipX, shipY);
         centerExp.set_sub();
         level.level.npc.push(centerExp);
+
+        // Create staggered rings with requestAnimationFrame instead of setTimeout
+        let currentRing = 0;
+        const createRing = () => {
+            if (currentRing >= rings) return;
+
+            const radius = 30 + (currentRing * 50);
+
+            // Create ring explosions
+            for (let i = 0; i < explosionsPerRing; i++) {
+                const angle = (i / explosionsPerRing) * Math.PI * 2;
+                const offsetX = Math.cos(angle) * radius;
+                const offsetY = Math.sin(angle) * radius;
+
+                let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
+                exp.set_sub();
+                level.level.npc.push(exp);
+            }
+
+            // Add 2 random explosions per ring (reduced from 5)
+            for (let i = 0; i < 2; i++) {
+                const randomAngle = Math.random() * Math.PI * 2;
+                const randomRadius = Math.random() * radius;
+                const offsetX = Math.cos(randomAngle) * randomRadius;
+                const offsetY = Math.sin(randomAngle) * randomRadius;
+
+                let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
+                exp.set_sub();
+                level.level.npc.push(exp);
+            }
+
+            currentRing++;
+
+            // Schedule next ring using setTimeout (100ms delay)
+            if (currentRing < rings) {
+                setTimeout(createRing, 100);
+            }
+        };
+
+        // Start creating rings after a small delay
+        setTimeout(createRing, 100);
     }
 
 }//end ship class

@@ -15,20 +15,18 @@ class help extends modal{
 
         this.text = "| Key           | Action                 |\n" +
             "|---------------|------------------------|\n" +
-            "| Q             | Quit the game          |\n" +
-            "| Arrow Left    | Bank left              |\n" +
-            "| Arrow Right   | Bank right             |\n" +
-            "| Arrow Up      | Accelerate             |\n" +
-            "| Arrow Down    | Decelerate             |\n" +
-            "| STRAFING      | WASD                   |\n" +
+            "| Arrow Keys    | Bank left/right        |\n" +
+            "|               | Accelerate/decelerate  |\n" +
+            "| WASD          | Strafe movement        |\n" +
             "| Space         | Fire lasers            |\n" +
             "| Enter         | Fire Missiles          |\n" +
+            "| Shift         | Boost                  |\n" +
             "| M             | Toggle Sound           |\n" +
             "| +             | Volume up              |\n" +
             "| -             | Volume down            |\n" +
             "| Escape        | Toggle Pause           |\n" +
-            "| CTRL + Escape | Turn on boss mode      |\n" +
-            "| Escape        | Exit (from boss mode)  |\n";
+            "| Tab           | Boss Mode (toggle)     |\n" +
+            "| H             | Show this help         |\n";
 
             this.resize();
             this.add_buttons();

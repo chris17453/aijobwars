@@ -1,33 +1,52 @@
-class events{
-    constructor(){
-        this.events = {}; // Object to hold events
-
-    }
-
-on(event_name, callback) {
-    if (!this.events[event_name]) {
-      this.events[event_name] = [];
-    }
-    this.events[event_name].push(callback);
+class events {
+  constructor(logger) {
+    this.events = {}; // Object to hold events
+    this.logger = logger || console;
   }
 
-  emit(event_name, data=null) {
-    if (data==null) {
-      data={};
-    }
-    if(this.hasOwnProperty('parent')){
-      data.parent=this.parent;
-    }
-    data.instance=this;
-    data.event=event_name;
-    
-
-    if (this.events[event_name]) {
-      this.events[event_name].forEach(callback => callback(data));
+  on(event_name, callback) {
+    try {
+      if (typeof event_name !== 'string') {
+        throw new Error("Event name must be a string");
+      }
+      if (typeof callback !== 'function') {
+        throw new Error("Callback must be a function");
+      }
+      if (!this.events[event_name]) {
+        this.events[event_name] = [];
+      }
+      this.events[event_name].push(callback);
+    } catch (error) {
+      this.logger.error(`on(${event_name}): ${error.message}`);
     }
   }
 
-}class point{
+  emit(event_name, data = null) {
+    try {
+      if (data == null) {
+        data = {};
+      }
+      if (this.hasOwnProperty('parent')) {
+        data.parent = this.parent;
+      }
+      data.instance = this;
+      data.event = event_name;
+
+      if (this.events[event_name]) {
+        this.events[event_name].forEach(callback => {
+          try {
+            callback(data);
+          } catch (cbError) {
+            this.logger.error(`emit(${event_name}) callback error: ${cbError.message}`);
+          }
+        });
+      }
+    } catch (error) {
+      this.logger.error(`emit(${event_name}): ${error.message}`);
+    }
+  }
+}
+class point{
     constructor(x,y){
         this.x=x;
         this.y=y;
@@ -238,101 +257,186 @@ class grid {
     }
 }
 class audio_manager {
-    constructor() {
-        this.defaultSounds = new Map();
-        this.playingSounds = new Map();
+    constructor(logger) {
+        this.audioBuffers = new Map(); // Decoded audio buffers
+        this.audioSources = new Map(); // Currently playing sources
         this.playSounds = true;
         this.defaultVolume = 0.4;
+        this.logger = logger || console;
+
+        // Create Web Audio API context
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Create master gain node for volume control
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.gain.value = this.defaultVolume;
+        this.masterGain.connect(this.audioContext.destination);
     }
 
-    add(key, audioPath=null) {
-        if (audioPath==null) audioPath=key;
-        const sound = new Audio(audioPath);
-        sound.volume = this.defaultVolume;
-
-        this.defaultSounds.set(key, sound);
-
-        if (!this.playingSounds.has(key)) {
-            this.playingSounds.set(key, []);
+    sanitize_path(path) {
+        if (typeof path !== 'string') {
+            throw new Error("Invalid audio path type");
         }
+        // Basic sanitization: remove potentially dangerous characters
+        return path.replace(/[<>"'`;]/g, '');
+    }
 
-        return sound; // Return the default audio object
+    async add(key, audioPath = null) {
+        try {
+            if (audioPath === null) audioPath = key;
+            audioPath = this.sanitize_path(audioPath);
+
+            // Fetch and decode audio buffer
+            const response = await fetch(audioPath);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+            // Store the decoded buffer
+            this.audioBuffers.set(key, audioBuffer);
+
+            return audioBuffer;
+        } catch (error) {
+            console.error(`add(${key}): ${error.message}`);
+            throw error;
+        }
     }
 
     get(key) {
-        if (this.defaultSounds.has(key)) {
-            return this.defaultSounds.get(key);
-        } else {
-            return false;
+        try {
+            if (this.audioBuffers.has(key)) {
+                return this.audioBuffers.get(key);
+            } else {
+                console.warn(`get(${key}): Sound not found`);
+                return false;
+            }
+        } catch (error) {
+            console.error(`get(${key}): ${error.message}`);
+            throw error;
         }
     }
 
     is_playing(key) {
-        if (!this.playingSounds.has(key)) {
+        try {
+            return this.audioSources.has(key) && this.audioSources.get(key) !== null;
+        } catch (error) {
+            console.error(`is_playing(${key}): ${error.message}`);
             return false;
         }
-
-        return this.playingSounds.get(key).length > 0;
     }
 
-    async play(key) {
-        console.log("Attempting Playing: "+key)
-        if (this.playSounds && this.defaultSounds.has(key)) {
-            const defaultSound = this.defaultSounds.get(key); // Get the default audio object
-            const clonedSound = defaultSound.cloneNode(true); // Clone the default audio object
-            this.playingSounds.get(key).push(clonedSound); // Save cloned sound in array
-            
-            await new Promise((resolve) => {
-                clonedSound.addEventListener('loadeddata', resolve);
-            });
-            clonedSound.volume=this.defaultVolume;
-            clonedSound.play(); // Play the cloned audio object
-            console.log("Playing: "+key)
-            
-            // Remove sound from playingSounds map when it finishes playing
-            clonedSound.addEventListener('ended', () => {
-                const index = this.playingSounds.get(key).indexOf(clonedSound);
-                if (index !== -1) {
-                    this.playingSounds.get(key).splice(index, 1);
+    async play(key, startTime = 0, loop = false) {
+        try {
+            // Resume audio context if suspended (browser autoplay policy)
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+
+            if (!this.playSounds || !this.audioBuffers.has(key)) {
+                console.warn(`play(${key}): Sound not available or playback disabled`);
+                return;
+            }
+
+            // Stop any currently playing instance
+            this.stop(key);
+
+            const audioBuffer = this.audioBuffers.get(key);
+
+            // Create source node
+            const source = this.audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.loop = loop; // Enable looping for background music
+
+            // Create gain node for this source
+            const gainNode = this.audioContext.createGain();
+            gainNode.gain.value = 1.0;
+
+            // Connect: source -> gain -> master gain -> destination
+            source.connect(gainNode);
+            gainNode.connect(this.masterGain);
+
+            // Store source and gain for later control
+            this.audioSources.set(key, { source, gainNode, startedAt: this.audioContext.currentTime - startTime });
+
+            // Start playback from offset
+            source.start(0, startTime);
+
+            // Clean up when finished (only for non-looping sounds)
+            if (!loop) {
+                source.onended = () => {
+                    if (this.audioSources.get(key)?.source === source) {
+                        this.audioSources.delete(key);
+                    }
+                };
+            }
+
+        } catch (error) {
+            console.error(`play(${key}): ${error.message}`, error);
+        }
+    }
+
+    stop(key) {
+        try {
+            const sourceData = this.audioSources.get(key);
+            if (sourceData) {
+                try {
+                    sourceData.source.stop();
+                } catch (e) {
+                    // Already stopped
                 }
-            });
+                this.audioSources.delete(key);
+            }
+        } catch (error) {
+            console.error(`stop(${key}): ${error.message}`);
         }
     }
 
-    async stop(key) {
-        if (this.playingSounds.has(key)) {
-            this.playingSounds.get(key).forEach(sound => {
-                sound.pause();
-                sound.currentTime = 0;
-            });
-            this.playingSounds.set(key, []); // Clear the array
+    pause(key) {
+        // Web Audio API doesn't have pause, so we stop and track position
+        try {
+            const sourceData = this.audioSources.get(key);
+            if (sourceData) {
+                const elapsed = this.audioContext.currentTime - sourceData.startedAt;
+                const wasLooping = sourceData.source.loop;
+                this.stop(key);
+                // Store pause position and loop state
+                this.audioSources.set(key + '_paused', { elapsed, loop: wasLooping });
+            }
+        } catch (error) {
+            console.error(`pause(${key}): ${error.message}`);
         }
     }
 
-    async pause(key) {
-        if (this.playingSounds.has(key)) {
-            this.playingSounds.get(key).forEach(sound => {
-                sound.pause();
-            });
+    async resume(key) {
+        // Resume from paused position
+        try {
+            const pausedData = this.audioSources.get(key + '_paused');
+            if (pausedData) {
+                const startTime = pausedData.elapsed || 0;
+                const loop = pausedData.loop || false;
+                this.audioSources.delete(key + '_paused');
+                await this.play(key, startTime, loop);
+            }
+        } catch (error) {
+            console.error(`resume(${key}): ${error.message}`);
         }
     }
 
     sound_off() {
-        this.playSounds = false;
-        this.playingSounds.forEach(sounds => {
-            sounds.forEach(sound => {
-                sound.pause();
-            });
-        });
+        try {
+            this.playSounds = false;
+            this.masterGain.gain.value = 0;
+        } catch (error) {
+            console.error(`sound_off: ${error.message}`);
+        }
     }
 
     sound_on() {
-        this.playSounds = true;
-        this.playingSounds.forEach(sounds => {
-            sounds.forEach(sound => {
-                sound.play();
-            });
-        });
+        try {
+            this.playSounds = true;
+            this.masterGain.gain.value = this.defaultVolume;
+        } catch (error) {
+            console.error(`sound_on: ${error.message}`);
+        }
     }
 
     set_volume(key, volume) {
@@ -340,16 +444,26 @@ class audio_manager {
             console.error("Invalid volume value");
             return;
         }
-
-        if (this.playingSounds.has(key)) {
-            this.playingSounds.get(key).forEach(sound => {
-                sound.volume = volume;
-            });
+        try {
+            const sourceData = this.audioSources.get(key);
+            if (sourceData && sourceData.gainNode) {
+                sourceData.gainNode.gain.value = volume;
+            }
+        } catch (error) {
+            console.error(`set_volume(${key}): ${error.message}`);
         }
+    }
 
-        if (this.defaultSounds.has(key)) {
-            const defaultSound = this.defaultSounds.get(key);
-            defaultSound.volume = volume;
+    set_master_volume(volume) {
+        if (volume == null || isNaN(volume)) {
+            console.error("Invalid volume value");
+            return;
+        }
+        try {
+            this.defaultVolume = volume;
+            this.masterGain.gain.value = volume;
+        } catch (error) {
+            console.error(`set_master_volume: ${error.message}`);
         }
     }
 }
@@ -402,18 +516,20 @@ class sprites extends events{
         this.add("title","static/intro/AI-JOB-WARS-3-24-2024.png");
 
 
-        this.add("email",    "static/debris/email.png");
-        this.add("pdf",      "static/debris/pdf.png");
-        this.add("phone",    "static/debris/phone.png");
-        this.add("webex2",   "static/debris/webex2.png");
-        this.add("block",    "static/blocks/block.png");
-        this.add("exp_9",    "static/explosion/exp_9_128x128_35frames_strip35.png");
-        this.add("ship1",    "static/ships/ship1.png");
-        this.add("teams",    "static/ships/teams.png");
-        this.add("Arcane",   "static/projectiles/Arcane Bolt.png");
-        this.add("Firebomb", "static/projectiles/Firebomb.png");
-        this.add("Water",    "static/ships/Water Bolt.png");
-        this.add("booster",  "static/ships/booster.png");
+        this.add("static/debris/email.png",    "static/debris/email.png");
+        this.add("static/debris/pdf.png",      "static/debris/pdf.png");
+        this.add("static/debris/phone.png",    "static/debris/phone.png");
+        this.add("static/debris/webex2.png",   "static/debris/webex2.png");
+        this.add("static/blocks/block.png",    "static/blocks/block.png");
+        this.add("static/explosion/exp_9_128x128_35frames_strip35.png",    "static/explosion/exp_9_128x128_35frames_strip35.png");
+        this.add("static/ships/ship1.png",    "static/ships/ship1.png");
+        this.add("static/ships/teams.png",    "static/ships/teams.png");
+        this.add("static/projectiles/Arcane Bolt.png",   "static/projectiles/Arcane Bolt.png");
+        this.add("static/projectiles/Firebomb.png", "static/projectiles/Firebomb.png");
+        this.add("static/ships/Water Bolt.png",    "static/ships/Water Bolt.png");
+        this.add("static/ships/booster.png",  "static/ships/booster.png");
+        this.add("static/projectiles/P2.png", "static/projectiles/P2.png");
+        this.add("static/scene/bg_stars.png", "static/scene/bg_stars.png");
 
 
         this.on_load();
@@ -461,7 +577,9 @@ class sprites extends events{
                 x: x,
                 y: y,
                 width: width || image.width,
-                height: height || image.height
+                height: height || image.height,
+                collision_mask: null,  // Cache for collision mask
+                mask_bounds: null      // Cache for mask bounds
             };
 
         });
@@ -479,10 +597,47 @@ class sprites extends events{
         });
     }    
 
+    get_or_create_collision_mask(key, position) {
+        const sprite = this.sprites[key];
+        if (!sprite) {
+            console.log("Missing image: " + key);
+            return null;
+        }
+
+        // Return cached mask if it exists
+        if (sprite.collision_mask && sprite.mask_bounds) {
+            return {
+                collision_mask: sprite.collision_mask,
+                mask_bounds: sprite.mask_bounds
+            };
+        }
+
+        // Generate mask for the first time
+        const pixelData = this.get_data(key, position);
+        if (!pixelData) return null;
+
+        // Create boolean mask (true = solid pixel)
+        sprite.collision_mask = new Array(position.width * position.height);
+        for (let i = 0; i < position.width * position.height; i++) {
+            const alpha = pixelData[i * 4 + 3]; // Get alpha channel
+            sprite.collision_mask[i] = alpha > 50; // Threshold for solid pixels
+        }
+
+        // Calculate tight bounding box from mask
+        sprite.mask_bounds = this.get_bounds(key, position);
+
+        console.log(`[Sprite] Collision mask generated for '${key}': ${position.width}x${position.height}`);
+
+        return {
+            collision_mask: sprite.collision_mask,
+            mask_bounds: sprite.mask_bounds
+        };
+    }
+
     get_bounds(key,position){
         let data=this.get_data(key,position);
-        
-        
+
+
         let left = position.width;
         let top = position.height;
         let right = 0;
@@ -642,39 +797,60 @@ class sprites extends events{
             return;
         }
 
-        let source_outer = new rect(s.x, s.y, s.width, s.height);
-        let source_inner = new rect(s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2);
+        // Round destination rect
+        let dx = Math.round(dest.x);
+        let dy = Math.round(dest.y);
+        let dw = Math.round(dest.width);
+        let dh = Math.round(dest.height);
 
-        let dest_outer = new rect(dest.x, dest.y, dest.width, dest.height);
-        let dest_inner = new rect(dest.x + x_margin, dest.y + y_margin, dest.width - x_margin * 2, dest.height - y_margin * 2);
-        
-        // Assuming grid class and rect class are properly defined and instantiated
-        let source_grid = new grid(source_outer, source_inner, 9);
-        let dest_grid = new grid(dest_outer, dest_inner, 9);
+        // Top row starts at dy
+        let top_y = dy;
+        let top_h = y_margin;
 
-        // Draw each quadrant
-        for (let index = 0; index < 9; index++) {
-            let dx = dest_grid.quadrants[index].x;
-            let dy = dest_grid.quadrants[index].y;
-            let dWidth = dest_grid.quadrants[index].width;
-            let dHeight = dest_grid.quadrants[index].height;
+        // Middle row starts where top ends
+        let mid_y = top_y + top_h;
+        let mid_h = dh - y_margin - y_margin;
 
-            // Calculate source dimensions
-            let sx = source_grid.quadrants[index].x;
-            let sy = source_grid.quadrants[index].y;
-            let sWidth = source_grid.quadrants[index].width;
-            let sHeight = source_grid.quadrants[index].height;
+        // Bottom row starts where middle ends
+        let bot_y = mid_y + mid_h;
+        let bot_h = (dy + dh) - bot_y;
 
-            // Create pattern for tiling if not a corner quadrant
-            if ([0, 2, 6, 8].includes(index)) { // Corners
-                this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, sWidth, sHeight);
-            }
-            if ([1, 3, 4,  5, 7].includes(index)) { // Other quadrants are tileds
+        // Left column starts at dx
+        let left_x = dx;
+        let left_w = x_margin;
 
-                this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+        // Center column starts where left ends
+        let center_x = left_x + left_w;
+        let center_w = dw - x_margin - x_margin;
 
-            }
-        }
+        // Right column starts where center ends
+        let right_x = center_x + center_w;
+        let right_w = (dx + dw) - right_x;
+
+        // Draw the 9 quadrants - each quadrant starts exactly where the previous one ended
+        // Top row
+        this.ctx.drawImage(s.image, s.x, s.y, x_margin, y_margin,
+                          left_x, top_y, left_w, top_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y, s.width - x_margin * 2, y_margin,
+                          center_x, top_y, center_w, top_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y, x_margin, y_margin,
+                          right_x, top_y, right_w, top_h);
+
+        // Middle row
+        this.ctx.drawImage(s.image, s.x, s.y + y_margin, x_margin, s.height - y_margin * 2,
+                          left_x, mid_y, left_w, mid_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2,
+                          center_x, mid_y, center_w, mid_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + y_margin, x_margin, s.height - y_margin * 2,
+                          right_x, mid_y, right_w, mid_h);
+
+        // Bottom row
+        this.ctx.drawImage(s.image, s.x, s.y + s.height - y_margin, x_margin, y_margin,
+                          left_x, bot_y, left_w, bot_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y + s.height - y_margin, s.width - x_margin * 2, y_margin,
+                          center_x, bot_y, center_w, bot_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + s.height - y_margin, x_margin, y_margin,
+                          right_x, bot_y, right_w, bot_h);
     }
 
     slice_3(key, dest) {
@@ -737,289 +913,349 @@ class sprites extends events{
 
 
 }class sprite_font {
-    constructor(ctx,sprites, image_key) {
-        this.sprites = sprites;
-        this.ctx=ctx;
-        this.characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_~#\"'&()[]|`\\/@" + "°+=*$£€<>";
-        this.image =image_key;
-        this.spacing_width=1;
-        this.mono_char_width = 22;
-        this.mono_char_height = 27;
-        this.char_width = 46;
-        this.char_height = 43;
-        this.chars_per_row = 5;
-        this.char_data = [];
-        this.sprite=this.sprites.get(this.image);
+  constructor(ctx, sprites, image_key, logger, viewport) {
+    this.sprites = sprites;
+    this.ctx = ctx;
+    this.viewport = viewport;
+    this.logger = logger || console;
+    this.characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_~#\"'&()[]|`\\/@" +
+      "°+=*$£€<>";
+    this.image = this.sanitize_path(image_key);
+    this.spacing_width = 1;
+    this.mono_char_width = 22;
+    this.mono_char_height = 27;
+    this.char_width = 46;
+    this.char_height = 43;
+    this.chars_per_row = 5;
+    this.char_data = [];
+    this.sprite = this.sprites.get(this.image);
 
-        this.calculate_char_data();
+    this.calculate_char_data();
+  }
 
+  sanitize_path(path) {
+    if (typeof path !== "string") {
+      throw new Error("Invalid image key type");
     }
+    return path.replace(/[<>"'`;]/g, "");
+  }
 
+  calculate_char_data() {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      for (let i = 0; i < this.characters.length; i++) {
+        const char = this.characters[i];
+        const sx = (i % this.chars_per_row) * this.char_width;
+        const sy = Math.floor(i / this.chars_per_row) * this.char_height;
+        let sub_rect = new rect(sx, sy, this.char_width, this.char_height);
+        const char_bounds = this.sprites.get_bounds(this.image, sub_rect);
+        const char_data = {
+          character: char,
+          left: char_bounds.left + sx,
+          top: char_bounds.top + sy,
+          right: char_bounds.right + sx,
+          bottom: char_bounds.bottom + sy,
+          width: char_bounds.right - char_bounds.left,
+          height: char_bounds.bottom - char_bounds.top,
+          stride: char_bounds.right - char_bounds.left + 1,
+          baseline: char_bounds.top
+        };
+        this.char_data.push(char_data);
+      }
+    } catch (error) {
+      this.logger.error(`calculate_char_data: ${error.message}`);
+      throw error;
+    }
+  }
 
-    calculate_char_data() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  get_character(char) {
+    try {
+      return this.char_data.find(char_data => char_data.character === char);
+    } catch (error) {
+      this.logger.error(`get_character(${char}): ${error.message}`);
+      return null;
+    }
+  }
 
-        for (let i = 0; i < this.characters.length; i++) {
-            const char = this.characters[i];
-            const sx = (i % this.chars_per_row) * this.char_width;
-            const sy = Math.floor(i / this.chars_per_row) * this.char_height; // Fixed typo: replaced 'o' with 'i'
-            let sub_rect=new rect(sx,sy,this.char_width,this.char_height);
-            const char_bounds = this.sprites.get_bounds(this.image,sub_rect);
-
-
-
-            const char_data = {
-                character: char,
-                left: char_bounds.left + sx,
-                top: char_bounds.top + sy,
-                right: char_bounds.right + sx,
-                bottom: char_bounds.bottom + sy,
-                width: char_bounds.right - char_bounds.left,
-                height: char_bounds.bottom - char_bounds.top,
-                stride: char_bounds.right - char_bounds.left + 1,
-                baseline: char_bounds.top
-            };
-            this.char_data.push(char_data);
+  get_bounds(text, monospace = false) {
+    try {
+      let x = 0,
+        y = 0,
+        max_x = 0;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === " ") {
+          x += this.mono_char_width;
+          continue;
         }
-    }
-
-
-
-    get_character(char) {
-        return this.char_data.find(char_data => char_data.character === char);
-    }
-
-    get_bounds(text,monospace=false){
-        try {
-            let x = 0,y=0,max_x=0;
-
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                // Use get_character to retrieve character data
-                if(char==" ")  {
-                    x+=this.mono_char_width;
-                    continue;
-                }
-                if(char=="\n")  {
-                    y+=this.mono_char_height;
-                    max_x=Math.max(max_x, x);
-                    x=0;
-                    continue;
-                }
-                const char_data = this.get_character(char);
-            
-                if (!char_data) continue;
-                if(monospace) x+=this.mono_char_width;
-                else {
-                    if (i<text.length-1) x+=this.spacing_width;
-                    x += char_data.width;
-                }
-
-            }
-            if (y==0)y=this.mono_char_height;
-            max_x=Math.max(max_x, x);
-            return new rect(0,0,max_x,y,"left","top")
-        } catch (error) {
-            console.error("Error loading image:", error);
+        if (char === "\n") {
+          y += this.mono_char_height;
+          max_x = Math.max(max_x, x);
+          x = 0;
+          continue;
         }
-    }
-    
-    
-    draw_text(position, text,centered=false,monospace=false) {
-        position=position.clone();
-        try {
-            let lines=text.split("\n");
-            if (centered) {
-                position.y= position.center_y-(lines.length*this.mono_char_height)/2;
-            } 
-            
-            
-            for (let line in lines){
-                this.draw_single_text(position,lines[line],centered,monospace);
-                position.y+=this.mono_char_height;
-            }
-        } catch (error) {
-            console.error("Error loading image:", error);
+        const char_data = this.get_character(char);
+        if (!char_data) continue;
+        if (monospace) {
+          x += this.mono_char_width;
+        } else {
+          if (i < text.length - 1) x += this.spacing_width;
+          x += char_data.width;
         }
+      }
+      if (y === 0) y = this.mono_char_height;
+      max_x = Math.max(max_x, x);
+      return new rect(0, 0, max_x, y, "left", "top");
+    } catch (error) {
+      this.logger.error(`get_bounds: ${error.message}`);
     }
+  }
 
-    draw_single_text(position, text,centered=false,monospace=false) {
-        try {
-                if (!this.chars_per_row) {
-                console.error("Image not loaded");
-                return;
-            }
+  draw_text(position, text, centered = false, monospace = false) {
+    try {
+      let lines = text.split("\n");
+      if (centered) {
+        position.y = position.center_y - (lines.length * this.mono_char_height) / 2;
+      }
+      for (let line in lines) {
+        this.draw_single_text(position, lines[line], centered, monospace);
+        position.y += this.mono_char_height;
+      }
+    } catch (error) {
+      this.logger.error(`draw_text: ${error.message}`);
+    }
+  }
 
-            let pos_x,padding=0;
-            let pos_y= position.y;
-            if (centered) {
-                pos_x = position.center_x;
-            } else {
-                pos_x = position.x;
-            }
-            if(centered){
-                let bounds=this.get_bounds(text,monospace);
-                pos_x-=bounds.center_x;
-            }
+  draw_single_text(position, text, centered = false, monospace = false) {
+    try {
+      if (!this.chars_per_row) {
+        this.logger.error("draw_single_text: Image not loaded");
+        return;
+      }
 
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                // Use get_character to retrieve character data
-                if(char==" ")  {
-                    pos_x+=this.mono_char_width;
-                    continue;
-                }
-                if (char=="\n") return;
-                const char_data = this.get_character(char);
-                if (!char_data) continue;
-               // if(monospace) padding=(this.mono_char_width-char_data.stride)/2;
-                this.ctx.drawImage(
-                    this.sprite.image,
-                    char_data.left,
-                    char_data.top,
-                    char_data.width,
-                    char_data.height,
-                    pos_x+padding,
-                    pos_y + char_data.baseline,
-                    char_data.width,
-                    char_data.height
-                );
-                if(monospace) pos_x+=this.mono_char_width;
-                else 
-                pos_x += char_data.width+this.spacing_width;
-                padding=0;
-            }
-        } catch (error) {
-            console.error("Error loading image:", error);
+      let pos_x, padding = 0;
+      let pos_y = position.y;
+      if (centered) {
+        pos_x = position.center_x;
+      } else {
+        pos_x = position.x;
+      }
+      if (centered) {
+        let bounds = this.get_bounds(text, monospace);
+        pos_x -= bounds.center_x;
+      }
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === " ") {
+          pos_x += this.mono_char_width;
+          continue;
         }
+        if (char === "\n") return;
+        const char_data = this.get_character(char);
+        if (!char_data) continue;
+
+        // Draw at virtual coordinates - canvas transform handles scaling
+        this.ctx.drawImage(
+          this.sprite.image,
+          char_data.left,
+          char_data.top,
+          char_data.width,
+          char_data.height,
+          pos_x + padding,
+          pos_y + char_data.baseline,
+          char_data.width,
+          char_data.height
+        );
+        if (monospace) {
+          pos_x += this.mono_char_width;
+        } else {
+          pos_x += char_data.width + this.spacing_width;
+        }
+        padding = 0;
+      }
+    } catch (error) {
+      this.logger.error(`draw_single_text: ${error.message}`);
     }
+  }
 }
-
-class button extends events{
-  constructor(parent,graphics, label,position,anchor_position, callback, up_image, down_image) {
+class button extends events {
+  constructor(parent, graphics, label, position, anchor_position, callback, up_image, down_image, logger) {
     super();
-    this.parent=parent;
-    this.graphics = graphics;
-    this.ctx = graphics.ctx;
-    this.sprites = graphics.sprites;
-    this.up_image = up_image;
-    this.down_image = down_image;
-    this.label = label;
-    this.is_down = false;
-    this.is_hover = false;
-    this.monospaced=false;
-    this.centered = false;
-    this.active=true;
-    
-    
-    let x_pad=20;
-    let y_pad=20;
-    let bounds=this.graphics.font.get_bounds(label,this.monospaced);
-    if (position.width==null) position.width=bounds.width+x_pad*2;
-    if (position.height==null) position.height=bounds.height+y_pad*2;
-    this.inner=new rect((position.width-bounds.width)/2,(position.height-bounds.height)/2,bounds.width,bounds.height);
-        this.position = position;  
-    this.anchor_position=anchor_position;
-    //if(this.anchor_position==null) console.log("OMG!");
+    this.logger = logger || console;
+    try {
+      this.parent = parent;
+      this.graphics = graphics;
+      this.ctx = graphics.ctx;
+      this.sprites = graphics.sprites;
+      // Sanitize image paths
+      this.up_image = this.sanitize_path(up_image);
+      this.down_image = this.sanitize_path(down_image);
+      this.label = label;
+      this.is_down = false;
+      this.is_hover = false;
+      this.monospaced = false;
+      this.centered = false;
+      this.active = true;
 
+      let x_pad = 20;
+      let y_pad = 20;
+      let bounds = this.graphics.font.get_bounds(label, this.monospaced);
+      if (position.width == null) position.width = bounds.width + x_pad * 2;
+      if (position.height == null) position.height = bounds.height + y_pad * 2;
+      this.inner = new rect((position.width - bounds.width) / 2, (position.height - bounds.height) / 2, bounds.width, bounds.height);
+      this.position = position;
+      this.anchor_position = anchor_position;
 
-    graphics.canvas.addEventListener('mousedown', this.handle_mouse_down.bind(this));
-    graphics.canvas.addEventListener('mouseup', this.handle_mouse_up.bind(this));
-    graphics.canvas.addEventListener('mousemove', this.handle_mouse_move.bind(this));
-    this.callback=callback;
-   // this.resize();
+      // Store bound event handlers to enable proper removal later
+      this._bound_mouse_down = this.handle_mouse_down.bind(this);
+      this._bound_mouse_up = this.handle_mouse_up.bind(this);
+      this._bound_mouse_move = this.handle_mouse_move.bind(this);
+
+      graphics.canvas.addEventListener('mousedown', this._bound_mouse_down);
+      graphics.canvas.addEventListener('mouseup', this._bound_mouse_up);
+      graphics.canvas.addEventListener('mousemove', this._bound_mouse_move);
+      this.callback = callback;
+    } catch (error) {
+      this.logger.error(`button constructor: ${error.message}`);
+      throw error;
+    }
   }
 
-  resize(anchor_position){
-    this.anchor_position=anchor_position;
+  sanitize_path(path) {
+    if (typeof path !== 'string') {
+      throw new Error("Invalid path type");
+    }
+    // Basic sanitization: remove potentially dangerous characters
+    return path.replace(/[<>"'`;]/g, '');
   }
 
+  resize(anchor_position) {
+    try {
+      this.anchor_position = anchor_position;
+    } catch (error) {
+      this.logger.error(`resize: ${error.message}`);
+    }
+  }
 
   render() {
-    if(this.active!=true) return;
-    let relative_position = this.position.clone();
-    let relative_inner = this.inner.clone();
-    relative_position.add(this.anchor_position)
-    relative_inner.add(relative_position)
-    //relative_position._x_mode="left";
-    //relative_position._y_mode="top";
-    let img=this.up_image;
-    if (this.is_down) {
-      img=this.down_image;
-    } else if (this.is_hover) {
-      relative_position.x+=2;
-      relative_position.y+=2;
-      relative_inner.x+=2;  
-      relative_inner.y+=2;
+    try {
+      if (this.active !== true) return;
+
+      // Work in virtual coordinates - canvas transform handles scaling
+      let relative_position = this.position.clone();
+      let relative_inner = this.inner.clone();
+
+      relative_position.add(this.anchor_position);
+      relative_inner.add(relative_position);
+
+      let img = this.up_image;
+      if (this.is_down) {
+        img = this.down_image;
+      } else if (this.is_hover) {
+        relative_position.x += 2;
+        relative_position.y += 2;
+        relative_inner.x += 2;
+        relative_inner.y += 2;
+      }
+
+      this.sprites.slice_9(img, relative_position, 10, 10);
+      this.graphics.font.draw_text(relative_inner, this.label, this.centered, this.monospaced);
+    } catch (error) {
+      this.logger.error(`render: ${error.message}`);
     }
-
-    this.sprites.slice_9(img,relative_position ,10,10);
-    
-    //this.sprites.draw_colored_rectangle(relative_position,"red");
-    //this.sprites.draw_colored_rectangle(relative_inner,"blue");
-    this.graphics.font.draw_text(relative_inner, this.label,this.centered, this.monospaced);
-
-}
+  }
 
   handle_mouse_down(event) {
-    if(this.active!=true) return;
-
-    if(this.is_down) return;
-    if (this.is_inside(event.offsetX, event.offsetY)) {
-      this.is_down = true;
-
+    try {
+      if (this.active !== true) return;
+      if (this.is_down) return;
+      if (this.is_inside(event.offsetX, event.offsetY)) {
+        this.is_down = true;
+      }
+    } catch (error) {
+      this.logger.error(`handle_mouse_down: ${error.message}`);
     }
   }
 
   handle_mouse_up(event) {
-
-    if(this.active!=true) return;
-    //console.log("Button: IN Clicked");
-    if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
-      if(this.is_down == true) {
-        //console.log("Button: Clicked");
-        if(this.callback) {
-          this.callback.bind(this.parent)({parent:this.parent,event:event,instance:this});
+    try {
+      if (this.active !== true) return;
+      if (this.is_down && this.is_inside(event.offsetX, event.offsetY)) {
+        if (this.is_down === true) {
+          if (this.callback) {
+            this.callback.bind(this.parent)({ parent: this.parent, event: event, instance: this });
+          }
+          this.emit('click', event);
         }
-        this.emit('click', event); // Emit 'click' event
       }
+      this.is_down = false;
+    } catch (error) {
+      this.logger.error(`handle_mouse_up: ${error.message}`);
     }
-    this.is_down=false;
-    //console.log("Button: OUT  Clicked");
-    
   }
 
   handle_mouse_move(event) {
-    if(this.active!=true) return;
+    try {
+      if (this.active !== true) return;
+      let previously_hover = this.is_hover;
+      this.is_hover = this.is_inside(event.offsetX, event.offsetY);
 
-    let previously_hover = this.is_hover;
-    this.is_hover = this.is_inside(event.offsetX, event.offsetY);
-
-    if (this.is_hover && !previously_hover) {
-      this.emit('mouseover', event); // Emit 'mouseover' event
-    } else if (!this.is_hover && previously_hover) {
-      this.emit('mouseout', event); // Emit 'mouseout' event
+      if (this.is_hover && !previously_hover) {
+        this.emit('mouseover', event);
+      } else if (!this.is_hover && previously_hover) {
+        this.emit('mouseout', event);
+      }
+    } catch (error) {
+      this.logger.error(`handle_mouse_move: ${error.message}`);
     }
   }
 
   is_inside(mouse_x, mouse_y) {
-    let relative_position = this.position.clone();
-    relative_position.add(this.anchor_position)
+    try {
+      // Convert mouse coordinates from physical pixels to virtual coordinates
+      const viewport = this.graphics.viewport;
+      const scale = viewport.scale;
 
-    return mouse_x >= relative_position.x && mouse_x <= relative_position.x + relative_position.width &&
-      mouse_y >= relative_position.y && mouse_y <= relative_position.y + relative_position.height;
-  }
-  set_active(active){
-    this.active=active;
-  }
-  delete(){
-      // Remove all event listeners
-      this.graphics.canvas.removeEventListener('mousedown', this.handle_mouse_down.bind(this));
-      this.graphics.canvas.removeEventListener('mouseup', this.handle_mouse_up.bind(this));
-      this.graphics.canvas.removeEventListener('mousemove', this.handle_mouse_move.bind(this));
+      // Calculate the viewport centering offset (in physical pixels)
+      const renderedWidth = viewport.virtual.width * scale.x;
+      const renderedHeight = viewport.virtual.height * scale.y;
+      const offsetX = (viewport.given.width - renderedWidth) / 2;
+      const offsetY = (viewport.given.height - renderedHeight) / 2;
 
-      // Clear other properties
+      // Transform mouse coordinates: subtract offset, then divide by scale
+      const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+      const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+      // Check collision in virtual coordinate space
+      let relative_position = this.position.clone();
+      relative_position.add(this.anchor_position);
+
+      return virtual_mouse_x >= relative_position.x &&
+             virtual_mouse_x <= relative_position.x + relative_position.width &&
+             virtual_mouse_y >= relative_position.y &&
+             virtual_mouse_y <= relative_position.y + relative_position.height;
+    } catch (error) {
+      this.logger.error(`is_inside: ${error.message}`);
+      return false;
+    }
+  }
+
+  set_active(active) {
+    try {
+      this.active = active;
+    } catch (error) {
+      this.logger.error(`set_active: ${error.message}`);
+    }
+  }
+
+  delete() {
+    try {
+      this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
+      this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
+      this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+
       delete this.parent;
       delete this.graphics;
       delete this.ctx;
@@ -1036,299 +1272,682 @@ class button extends events{
       delete this.position;
       delete this.anchor_position;
       delete this.callback;
+      delete this._bound_mouse_down;
+      delete this._bound_mouse_up;
+      delete this._bound_mouse_move;
+    } catch (error) {
+      this.logger.error(`delete: ${error.message}`);
+    }
   }
-
 }
-class modal {
-    constructor(){
-        this.window_manager=null;
-        this.parent=null;
-        this.graphics = null;
-        this.active=false;
-        this.events = {}; 
-        this.ok=null;
-        this.cancel=null;
-        this.close=null;
-        this.title = null;
-        this.text = null;
-        this.position = null;
-        this.skin=true;
-        this.external_render_callback=null;
-        this.background=null;
-        this.bg_gradient=null;
+class seekbar extends events {
+    constructor(parent, graphics, position, anchor_position, get_progress_callback, seek_callback, logger) {
+        super();
+        this.logger = logger || console;
+        try {
+            this.parent = parent;
+            this.graphics = graphics;
+            this.ctx = graphics.ctx;
+            this.position = position;
+            this.anchor_position = anchor_position;
+            this.get_progress_callback = get_progress_callback; // Function that returns {current, total, paused}
+            this.seek_callback = seek_callback; // Function called when user seeks
+            this.active = true;
+            this.is_dragging = false;
 
-        this.buttons = [];
-        this.images=[];
-    }
-    
-    //default init assignemnt from windo manager
-    init(window_manager){
-        this.window_manager=window_manager;
-        this.graphics=window_manager.graphics;
-        this.audio_manager=window_manager.audio_manager;
-        this.canvas = this.graphics.canvas;
-        this.sprites = this.graphics.sprites;
-    }
-    add_bg_gradient(percentage,color){
-        if (this.bg_gradient==null) this.bg_gradient=[];
-        this.bg_gradient.push([percentage,color])
-    }
+            // Store bound event handlers
+            this._bound_mouse_down = this.handle_mouse_down.bind(this);
+            this._bound_mouse_up = this.handle_mouse_up.bind(this);
+            this._bound_mouse_move = this.handle_mouse_move.bind(this);
 
-    //opverride this for new layout
-    layout2(position, title, text, cancel = false, ok = true,close=false) {
-        this.active=true;
-        this.ok=ok;
-        this.cancel=cancel;
-        this.close=close;
-        this.title = title;
-        this.text = text;
-        this.position = position;
-
-    }
-
-    no_skin(){
-        this.skin=false;
-    }
-    
-    set_background(background){
-        this.background=background;
-    }
-
-    add_buttons(){
-
-        // Adjust button positions relative to the internal rectangle
-        let mode="center";
-
-        if (this.close) {
-            var button_position=new rect(this.position.width-80,-30,42,42);
-            this.close = this.create_button("", button_position, null,"window-close-up", "window-close-down");
-            this.close.on('click', () => { this.emit('close', { instance: this }); });
+            graphics.canvas.addEventListener('mousedown', this._bound_mouse_down);
+            graphics.canvas.addEventListener('mouseup', this._bound_mouse_up);
+            graphics.canvas.addEventListener('mousemove', this._bound_mouse_move);
+        } catch (error) {
+            this.logger.error(`seekbar constructor: ${error.message}`);
+            throw error;
         }
-
-
-        if (this.ok) {
-            var button_position=new rect(this.position.left+100,this.position.bottom-60);
-            let ok_instance = this.add_button("Ok", button_position, null,"button-up-cyan", "button-down-cyan");
-            ok_instance.on('click', () => { this.emit('ok', { instance: this }); });
-        }
-        if (this.cancel) {
-            var button_position=new rect(this.position.right-100,this.position.bottom-60);
-            let cancel_instance = this.add_button("Cancel", button_position,mode,"button-up-red", "button-down-red");
-            cancel_instance.on('click', () => { this.emit('cancel', { instance: this }); });
-        }
-
-        // Add event listener for keydown event
-        document.addEventListener('keydown', this.handle_key_down.bind(this));
-    }
-    handle_keys(){
-
     }
 
-    resize(){
-        //let modal_sprite = this.sprites.get(["window"]);
-        //let title_sprite = this.sprites.get(["window-title"]);
-
-        // Set default modal size and position if not specified
-        //this.position.width = this.position.width || modal_sprite.width;
-        //this.position.height = this.position.height || modal_sprite.height;
-        
-        // Calculate title position within the modal
-        this.title_position = new rect(
-            (160)/2,
-            -20,
-            this.position.width - 160,
-            80,
-            "left","top"
-        );
-
-
-        // Calculate internal rectangle position with padding
-        //if(this.close!=true && this.close!=null) {
-            //this.close.position=new rect(this.position.width-80,-30,42,42);
-       // }
-        let x_padding=34;
-        let y_padding=[30,50] ;
-        let y_offset=0;
-        if(this.skin==false) {
-            x_padding=0;
-            y_padding=[0,0];
-            y_offset=0;
-        }
-        this.internal_rect = new rect(
-            x_padding,
-            y_offset+y_padding[0],
-            this.position.width - x_padding*2,
-            this.position.height- y_offset - y_padding[0]-y_padding[1],
-            "left","top"
-        );
-
-
-
-        this.render_position=this.position.clone();
-        this.render_title_position=this.title_position.clone();
-        this.render_internal_rect=this.internal_rect.clone();
-        //lets recalculate the positions..
-        this.render_position.add(this.graphics.viewport.given);
-        this.render_title_position.add(this.render_position);
-        this.render_internal_rect.add(this.render_position);
-        for(let i=0;i<this.buttons.length;i++) {
-            this.buttons[i].resize(this.render_internal_rect);
-        }
-
-    }
-    
-
-    create_button(label, position,callback, up_image, down_image) {
-        // Create and setup the new button
-        let anchor_position=new rect(0,0,0,0);
-        anchor_position.add(this.graphics.viewport.given);
-        anchor_position.add(this.position);
-        anchor_position.add(this.internal_rect);
-        
-        let new_button = new button(this,this.graphics, label, position,anchor_position,callback,up_image, down_image);
-        new_button.on('click', () => { this.emit('click', { instance: this }); });
-        return new_button;
-    }
-
-
-    add_button(label, position,callback, up_image, down_image) {
-        let new_button=this.create_button(label, position,callback, up_image, down_image);
-        this.buttons.push(new_button);
-        return new_button;
-    }
-
-    add_image(position, key){
-        let image = { position: position, key: key };
-        this.images.push(image);
-        return image;
-    }
-    
-    del_image(image){
-        const index = this.images.findIndex(img => img.key === image.key);
-        if (index !== -1) {
-            this.images.splice(index, 1);
-            return true; // Return true if the image was successfully removed
-        }
-        return false; // Return false if the image was not found
-    }
-    render_callback(callback){
-        this.external_render_callback=callback;
-
-    }
-    handle_key_down(event) {
-        if(this.active!=true) return;
-        
-        // Handle keydown event
-        this.emit('keydown', { instance: this, event: event });
-    }
-
-    on(event_name, callback) {
-        if (!this.events[event_name]) {
-            this.events[event_name] = [];
-        }
-        this.events[event_name].push(callback);
-    }
-
-    emit(event_name, data) {
-        if (this.events[event_name]) {
-            this.events[event_name].forEach(callback => callback(data));
+    resize(anchor_position) {
+        try {
+            this.anchor_position = anchor_position;
+        } catch (error) {
+            this.logger.error(`resize: ${error.message}`);
         }
     }
 
     render() {
-        if (this.active==false) return;
-                // Begin the path for the clipping region
-        //if you want to do some direct drawing on the canvas... from external of the windo manager
+        try {
+            if (this.active !== true) return;
 
-        if (this.skin)this.sprites.slice_9("window",this.render_position);
-        let internal=this.internal_rect.clone();
+            const progress_data = this.get_progress_callback();
+            if (!progress_data) return;
 
-        this.graphics.ctx.save();
-        this.graphics.ctx.beginPath();
-        this.graphics.ctx.rect(this.render_internal_rect.x,this.render_internal_rect.y,this.render_internal_rect.width,this.render_internal_rect.height);
-        this.graphics.ctx.clip(); // Sets the clipping region
+            const {current, total, paused} = progress_data;
 
-        if (this.external_render_callback!=null) this.external_render_callback(this.render_internal_rect);
+            // Ensure we have valid numbers
+            if (typeof current !== 'number' || typeof total !== 'number') return;
 
-        //this.sprites.draw_colored_rectangle(this.position,"red");
-        //this.sprites.draw_colored_rectangle(internal,"blue");
-        // Render buttons
-        this.buttons.forEach(button => button.render());
-        for(let i=0;i<this.images.length;i++) {
-            let image=this.images[i];
-            let image_pos=image.position.clone();
-            if (this.graphics.viewport.given)
-            {
-                image_pos.add(this.graphics.viewport.given);
+            // Calculate absolute position
+            let relative_position = this.position.clone();
+            relative_position.add(this.anchor_position);
+
+            const seekbar_x = relative_position.x;
+            const seekbar_y = relative_position.y;
+            const seekbar_width = this.position.width;
+            const seekbar_height = this.position.height;
+
+            // Calculate progress
+            const progress = total > 0 ? Math.min(1, current / total) : 0;
+
+            this.ctx.save();
+
+            // Background track
+            this.ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+            this.ctx.fillRect(seekbar_x, seekbar_y, seekbar_width, seekbar_height);
+
+            // Progress bar
+            this.ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+            this.ctx.fillRect(seekbar_x, seekbar_y, seekbar_width * progress, seekbar_height);
+
+            // Handle (thumb)
+            const handle_x = seekbar_x + (seekbar_width * progress);
+            const handle_width = 10;
+            this.ctx.fillStyle = '#00FFFF';
+            this.ctx.fillRect(handle_x - handle_width/2, seekbar_y - 5, handle_width, seekbar_height + 10);
+
+            // Time display
+            const current_time_str = this.format_time(current / 1000);
+            const total_time_str = this.format_time(total / 1000);
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.font = '14px monospace';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`${current_time_str} / ${total_time_str}`, seekbar_x, seekbar_y - 10);
+
+            // Pause/Play indicator
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(paused ? '[PAUSED]' : '[PLAYING]', seekbar_x + seekbar_width, seekbar_y - 10);
+
+            this.ctx.restore();
+        } catch (error) {
+            this.logger.error(`render: ${error.message}`);
+        }
+    }
+
+    format_time(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    handle_mouse_down(event) {
+        try {
+            if (this.active !== true) return;
+            if (this.is_inside(event.offsetX, event.offsetY)) {
+                this.is_dragging = true;
+                this.emit('seek_start');
+                this.handle_seek(event.offsetX, event.offsetY);
             }
-            this.graphics.sprites.render(image.key, image_pos, 1,'none') ;
+        } catch (error) {
+            this.logger.error(`handle_mouse_down: ${error.message}`);
         }
+    }
 
-        // Render text
-        if (this.text) {
-          this.graphics.font.draw_text(internal,this.text, true, true);
+    handle_mouse_up(event) {
+        try {
+            if (this.active !== true) return;
+            if (this.is_dragging) {
+                this.is_dragging = false;
+                this.emit('seek_end');
+            }
+        } catch (error) {
+            this.logger.error(`handle_mouse_up: ${error.message}`);
         }
-        this.graphics.ctx.restore();
-        if (this.skin) {
-            //title is the last overlay
-            this.sprites.slice_3("window-title",this.render_title_position);
-            this.graphics.font.draw_text(this.render_title_position,this.title, true,false);
+    }
+
+    handle_mouse_move(event) {
+        try {
+            if (this.active !== true) return;
+            if (this.is_dragging) {
+                this.handle_seek(event.offsetX, event.offsetY);
+            }
+        } catch (error) {
+            this.logger.error(`handle_mouse_move: ${error.message}`);
         }
-        if (this.close!=null) this.close.render();
     }
 
-    set_active(active){
-        this.active=active;
-        this.buttons.forEach(button => button.set_active(active));
-        //this.images.forEach(button => button.set_active(active));
+    handle_seek(mouse_x, mouse_y) {
+        try {
+            const progress_data = this.get_progress_callback();
+            if (!progress_data) return;
+
+            // Transform mouse coordinates to virtual space
+            const viewport = this.graphics.viewport;
+            const scale = viewport.scale;
+            const renderedWidth = viewport.virtual.width * scale.x;
+            const renderedHeight = viewport.virtual.height * scale.y;
+            const offsetX = (viewport.given.width - renderedWidth) / 2;
+            const offsetY = (viewport.given.height - renderedHeight) / 2;
+            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+
+            let relative_position = this.position.clone();
+            relative_position.add(this.anchor_position);
+
+            const seekbar_x = relative_position.x;
+            const seekbar_width = this.position.width;
+
+            // Calculate new time based on click position (in virtual coordinates)
+            const click_ratio = Math.max(0, Math.min(1, (virtual_mouse_x - seekbar_x) / seekbar_width));
+            const new_time = progress_data.total * click_ratio;
+
+            if (this.seek_callback) {
+                this.seek_callback(new_time);
+            }
+
+            this.emit('seek', {time: new_time, ratio: click_ratio});
+        } catch (error) {
+            this.logger.error(`handle_seek: ${error.message}`);
+        }
     }
 
-    close() {
-        if(this.active!=true) return;
+    is_inside(mouse_x, mouse_y) {
+        try {
+            if (this.active !== true || !this.position || !this.anchor_position) return false;
 
-        // Close the modal and clean up if necessary
-        this.emit('close', { instance: this });
-        console.log("Modal: Close Window");
-        document.removeEventListener('keydown', this.handle_key_down.bind(this));
+            // Transform mouse coordinates to virtual space
+            const viewport = this.graphics.viewport;
+            const scale = viewport.scale;
+            const renderedWidth = viewport.virtual.width * scale.x;
+            const renderedHeight = viewport.virtual.height * scale.y;
+            const offsetX = (viewport.given.width - renderedWidth) / 2;
+            const offsetY = (viewport.given.height - renderedHeight) / 2;
+            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+            let relative_position = this.position.clone();
+            relative_position.add(this.anchor_position);
+
+            // Expand clickable area slightly above and below the bar
+            const clickable_padding = 5;
+
+            return virtual_mouse_x >= relative_position.x &&
+                   virtual_mouse_x <= relative_position.x + this.position.width &&
+                   virtual_mouse_y >= relative_position.y - clickable_padding &&
+                   virtual_mouse_y <= relative_position.y + this.position.height + clickable_padding;
+        } catch (error) {
+            this.logger.error(`is_inside: ${error.message}`);
+            return false;
+        }
     }
 
-
-    close() {
-        //if(this.active != true) return;
-    
-        // Close the modal and clean up if necessary
-        this.emit('close', { instance: this });
-        console.log("Modal: Close Window");
-    
-       this.delete();
-    }
-    delete(){
-        
-        // Remove all event listeners
-        document.removeEventListener('keydown', this.handle_key_down.bind(this));
-        
-        // Clear the events object
-        this.events = {};
-    
-        // Delete the objects
-        this.buttons.forEach(button=>button.delete());
-        delete this.parent;
-        delete this.graphics;
-        delete this.canvas;
-        delete this.sprites;
-        delete this.ok;
-        delete this.cancel;
-        delete this.title;
-        delete this.text;
-        delete this.position;
-        delete this.external_render_callback;
-        delete this.buttons;
-        delete this.images;
-        delete this.images;
-        // Set active to false
-        this.active = false;
+    set_active(active) {
+        try {
+            this.active = active;
+        } catch (error) {
+            this.logger.error(`set_active: ${error.message}`);
+        }
     }
 
+    delete() {
+        try {
+            // Set active to false first to prevent any ongoing operations
+            this.active = false;
+
+            if (this.graphics && this.graphics.canvas) {
+                this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
+                this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
+                this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+            }
+
+            delete this.parent;
+            delete this.graphics;
+            delete this.ctx;
+            delete this.position;
+            delete this.anchor_position;
+            delete this.get_progress_callback;
+            delete this.seek_callback;
+            delete this.is_dragging;
+            delete this._bound_mouse_down;
+            delete this._bound_mouse_up;
+            delete this._bound_mouse_move;
+        } catch (error) {
+            if (this.logger) {
+                this.logger.error(`delete: ${error.message}`);
+            }
+        }
+    }
+}
+class modal {
+  constructor(logger) {
+    this.logger = logger || console;
+    try {
+      this.window_manager = null;
+      this.parent = null;
+      this.graphics = null;
+      this.active = false;
+      this.events = {};
+      this.ok = null;
+      this.cancel = null;
+      // Rename the close property to avoid clashing with the close() method
+      this.closeButton = null;
+      this.title = null;
+      this.text = null;
+      this.position = null;
+      this.skin = true;
+      this.external_render_callback = null;
+      this.background = null;
+      this.bg_gradient = null;
+      this.buttons = [];
+      this.images = [];
+      this.ui_components = [];  // Array for ui_component-based elements
+    } catch (error) {
+      this.logger.error(`modal constructor: ${error.message}`);
+    }
+  }
+
+  // Default init assignment from window manager
+  init(window_manager) {
+    try {
+      this.window_manager = window_manager;
+      this.graphics = window_manager.graphics;
+      this.audio_manager = window_manager.audio_manager;
+      this.canvas = this.graphics.canvas;
+      this.sprites = this.graphics.sprites;
+    } catch (error) {
+      this.logger.error(`init: ${error.message}`);
+    }
+  }
+
+  add_bg_gradient(percentage, color) {
+    try {
+      if (this.bg_gradient == null) {
+        this.bg_gradient = [];
+      }
+      this.bg_gradient.push([percentage, color]);
+    } catch (error) {
+      this.logger.error(`add_bg_gradient: ${error.message}`);
+    }
+  }
+
+  // Override this for new layout
+  layout2(position, title, text, cancel = false, ok = true, close = false) {
+    try {
+      this.active = true;
+      this.ok = ok;
+      this.cancel = cancel;
+      // Use the renamed property for the close button
+      this.closeButton = close;
+      this.title = title;
+      this.text = text;
+      this.position = position;
+    } catch (error) {
+      this.logger.error(`layout2: ${error.message}`);
+    }
+  }
+
+  no_skin() {
+    try {
+      this.skin = false;
+    } catch (error) {
+      this.logger.error(`no_skin: ${error.message}`);
+    }
+  }
+
+  set_background(background) {
+    try {
+      // If background is a string, sanitize it
+      if (typeof background === "string") {
+        background = this.sanitize_path(background);
+      }
+      this.background = background;
+    } catch (error) {
+      this.logger.error(`set_background: ${error.message}`);
+    }
+  }
+
+  sanitize_path(path) {
+    try {
+      if (typeof path !== "string") {
+        throw new Error("Invalid background path type");
+      }
+      return path.replace(/[<>"'`;]/g, "");
+    } catch (error) {
+      this.logger.error(`sanitize_path: ${error.message}`);
+      throw error;
+    }
+  }
+
+  add_buttons() {
+    try {
+      let mode = "center";
+      // Store bound reference so that removeEventListener works correctly
+      this._bound_handle_key_down = this.handle_key_down.bind(this);
+
+      if (this.closeButton) {
+        // Close button is positioned relative to modal edge (not internal_rect)
+        let button_position = new rect(this.position.width - 50, -20, 42, 42);
+        let anchor_position = new rect(0, 0, 0, 0);
+        anchor_position.add(this.position); // Only add modal position, NOT internal_rect
+        this.closeButton = new button(this, this.graphics, "", button_position, anchor_position, null, "window-close-up", "window-close-down");
+        this.closeButton.on("click", () => {
+          this.emit("close", { instance: this });
+        });
+      }
+
+      if (this.ok) {
+        let button_position = new rect(this.position.left + 100, this.position.bottom - 60);
+        let ok_instance = this.add_button("Ok", button_position, null, "button-up-cyan", "button-down-cyan");
+        ok_instance.on("click", () => {
+          this.emit("ok", { instance: this });
+        });
+      }
+      if (this.cancel) {
+        let button_position = new rect(this.position.right - 100, this.position.bottom - 60);
+        let cancel_instance = this.add_button("Cancel", button_position, mode, "button-up-red", "button-down-red");
+        cancel_instance.on("click", () => {
+          this.emit("cancel", { instance: this });
+        });
+      }
+
+      // Add event listener for keydown events
+      document.addEventListener("keydown", this._bound_handle_key_down);
+    } catch (error) {
+      this.logger.error(`add_buttons: ${error.message}`);
+    }
+  }
+
+  handle_keys() {
+    // Placeholder for handling keys if needed
+  }
+
+  resize() {
+    try {
+      // Work entirely in virtual coordinates - canvas transform handles scaling
+
+      // Calculate title position within the modal
+      this.title_position = new rect(
+        160 / 2,
+        -20,
+        this.position.width - 160,
+        80,
+        "left",
+        "top"
+      );
+
+      let x_padding = 34;
+      let y_padding = [30, 50];
+      let y_offset = 0;
+      if (this.skin === false) {
+        x_padding = 0;
+        y_padding = [0, 0];
+        y_offset = 0;
+      }
+      this.internal_rect = new rect(
+        x_padding,
+        y_offset + y_padding[0],
+        this.position.width - x_padding * 2,
+        this.position.height - y_offset - y_padding[0] - y_padding[1],
+        "left",
+        "top"
+      );
+
+      // Create render positions (no scaling needed - work in virtual coords)
+      this.render_position = this.position.clone();
+      this.render_title_position = this.title_position.clone();
+      this.render_internal_rect = this.internal_rect.clone();
+
+      // Add positions together (all in virtual coordinate space)
+      this.render_title_position.add(this.render_position);
+      this.render_internal_rect.add(this.render_position);
+
+      // Regular buttons are anchored to internal_rect
+      for (let i = 0; i < this.buttons.length; i++) {
+        this.buttons[i].resize(this.render_internal_rect);
+      }
+
+      // Close button is anchored to modal position (not internal_rect)
+      if (this.closeButton && typeof this.closeButton.resize === 'function') {
+        this.closeButton.resize(this.render_position);
+      }
+
+      // Update all ui_component children with render_internal_rect as anchor
+      for (let i = 0; i < this.ui_components.length; i++) {
+        if (this.ui_components[i].resize) {
+          this.ui_components[i].resize(this.render_internal_rect);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`resize: ${error.message}`);
+    }
+  }
+
+  create_button(label, position, callback, up_image, down_image) {
+    try {
+      // Anchor position is in virtual coordinates (no viewport.given offset needed)
+      // Canvas transform handles all scaling and positioning
+      let anchor_position = new rect(0, 0, 0, 0);
+      anchor_position.add(this.position);
+      anchor_position.add(this.internal_rect);
+
+      let new_button = new button(this, this.graphics, label, position, anchor_position, callback, up_image, down_image);
+      new_button.on("click", () => {
+        this.emit("click", { instance: this });
+      });
+      return new_button;
+    } catch (error) {
+      this.logger.error(`create_button: ${error.message}`);
+      return null;
+    }
+  }
+
+  add_button(label, position, callback, up_image, down_image) {
+    try {
+      let new_button = this.create_button(label, position, callback, up_image, down_image);
+      if (new_button) {
+        this.buttons.push(new_button);
+      }
+      return new_button;
+    } catch (error) {
+      this.logger.error(`add_button: ${error.message}`);
+      return null;
+    }
+  }
+
+  add_image(position, key) {
+    try {
+      let image = { position: position, key: key };
+      this.images.push(image);
+      return image;
+    } catch (error) {
+      this.logger.error(`add_image: ${error.message}`);
+      return null;
+    }
+  }
+
+  del_image(image) {
+    try {
+      const index = this.images.findIndex((img) => img.key === image.key);
+      if (index !== -1) {
+        this.images.splice(index, 1);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`del_image: ${error.message}`);
+      return false;
+    }
+  }
+
+  render_callback(callback) {
+    try {
+      this.external_render_callback = callback;
+    } catch (error) {
+      this.logger.error(`render_callback: ${error.message}`);
+    }
+  }
+
+  handle_key_down(event) {
+    try {
+      if (this.active !== true) return;
+      this.emit("keydown", { instance: this, event: event });
+    } catch (error) {
+      this.logger.error(`handle_key_down: ${error.message}`);
+    }
+  }
+
+  on(event_name, callback) {
+    try {
+      if (!this.events[event_name]) {
+        this.events[event_name] = [];
+      }
+      this.events[event_name].push(callback);
+    } catch (error) {
+      this.logger.error(`on(${event_name}): ${error.message}`);
+    }
+  }
+
+  emit(event_name, data) {
+    try {
+      if (this.events[event_name]) {
+        this.events[event_name].forEach((callback) => {
+          try {
+            callback(data);
+          } catch (cbError) {
+            this.logger.error(`emit(${event_name}) callback error: ${cbError.message}`);
+          }
+        });
+      }
+    } catch (error) {
+      this.logger.error(`emit(${event_name}): ${error.message}`);
+    }
+  }
+
+  render() {
+    try {
+      if (this.active === false) return;
+      if (!this.graphics || !this.graphics.ctx) return;
+      if (!this.sprites) return;
+      if (!this.render_position || !this.internal_rect || !this.render_internal_rect) return;
+
+      // Cache ctx reference to prevent race conditions
+      const ctx = this.graphics.ctx;
+      if (!ctx || typeof ctx.save !== 'function') return;
+
+      if (this.skin) {
+        this.sprites.slice_9("window", this.render_position);
+      }
+      let internal = this.internal_rect.clone();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(
+        this.render_internal_rect.x,
+        this.render_internal_rect.y,
+        this.render_internal_rect.width,
+        this.render_internal_rect.height
+      );
+      ctx.clip();
+
+      if (this.external_render_callback != null) {
+        this.external_render_callback(this.render_internal_rect);
+      }
+
+      // Render buttons
+      if (this.buttons) {
+        this.buttons.forEach((button) => button.render());
+      }
+
+      // Render ui_components
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.render());
+      }
+      // Render images (in virtual coordinates - canvas transform handles scaling)
+      if (this.images) {
+        for (let i = 0; i < this.images.length; i++) {
+          let image = this.images[i];
+          let image_pos = image.position.clone();
+          // No viewport.given offset - we're in virtual coordinate space
+          this.graphics.sprites.render(image.key, image_pos, 1, "none");
+        }
+      }
+
+      // Render text
+      if (this.text) {
+        this.graphics.font.draw_text(internal, this.text, true, true);
+      }
+
+      // Restore context (using cached ctx reference)
+      ctx.restore();
+
+      if (this.skin && this.sprites && this.graphics.font) {
+        this.sprites.slice_3("window-title", this.render_title_position);
+        this.graphics.font.draw_text(this.render_title_position, this.title, true, false);
+      }
+      if (this.closeButton != null && typeof this.closeButton.render === "function") {
+        this.closeButton.render();
+      }
+    } catch (error) {
+      this.logger.error(`render: ${error.message}`);
+    }
+  }
+
+  set_active(active) {
+    try {
+      this.active = active;
+      if (this.buttons) {
+        this.buttons.forEach((button) => button.set_active(active));
+      }
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.set_active(active));
+      }
+    } catch (error) {
+      this.logger.error(`set_active: ${error.message}`);
+    }
+  }
+
+  close() {
+    try {
+      if (this.active !== true) return;
+      this.emit("close", { instance: this });
+      this.logger.info("Modal: Close Window");
+      this.delete();
+    } catch (error) {
+      this.logger.error(`close: ${error.message}`);
+    }
+  }
+
+  delete() {
+    try {
+      // CRITICAL: Set active to false FIRST to stop render() from being called
+      this.active = false;
+
+      if (this._bound_handle_key_down) {
+        document.removeEventListener("keydown", this._bound_handle_key_down);
+      }
+      this.events = {};
+      if (this.buttons) {
+        this.buttons.forEach((button) => button.delete());
+      }
+      if (this.ui_components) {
+        this.ui_components.forEach((component) => component.delete());
+      }
+      delete this.parent;
+      delete this.graphics;
+      delete this.canvas;
+      delete this.sprites;
+      delete this.ok;
+      delete this.cancel;
+      delete this.title;
+      delete this.text;
+      delete this.position;
+      delete this.external_render_callback;
+      delete this.buttons;
+      delete this.images;
+    } catch (error) {
+      this.logger.error(`delete: ${error.message}`);
+    }
+  }
 }
 
 // This class is used to size the window..
@@ -1375,19 +1994,22 @@ class viewport {
     }
 
     calculate_scale() {
-        const scaleX = this.given.width / this.requested.width;
-        if (scaleX > 1) {
-            this.scale.x = 1;
-            this.scale.y = 1;
-            this.virtual.width = this.given.width;
-            this.virtual.height = this.given.height;
-        } else {
-            const virtX = this.requested.width / this.given.width;
-            this.scale.x = scaleX;
-            this.scale.y = scaleX;
-            this.virtual.width = parseInt(this.given.width * virtX);
-            this.virtual.height = parseInt(this.given.height * virtX);
-        }
+        // Virtual viewport is ALWAYS fixed at requested dimensions (e.g., 1920x1080)
+        // This is the coordinate space everything is designed for
+        this.virtual.width = this.requested.width;
+        this.virtual.height = this.requested.height;
+
+        // Calculate scale factors to fit the virtual viewport into physical screen
+        // We want to fit the entire virtual space into the physical screen while maintaining aspect ratio
+        const scaleX = this.given.width / this.virtual.width;
+        const scaleY = this.given.height / this.virtual.height;
+
+        // Use the smaller scale factor to ensure everything fits (letterbox if needed)
+        // Allow both upscaling and downscaling to fit any screen size
+        const uniformScale = Math.min(scaleX, scaleY);
+
+        this.scale.x = uniformScale;
+        this.scale.y = uniformScale;
     }
 }
 class window_manager extends events{
@@ -1400,12 +2022,36 @@ class window_manager extends events{
       this.audio_manager = new audio_manager();
       this.modals = [];
       this.active_modal=null;
-      
+
       this.kb = new key_states();
+
+      // DEBUG: Frame stepping mode - disabled by default (F12 to toggle, F11 to step)
+      this.debug_frame_step = false;
+      this.debug_render_next_frame = false;
+      this.debug_frame_count = 0;
 
       window.addEventListener('keydown', (event) => {
           this.kb.down(event.key);
           this.kb.event(event)
+
+          // F12 = Toggle frame stepping mode
+          if (event.key === 'F12') {
+              this.debug_frame_step = !this.debug_frame_step;
+              console.log('[DEBUG] Frame stepping:', this.debug_frame_step ? 'ENABLED - Press F11 to render next frame' : 'DISABLED');
+              event.preventDefault();
+              return;
+          }
+
+          // F11 = Render next frame (when in frame step mode)
+          if (event.key === 'F11') {
+              if (this.debug_frame_step) {
+                  this.debug_render_next_frame = true;
+                  console.log('[DEBUG] ========== RENDERING FRAME', ++this.debug_frame_count, '==========');
+              }
+              event.preventDefault();
+              return;
+          }
+
           switch (event.key) {
               case 'F5': break;
               default: event.preventDefault();
@@ -1418,17 +2064,25 @@ class window_manager extends events{
           this.kb.event(event)
           switch (event.key) {
               case 'F5': break;
+              case 'F11': break;
+              case 'F12': break;
               default: event.preventDefault();
           }
       });
 
       setInterval(() => {
+          // Skip rendering if in frame step mode and F11 wasn't pressed
+          if (this.debug_frame_step && !this.debug_render_next_frame) {
+              return;
+          }
+          this.debug_render_next_frame = false; // Reset after rendering one frame
+
           this.graphics.recalc_canvas();
           if (this.has_windows() > 0) {
-              this.handle_keys();  
+              this.handle_keys();
               this.resize();
               this.render();
-          } 
+          }
         },1000 / 24);
     }
 
@@ -1473,11 +2127,14 @@ class window_manager extends events{
         this.modals.splice(index, 1); // Remove the modal from the array
         // Additional cleanup if necessary
       }
+
+      // CRITICAL: Clear active_modal immediately to prevent render calls on deleted modal
+      this.active_modal = null;
+
       if(this.modals.length>0) {
         let last_modal= this.modals[this.modals.length - 1];
         last_modal.set_active(true);
         this.active_modal=last_modal;
-
       }
     }
     handle_keys(){
@@ -1490,185 +2147,404 @@ class window_manager extends events{
     }
 
     render() {
-
         if (this.active_modal) {
-          if (this.active_modal.bg_gradient) {
-            var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.frame.height);
-            for(let i=0;i<this.active_modal.bg_gradient.length;i++) 
-              gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
-            this.graphics.sprites.clear(gradient,this.graphics.viewport.frame);
-          }
-    
+          // Save the current canvas state
+          this.graphics.ctx.save();
+
+          // Apply viewport scaling and centering transformation
+          // This makes everything drawn in virtual coordinates automatically scale to physical pixels
+          const scale = this.graphics.viewport.scale;
+          const viewport = this.graphics.viewport;
+
+          // Calculate the actual rendered size after scaling
+          const renderedWidth = viewport.virtual.width * scale.x;
+          const renderedHeight = viewport.virtual.height * scale.y;
+
+          // Calculate offset to center the viewport in the canvas
+          const offsetX = (viewport.given.width - renderedWidth) / 2;
+          const offsetY = (viewport.given.height - renderedHeight) / 2;
+
+          // Apply translation to center, then scale
+          this.graphics.ctx.translate(offsetX, offsetY);
+          this.graphics.ctx.scale(scale.x, scale.y);
+
+          // Now everything is drawn in virtual coordinate space (1920x1080)
+          // and automatically scaled and centered to fit the canvas
+
+          // Render background first (if exists)
           if (this.active_modal.background){
-              this.graphics.sprites.render(this.active_modal.background,null,this.graphics.viewport.given,1,"contain");
+              const bgRect = new rect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
+              this.graphics.sprites.render(this.active_modal.background, null, bgRect, 1, "contain");
             }
-            this.active_modal.render();
+
+          // Then render gradient overlay (if exists)
+          if (this.active_modal.bg_gradient) {
+            var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.virtual.height);
+            for(let i=0;i<this.active_modal.bg_gradient.length;i++)
+              gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
+
+            // Draw gradient with proper transparency support
+            this.graphics.ctx.fillStyle = gradient;
+            this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
+          }
+
+          this.active_modal.render();
+
+          // Restore the canvas state (removes the scale transformation)
+          this.graphics.ctx.restore();
         }
         //this.modals.forEach(window => window.render());
     }
   }
 
-  class graphics extends events{
-
-    constructor(canvas=null,ctx=null){
-        super();    
-        this.canvas=canvas
-        this.ctx=ctx;
-        this.font=null;
-        this.sprites=new sprites(ctx);
-        this.sprites.on("complete",this.load_font.bind(this)); // Using arrow function to preserve 
+  class graphics extends events {
+    constructor(canvas = null, ctx = null, logger) {
+      super(logger);
+      this.logger = logger || console;
+      try {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.font = null;
+        this.sprites = new sprites(ctx);
+        this.sprites.on("complete", this.load_font.bind(this));
         this.sprites.preload();
-        //this.sprites.on_load( this.load_font.bind(this)); // Using arrow function to preserve 'this'
-        this.backround=null;
-        this.viewport=new viewport(1920,window.innerHeight);
-        this.frame_background_color='#222';
-        this.background_color='#000000';
-
+        this.backround = null;
+        // Fixed virtual resolution - everything is designed for 1920x1080
+        this.viewport = new viewport(1920, 1080);
+        this.frame_background_color = '#222';
+        this.background_color = '#000000';
+      } catch (error) {
+        this.logger.error(`graphics constructor: ${error.message}`);
+      }
     }
-    load_font(){
-        let font=new sprite_font(this.ctx,this.sprites, "grey_font");
+  
+    sanitize_path(path) {
+      if (typeof path !== 'string') {
+        throw new Error("Invalid image URL type");
+      }
+      return path.replace(/[<>"'`;]/g, '');
+    }
+  
+    load_font() {
+      try {
+        let font = new sprite_font(this.ctx, this.sprites, "grey_font", this.logger, this.viewport);
         this.font = font;
         this.emit('complete');
-
+      } catch (error) {
+        this.logger.error(`load_font: ${error.message}`);
+      }
     }
-
-    set_background(image_url){
-        this.backround=new Image();
-        this.backround.src=image_url;
+  
+    set_background(image_url) {
+      try {
+        image_url = this.sanitize_path(image_url);
+        this.backround = new Image();
+        this.backround.src = image_url;
+      } catch (error) {
+        this.logger.error(`set_background: ${error.message}`);
+      }
     }
-
-    recalc_canvas(){
+  
+    recalc_canvas() {
+      try {
         this.viewport.calculate();
-
-        //reset canvas dimentions
+        // reset canvas dimensions
         this.canvas.windowWidth = this.viewport.frame.width;
         this.canvas.windowHeight = this.viewport.frame.height;
         this.canvas.width = this.viewport.frame.width;
         this.canvas.height = this.viewport.frame.height;
-
+      } catch (error) {
+        this.logger.error(`recalc_canvas: ${error.message}`);
+      }
     }
-
-
+  
     updateCanvasSizeAndDrawImage(level_position) {
-        if (this.backround==null){
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            return;
+      try {
+        if (this.backround == null) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          return;
         }
-        //this corrects the window every frame.. no need for an event.. tho maybe less resource intensive
-        let srcX=0;
-        let srcY=0;//increment for scroll (start at bottom)
-        // make it src bg width and window height
-        let destX=this.viewport.given.x;
-        let destY=this.viewport.given.y;
-        let scaledDestWidth=this.viewport.given.width;
-        let scaledDestHeight=this.viewport.given.height;
-
-        let vp_h=this.viewport.virtual.height;
-        let scrollable_height=level_position.height-vp_h;
-        if( scrollable_height<0)scrollable_height=0;
-        let position_percentage=((scrollable_height)/level_position.y);
-        srcY=position_percentage*scrollable_height;
-        
-        position_percentage=level_position.y/(level_position.height-this.viewport.virtual.height);
-        srcY=position_percentage*(this.backround.height-this.viewport.virtual.height);
-        
-        
+        // Correct the window every frame
+        let srcX = 0;
+        let srcY = 0; // increment for scroll (start at bottom)
+        let destX = this.viewport.given.x;
+        let destY = this.viewport.given.y;
+        let scaledDestWidth = this.viewport.given.width;
+        let scaledDestHeight = this.viewport.given.height;
+  
+        let vp_h = this.viewport.virtual.height;
+        let scrollable_height = level_position.height - vp_h;
+        if (scrollable_height < 0) scrollable_height = 0;
+        let position_percentage = (scrollable_height) / level_position.y;
+        srcY = position_percentage * scrollable_height;
+  
+        position_percentage = level_position.y / (level_position.height - this.viewport.virtual.height);
+        srcY = position_percentage * (this.backround.height - this.viewport.virtual.height);
+  
         this.ctx.save();
         this.ctx.fillStyle = this.frame_background_color;
-
-        // Clear the canvaFrame
-        this.ctx.fillRect(this.viewport.frame.x,this.viewport.frame.y,this.viewport.frame.width,this.viewport.frame.height);
-
-        //this.ctx.globalCompositeOperation = 'source-atop';
-        //this.ctx.fillStyle = this.frame_background_color;
-        //this.ctx.fillRect(this.viewport.frame.x,this.viewport.frame.y,this.viewport.frame.width,this.viewport.frame.height);
-
+        // Clear the canvas frame
+        this.ctx.fillRect(
+          this.viewport.frame.x,
+          this.viewport.frame.y,
+          this.viewport.frame.width,
+          this.viewport.frame.height
+        );
         this.ctx.restore();
-
-
+  
         this.ctx.fillStyle = this.background_color;
-
-        // Clear the canvas
-        //this.ctx.clearRect(this.viewport.given.x,this.viewport.given.y,this.viewport.given.width,this.viewport.given.height);
-
-        
-
-        let bg_scale_x=this.viewport.given.width/this.backround.width;
-        let bg_h=this.viewport.virtual.height;
-        
-        // Draw the selected portion of the original image scaled on the canvas at the specified coordinates
-        this.ctx.drawImage(this.backround, 
-                            srcX, srcY, 
-                            this.backround.width,bg_h, 
-            
-                            destX, destY, 
-                            scaledDestWidth, scaledDestHeight);
+        let bg_scale_x = this.viewport.given.width / this.backround.width;
+        let bg_h = this.viewport.virtual.height;
+  
+        // Draw the selected portion of the original image scaled on the canvas
+        this.ctx.drawImage(
+          this.backround,
+          srcX, srcY,
+          this.backround.width, bg_h,
+          destX, destY,
+          scaledDestWidth, scaledDestHeight
+        );
+      } catch (error) {
+        this.logger.error(`updateCanvasSizeAndDrawImage: ${error.message}`);
+      }
     }
-
+  
     fade_images(percentage) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-
+      try {
+        if (!this.ctx || !this.canvas) {
+          this.logger.error("fade_images: Canvas or context not defined");
+          return;
+        }
+        // Assuming image1 and image2 are defined in the proper scope
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         // Draw the first image
-        ctx.globalAlpha = 1; // Reset to full opacity
-        ctx.drawImage(image1, 0, 0, canvas.width, canvas.height);
-
+        this.ctx.globalAlpha = 1;
+        this.ctx.drawImage(image1, 0, 0, this.canvas.width, this.canvas.height);
         // Draw the second image on top with adjusted opacity
-        ctx.globalAlpha = percentage / 100; // Convert percentage to [0,1] range for alpha
-        ctx.drawImage(image2, 0, 0, canvas.width, canvas.height);
-
-        ctx.globalAlpha = 1; // Reset alpha to full opacity
+        this.ctx.globalAlpha = percentage / 100;
+        this.ctx.drawImage(image2, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.globalAlpha = 1;
+      } catch (error) {
+        this.logger.error(`fade_images: ${error.message}`);
+      }
     }
-}
-class menu extends modal{
+  }
+  class key_states {
+    constructor(logger) {
+      this.logger = logger || console;
+      try {
+        this.states = [];
+        // Renamed property to avoid conflict with the method name 'shift'
+        this.shift_state = false;
+        this.ctrl_state = false;
+      } catch (error) {
+        this.logger.error(`key_states constructor: ${error.message}`);
+      }
+    }
+  
+    up(key) {
+      try {
+        if (!this.states[key] || !this.states[key].justStopped) { // Ensure the justStopped logic
+          this.states[key] = { pressed: false, up: true, down: false, justStopped: true };
+        }
+      } catch (error) {
+        this.logger.error(`up(${key}): ${error.message}`);
+      }
+    }
+  
+    down(key) {
+      try {
+        if (!this.states[key] || !this.states[key].justPressed) { // Ensure the justPressed logic
+          this.states[key] = { pressed: true, up: false, down: true, justPressed: true };
+        }
+      } catch (error) {
+        this.logger.error(`down(${key}): ${error.message}`);
+      }
+    }
+  
+    get_state(key) {
+      try {
+        if (key in this.states) {
+          return this.states[key];
+        }
+        this.states[key] = { pressed: false, up: false, down: false };
+        return this.states[key];
+      } catch (error) {
+        this.logger.error(`get_state(${key}): ${error.message}`);
+        return { pressed: false, up: false, down: false };
+      }
+    }
+  
+    is_pressed(key) {
+      try {
+        return key in this.states && this.states[key].pressed;
+      } catch (error) {
+        this.logger.error(`is_pressed(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    just_pressed(key) {
+      try {
+        if (key in this.states && this.states[key].justPressed) {
+          this.states[key].justPressed = false; // Reset after checking
+          return true;
+        }
+        return false;
+      } catch (error) {
+        this.logger.error(`just_pressed(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    just_stopped(key) {
+      try {
+        if (key in this.states && this.states[key].justStopped) {
+          this.states[key].justStopped = false; // Reset after checking
+          return true;
+        }
+        return false;
+      } catch (error) {
+        this.logger.error(`just_stopped(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    shift() {
+      try {
+        return this.shift_state;
+      } catch (error) {
+        this.logger.error(`shift(): ${error.message}`);
+        return false;
+      }
+    }
+  
+    ctrl() {
+      try {
+        return this.ctrl_state;
+      } catch (error) {
+        this.logger.error(`ctrl(): ${error.message}`);
+        return false;
+      }
+    }
+  
+    event(event) {
+      try {
+        this.shift_state = event.shiftKey;
+        this.ctrl_state = event.ctrlKey;
+      } catch (error) {
+        this.logger.error(`event(): ${error.message}`);
+      }
+    }
+  }
+  class menu extends modal{
     constructor(){
         super();
-        
 
-
+        // Store button data for resize recalculation
+        this.menu_buttons = [];
+        this.title_image = null;
     }
+
     layout(){
         //window specifics
         this.set_background("menu");
         this.ok=false;
         this.cancel=false;
-        this.close=true;
+        this.closeButton=true;
         this.title="Menu";
         this.text="";
         this.active=true;
-        let x=20;
-        let y=30;
-        let window_width=400;
-        let window_height=600;
-        
-        this.position = new rect(x, y, window_width,window_height,"left","top");
+
+        // Use virtual viewport dimensions (logical pixels, not physical)
+        let vw = this.graphics.viewport.virtual.width;
+        let vh = this.graphics.viewport.virtual.height;
+
+        // Menu scales with viewport - fixed size, left-anchored at 60px
+        let window_width = 400;
+        let window_height = 600;
+        let x = 60;  // Left-anchored at 60 pixels
+        let y = (vh - window_height) / 2;  // Center vertically
+
+        this.position = new rect(x, y, window_width, window_height, "left", "top");
         this.resize();
         this.add_buttons();
-        
-        //layout options
-        
-        this.add_bg_gradient(0, 'black');
-        this.add_bg_gradient(.7, 'lightgrey');
-        this.add_bg_gradient(.8, 'darkgrey');
-        this.add_bg_gradient(1, 'black');
 
+        //layout options - keep gradient for visual effect
+        this.add_bg_gradient(0, 'rgba(0,0,0,0.3)');
+        this.add_bg_gradient(.7, 'rgba(211,211,211,0.2)');
+        this.add_bg_gradient(.8, 'rgba(169,169,169,0.2)');
+        this.add_bg_gradient(1, 'rgba(0,0,0,0.3)');
 
-        let w=this.graphics.viewport.given.width;
-        let button_spacing = 80,button_width=this.internal_rect.width-x*2;
-        let button_position1=new rect(x,y,button_width,null,"left","top");
-        let button_position2=new rect(x,y+=button_spacing,button_width,null,"left","top");
-        let button_position3=new rect(x,y+=button_spacing,button_width,null,"left","top");
-        let button_position4=new rect(x,y+=button_spacing,button_width,null,"left","top");
-        let button_position5=new rect(x,this.internal_rect.height-110,button_width,null,"left","top");
-        let button_position6=new rect(w/2-200,10,1024,236,"left","top");
-        
-        this.add_image(button_position6,"title");
-        this.add_button("New Game",button_position1,this.new_game, "button-up-cyan", "button-down-cyan");
-        this.add_button("Story So Far", button_position2,this.story, "button-up-cyan", "button-down-cyan");
-        this.add_button("High Scores", button_position3,this.high_scoress, "button-up-cyan", "button-down-cyan");
-        this.add_button("Credits", button_position4,this.credits,"button-up-cyan", "button-down-cyan");
-        this.add_button("Exit", button_position5,this.exit, "button-up-red", "button-down-red");
+        // Create buttons with viewport-relative positions
+        this.create_menu_buttons();
+    }
 
+    create_menu_buttons() {
+        // Clear existing menu buttons
+        this.menu_buttons = [];
 
+        // Calculate positions based on internal_rect
+        let x = 20;
+        let y = 30;
+        let button_spacing = 80;
+        let button_width = this.internal_rect.width - x * 2;
+
+        let vw = this.graphics.viewport.virtual.width;
+
+        // Store button definitions
+        this.menu_buttons = [
+            { label: "New Game", callback: this.new_game, y_offset: y, style: "cyan" },
+            { label: "Story So Far", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
+            { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
+            { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
+            { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - 110, style: "red" }
+        ];
+
+        // Create actual button instances
+        for (let btn_def of this.menu_buttons) {
+            let button_position = new rect(x, btn_def.y_offset, button_width, null, "left", "top");
+            let up_img = btn_def.style === "cyan" ? "button-up-cyan" : "button-up-red";
+            let down_img = btn_def.style === "cyan" ? "button-down-cyan" : "button-down-red";
+            btn_def.button = this.add_button(btn_def.label, button_position, btn_def.callback, up_img, down_img);
+            btn_def.position = button_position;
+        }
+
+        // Add title image - scale with viewport
+        let title_width = Math.min(1024, vw * 0.6);
+        let title_height = title_width * (236 / 1024);  // Maintain aspect ratio
+        let title_x = vw / 2 - title_width / 2;
+        let button_position6 = new rect(title_x, 10, title_width, title_height, "left", "top");
+        this.title_image = this.add_image(button_position6, "title");
+    }
+
+    resize() {
+        // Recalculate menu position based on new viewport - left-anchored
+        if (this.graphics && this.graphics.viewport) {
+            let vw = this.graphics.viewport.virtual.width;
+            let vh = this.graphics.viewport.virtual.height;
+
+            // Keep menu size fixed, left-anchored at 60px, vertically centered
+            let window_width = 400;
+            let window_height = 600;
+            let x = 60;  // Left-anchored at 60 pixels
+            let y = (vh - window_height) / 2;  // Center vertically
+
+            this.position.x = x;
+            this.position.y = y;
+            this.position.width = window_width;
+            this.position.height = window_height;
+        }
+
+        // Call parent resize to update internal_rect and button positions
+        super.resize();
+
+        // Update title image position to stay centered in viewport
+        if (this.title_image && this.graphics && this.graphics.viewport) {
+            let vw = this.graphics.viewport.virtual.width;
+            let title_x = vw / 2 - 512;  // Half of 1024
+            this.title_image.position.x = title_x;
+        }
     }
 
 
@@ -1676,7 +2552,12 @@ class menu extends modal{
         alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
     }
 
-    credits(event) {
+    async credits(event) {
+        // Resume audio context on user interaction (browser autoplay policy)
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
         let modal=new credits();
         this.window_manager.add(modal)
     }
@@ -1686,7 +2567,12 @@ class menu extends modal{
         this.window_manager.add(modal)
     }
 
-    story(event) {
+    async story(event) {
+        // Resume audio context on user interaction (browser autoplay policy)
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
         let modal=new prologue();
         this.window_manager.add(modal)
     }
@@ -1830,26 +2716,136 @@ class menu extends modal{
     }
 
     check_collision(otherObject) {
-        // Calculate the center coordinates of both objects
+        // DEBUG: Check if width/height are defined
+        if (!this.width || !this.height || !otherObject.width || !otherObject.height) {
+            console.error('[Collision] Missing dimensions:', {
+                this: {type: this.type, w: this.width, h: this.height},
+                other: {type: otherObject.type, w: otherObject.width, h: otherObject.height}
+            });
+            return false;
+        }
+
+        // First, do a fast bounding box check
+        // Use mask_bounds if available for tighter collision
+        const thisBounds = this.mask_bounds || {
+            x: 0,
+            y: 0,
+            width: this.width,
+            height: this.height
+        };
+        const otherBounds = otherObject.mask_bounds || {
+            x: 0,
+            y: 0,
+            width: otherObject.width,
+            height: otherObject.height
+        };
+
+        // Calculate actual positions with bounds
+        const thisLeft = this.position.x + thisBounds.x;
+        const thisRight = thisLeft + thisBounds.width;
+        const thisTop = this.position.y + thisBounds.y;
+        const thisBottom = thisTop + thisBounds.height;
+
+        const otherLeft = otherObject.position.x + otherBounds.x;
+        const otherRight = otherLeft + otherBounds.width;
+        const otherTop = otherObject.position.y + otherBounds.y;
+        const otherBottom = otherTop + otherBounds.height;
+
+        // Fast AABB check - if bounding boxes don't overlap, no collision
+        if (thisRight < otherLeft || thisLeft > otherRight ||
+            thisBottom < otherTop || thisTop > otherBottom) {
+            return false;
+        }
+
+        // DEBUG: Log when AABB passes
+        if (Math.random() < 0.01) { // Only log 1% to avoid spam
+            console.log('[Collision] AABB passed:', {
+                this: this.type,
+                other: otherObject.type,
+                hasMasks: !!(this.collision_mask && otherObject.collision_mask)
+            });
+        }
+
+        // If both objects have collision masks, do pixel-perfect check
+        if (this.collision_mask && otherObject.collision_mask) {
+            return this.check_pixel_collision(otherObject);
+        }
+
+        // Fall back to circular collision for objects without masks
         let thisCenterX = this.position.x + this.width / 2;
         let thisCenterY = this.position.y + this.height / 2;
         let otherCenterX = otherObject.position.x + otherObject.width / 2;
         let otherCenterY = otherObject.position.y + otherObject.height / 2;
 
-        // Calculate the distance between the centers of the objects
-        let distanceX = Math.abs(thisCenterX - otherCenterX);
-        let distanceY = Math.abs(thisCenterY - otherCenterY);
+        let dx = thisCenterX - otherCenterX;
+        let dy = thisCenterY - otherCenterY;
+        let distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Calculate the combined width and height of both objects
-        let combinedWidth = (this.width + otherObject.width) / 2;
-        let combinedHeight = (this.height + otherObject.height) / 2;
+        // Use larger radii (70% of average dimension) for better collision detection
+        // Small projectiles (16x16) need generous hit zones to feel responsive
+        let thisRadius = Math.min(this.width, this.height) * 0.7;
+        let otherRadius = Math.min(otherObject.width, otherObject.height) * 0.7;
+        let combinedRadius = thisRadius + otherRadius;
 
-        // Check if the distance between the centers is less than the combined width and height
-        if (distanceX < combinedWidth && distanceY < combinedHeight) {
-            // Collision detected or adjacent
-            return true;
+        const isColliding = distance < combinedRadius;
+
+        // DEBUG: Log collisions
+        if (isColliding && Math.random() < 0.05) {
+            console.log('[Collision] CIRCULAR HIT!', {
+                this: this.type,
+                other: otherObject.type,
+                distance: distance.toFixed(2),
+                combinedRadius: combinedRadius.toFixed(2)
+            });
         }
-        // No collision
+
+        return isColliding;
+    }
+
+    check_pixel_collision(otherObject) {
+        // Calculate overlap region
+        const overlapLeft = Math.max(this.position.x, otherObject.position.x);
+        const overlapRight = Math.min(
+            this.position.x + this.width,
+            otherObject.position.x + otherObject.width
+        );
+        const overlapTop = Math.max(this.position.y, otherObject.position.y);
+        const overlapBottom = Math.min(
+            this.position.y + this.height,
+            otherObject.position.y + otherObject.height
+        );
+
+        // Dynamic step size - smaller objects need finer sampling
+        // For 16x16 projectiles, use step=2 (checks 64 pixels)
+        // For larger objects, use step=4 for performance
+        const smallestDimension = Math.min(
+            Math.min(this.width, this.height),
+            Math.min(otherObject.width, otherObject.height)
+        );
+        const step = smallestDimension <= 32 ? 2 : 4;
+        for (let y = overlapTop; y < overlapBottom; y += step) {
+            for (let x = overlapLeft; x < overlapRight; x += step) {
+                // Get local coordinates for both objects
+                const thisX = Math.floor(x - this.position.x);
+                const thisY = Math.floor(y - this.position.y);
+                const otherX = Math.floor(x - otherObject.position.x);
+                const otherY = Math.floor(y - otherObject.position.y);
+
+                // Check if coordinates are in bounds
+                if (thisX >= 0 && thisX < this.width && thisY >= 0 && thisY < this.height &&
+                    otherX >= 0 && otherX < otherObject.width && otherY >= 0 && otherY < otherObject.height) {
+
+                    const thisIndex = thisY * this.width + thisX;
+                    const otherIndex = otherY * otherObject.width + otherX;
+
+                    // If both pixels are solid, we have a collision
+                    if (this.collision_mask[thisIndex] && otherObject.collision_mask[otherIndex]) {
+                        return true;
+                    }
+                }
+            }
+        }
+
         return false;
     }
 
@@ -1968,6 +2964,8 @@ class menu extends modal{
         this.old_acceleration=null;
         this.old_velocity=null;
         this.old_position=null;
+        this.collision_mask = null; // Pixel-perfect collision mask
+        this.mask_bounds = null; // Tight bounding box from mask
 
         this.id=game_object.uuid_generator.next().value;
     }
@@ -1997,22 +2995,30 @@ class menu extends modal{
         return this.loop_done;
     }
     damage(damage) {
-        this.life -= damage;
-        if (this.life < 0) this.destroy();
+        // Don't apply damage if already destroyed
+        if (this.destroy_object) return;
 
+        this.life -= damage;
+        if (this.life <= 0) {
+            this.life = 0;
+            this.destroy();
+        }
     }
     set_max_life(max_life) {
         this.max_life = max_life;
         this.life = max_life;
     }
     get_life_percentage() {
+        if (this.life < 0) return 0;
+        if (this.life > this.max_life) return 100;
         return parseInt((this.life / this.max_life) * 100);
     }
 
     destroy() {
-        this.destroy_object = true;
-        console.log("DEstory THIS!");
+        // Prevent multiple destroy calls on the same object
+        if (this.destroy_object) return;
 
+        this.destroy_object = true;
     }
     set_type(type) {
         this.type = type;
@@ -2058,6 +3064,28 @@ class menu extends modal{
         this.frame_width = frame_width;
         this.img=img_URL;
         this.graphics.sprites.add(img_URL);
+
+        // Get or generate collision mask (cached in sprite)
+        this.get_collision_mask();
+    }
+
+    get_collision_mask() {
+        // Wait for sprite to load, then get or create cached mask
+        setTimeout(() => {
+            try {
+                const position = new rect(0, 0, this.width, this.height);
+
+                // Get cached mask from sprite (or generate if first time)
+                const maskData = this.graphics.sprites.get_or_create_collision_mask(this.img, position);
+                if (!maskData) return;
+
+                // Reference the cached mask (not a copy)
+                this.collision_mask = maskData.collision_mask;
+                this.mask_bounds = maskData.mask_bounds;
+            } catch (error) {
+                console.error(`[${this.type}] Failed to get collision mask:`, error);
+            }
+        }, 100); // Small delay to ensure sprite is loaded
     }
 
     image_rotate(rotation) {
@@ -2068,8 +3096,10 @@ class menu extends modal{
     set_sound(action, sound_URL) {
         //cache this to save the some ChannelSplitterNode.apply. early  optimization bites you in the ass
         this.sounds[this.type+action]=sound_URL;
-        this.audio_manager.add(this.type+action, sound_URL);
-
+        // Fire and forget - load audio in background
+        this.audio_manager.add(this.type+action, sound_URL).catch(err => {
+            console.error(`Failed to load sound ${sound_URL}:`, err);
+        });
     }
 
 
@@ -2149,23 +3179,17 @@ class menu extends modal{
     }//end update frame
 
     orient(window = null) {
+        if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
 
         this.graphics.ctx.save();
-        let scale = this.graphics.viewport.scale.x;
 
+        // Work in virtual coordinates - canvas transform handles scaling
         let x = this.position.x;
         let y = this.position.y;
         if (window != null) {
             x -= window.x;
             y -= window.y;
-            x += this.graphics.viewport.given.x;
-            y += this.graphics.viewport.given.y;
         }
-        //x-=this.center.x ;
-        //y-=this.center.y ;
-
-        x *= scale;
-        y *= scale;
 
         this.graphics.ctx.translate(x, y);
 
@@ -2209,33 +3233,23 @@ class menu extends modal{
 
     render() {
         if (this.visible == false) return;
-        // Define the source rectangle
 
+        // Work in virtual coordinates - canvas transform handles scaling
         let sourceX = 0;
         let sourceY = 0;
-        let sourceWidth = this.width; //*this.graphics.viewport.scale.x
-        let sourceHeight = this.height; //*this.graphics.viewport.scale.x
+        let sourceWidth = this.width;
+        let sourceHeight = this.height;
         if (this.image_frames > 1) {
             sourceX = this.image_frame * this.frame_width;
             sourceWidth = this.frame_width;
         }
-        let dest_height = sourceHeight * this.graphics.viewport.scale.x;
-        let dest_width = sourceWidth * this.graphics.viewport.scale.x;
-        let scale = this.graphics.viewport.scale.x;
-        
-        let src= new rect(sourceX, sourceY, sourceWidth, sourceHeight);
-        let dest=new rect(-this.center.x * scale, -this.center.y * scale, dest_width, dest_height);
-        this.graphics.sprites.render(this.img,src,dest,1,'none'); 
-        
 
-        //      } else {
-        //            this.graphics.ctx.drawImage(this.img,  -this.center.x, -this.center.y, sourceWidth, sourceHeight,
-        //                                        -this.center.x, -this.center.y, sourceWidth, sourceHeight);
+        let src = new rect(sourceX, sourceY, sourceWidth, sourceHeight);
+        let dest = new rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
+        this.graphics.sprites.render(this.img, src, dest, 1, 'none');
 
-        //this.graphics.ctx.drawImage(this.img, -this.center.x, -this.center.y);
-        //    }
-        for(let i=0;i<this.explosions.length;i++){
-            this.explosions[i].render(); 
+        for(let i = 0; i < this.explosions.length; i++){
+            this.explosions[i].render();
         }
     }
     renderWithOverlay(overlayColor) {
@@ -2248,6 +3262,7 @@ class menu extends modal{
             let sourceHeight = this.height;
 
             // Save the current context state
+            if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
             this.graphics.ctx.save();
 
             // Clip to the region of the drawn imagery
@@ -2268,6 +3283,7 @@ class menu extends modal{
             this.graphics.ctx.restore();
         } else {
             // Save the current context state
+            if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
             this.graphics.ctx.save();
 
             // Clip to the region of the drawn imagery
@@ -2399,6 +3415,7 @@ class Derbis extends game_object {
                     10);                     // ropration speed
                 this.set_image('static/debris/email.png');
                 this.set_type("email");
+                this.set_max_life(50);
                 let email_action = [
                     { frames: 4, type: "strafe_left", speed:speed},
                     { frames: 15, type: "skip" },
@@ -2416,6 +3433,7 @@ class Derbis extends game_object {
                     4);                     // ropration speed
                 this.set_image('static/debris/pdf.png');
                 this.set_type("pdf");
+                this.set_max_life(30);
                 let pdf_action = [
                     { type: "accelerate", frames: 1 },
                     { type: "accelerate", frames: 1 },
@@ -2424,7 +3442,7 @@ class Derbis extends game_object {
                     { type: "bank_left", frames: 4 }
                 ];
 
-                this.action_list= pdf_action;                
+                this.action_list= pdf_action;
                 break;
             case 'call':
                 super(window_manager,x, y,64,64,
@@ -2433,6 +3451,7 @@ class Derbis extends game_object {
                     4);                     // ropration speed
                 this.set_image('static/debris/phone.png');
                 this.set_type("call");
+                this.set_max_life(40);
                 let call_action = [
                     { type: "bank_right", frames: 1 },
 
@@ -2448,6 +3467,7 @@ class Derbis extends game_object {
                     4);                     // ropration speed
                 this.set_image('static/debris/webex2.png');
                 this.set_type("webex");
+                this.set_max_life(40);
                 this.action_list = default_action;
                 break;
             case 'block':
@@ -2456,8 +3476,74 @@ class Derbis extends game_object {
                     0,                      // rotation
                     0);                     // ropration speed
                 this.set_image('static/blocks/block.png');
-        
                 this.set_type("block");
+                break;
+
+            case 'linkedin':
+                super(window_manager,x, y,64,64,
+                    3,                    // mass
+                    0,                      // rotation
+                    6);                     // ropration speed
+                this.set_image('static/ships/linkedin.png');
+                this.set_type("linkedin");
+                this.set_max_life(60);
+                let linkedin_action = [
+                    { type: "bank_left", frames: 2 },
+                    { type: "accelerate", frames: 3, speed:speed },
+                    { type: "bank_right", frames: 2 },
+                    { type: "skip", frames: 5 }
+                ];
+                this.action_list = linkedin_action;
+                break;
+
+            case 'zoom':
+                super(window_manager,x, y,64,64,
+                    2,                    // mass
+                    0,                      // rotation
+                    8);                     // ropration speed
+                this.set_image('static/debris/webex2.png'); // Using webex as placeholder
+                this.set_type("zoom");
+                this.set_max_life(45);
+                let zoom_action = [
+                    { frames: 3, type: "strafe_right", speed:speed },
+                    { frames: 10, type: "skip" },
+                    { frames: 3, type: "strafe_left", speed:speed },
+                    { frames: 10, type: "skip" }
+                ];
+                this.action_list = zoom_action;
+                break;
+
+            case 'facebook':
+                super(window_manager,x, y,64,64,
+                    3,                    // mass
+                    0,                      // rotation
+                    5);                     // ropration speed
+                this.set_image('static/debris/email.png'); // Using email as placeholder
+                this.set_type("facebook");
+                this.set_max_life(55);
+                let facebook_action = [
+                    { type: "bank_right", frames: 3 },
+                    { type: "accelerate", frames: 2, speed:speed },
+                    { type: "skip", frames: 8 }
+                ];
+                this.action_list = facebook_action;
+                break;
+
+            case 'reddit':
+                super(window_manager,x, y,64,64,
+                    2,                    // mass
+                    0,                      // rotation
+                    7);                     // ropration speed
+                this.set_image('static/debris/pdf.png'); // Using pdf as placeholder
+                this.set_type("reddit");
+                this.set_max_life(40);
+                let reddit_action = [
+                    { type: "bank_left", frames: 1 },
+                    { type: "bank_right", frames: 1 },
+                    { type: "skip", frames: 3 }
+                ];
+                this.action_list = reddit_action;
+                break;
         }
         this.rotation = 180;
 
@@ -2590,7 +3676,115 @@ class Projectile extends game_object {
     }
 
 }
+class HeatSeekingMissile extends game_object {
+    constructor(window_manager, x=0, y=0, rotation=0) {
+        super(window_manager, x, y, 32, 32, 100, rotation, 8);
+        this.target = null; // Will be set to nearest enemy
+        this.maxSpeed = 300; // Maximum speed of the missile
+        this.turningRate = 5; // Rate at which the missile can turn
+        this.accelerationRate = 50; // Rate at which the missile accelerates
 
+        this.set_image('static/projectiles/P4.png', 16, 4, 270);
+        this.set_center(16, 16);
+        this.set_velocity_loss_off();
+        this.set_type("missile");
+        this.expire(10);
+        this.set_max_life(1);
+    }
+
+    set_target(target) {
+        this.target = target;
+    }
+
+    find_nearest_target(npcs) {
+        if (!npcs || npcs.length === 0) return null;
+
+        let nearest = null;
+        let nearestDist = Infinity;
+
+        for (let npc of npcs) {
+            if (npc.destroy_object) continue;
+            // Only target ships and certain debris
+            if (npc.type !== "ship" && npc.type !== "email" && npc.type !== "pdf") continue;
+
+            const dx = npc.position.x - this.position.x;
+            const dy = npc.position.y - this.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = npc;
+            }
+        }
+
+        return nearest;
+    }
+
+    update_frame(deltaTime) {
+        // Check if target is still valid
+        if (this.target && this.target.destroy_object) {
+            this.target = null;
+        }
+
+        if (this.target) {
+            // Update orientation to face the target
+            this.rotateTowardsTarget();
+
+            // Accelerate towards the target
+            this.accelerate_towards_target();
+        }
+
+        // Limit speed
+        this.limitSpeed();
+
+        // Update frame (from parent class)
+        super.update_frame(deltaTime);
+    }
+
+    rotateTowardsTarget() {
+        if (!this.target) return;
+
+        const deltaX = this.target.position.x - this.position.x;
+        const deltaY = this.target.position.y - this.position.y;
+
+        // Calculate angle to target (0 degrees is up/north)
+        const targetAngle = (Math.atan2(deltaX, -deltaY) * (180 / Math.PI) + 360) % 360;
+
+        // Calculate shortest rotation direction
+        let angleDiff = targetAngle - this.rotation;
+        if (angleDiff > 180) angleDiff -= 360;
+        if (angleDiff < -180) angleDiff += 360;
+
+        // Rotate towards the target
+        if (Math.abs(angleDiff) > this.turningRate) {
+            if (angleDiff > 0) {
+                this.bank_right();
+            } else {
+                this.bank_left();
+            }
+        } else {
+            // Close enough, set rotation directly
+            this.rotation = targetAngle;
+        }
+    }
+
+    accelerate_towards_target() {
+        // Accelerate in the direction we're facing
+        this.accelerate_object(this.rotation, this.accelerationRate);
+    }
+
+    limitSpeed() {
+        // Calculate current speed
+        const speed = Math.sqrt(Math.pow(this.velocity.x, 2) + Math.pow(this.velocity.y, 2));
+
+        // If speed exceeds maxSpeed, reduce velocity
+        if (speed > this.maxSpeed) {
+            const scaleFactor = this.maxSpeed / speed;
+            this.velocity.x *= scaleFactor;
+            this.velocity.y *= scaleFactor;
+        }
+    }
+}
 
 class Ship extends game_object {
 
@@ -2603,11 +3797,19 @@ class Ship extends game_object {
         this.boost_fire_control = new fire_control(1);
         this.laser_fire_control = new fire_control(5);
         this.missile_fire_control = new fire_control(10);
+        this.shield_fire_control = new fire_control(3, 2000, 2000); // Shield uses fire_control for auto decay/ramp
         this.thrusters = [];
         this.projectiles = [];
         this.booster=null;
         this.bolt_type=null;
         this.missile_type=null;
+
+        // Shield system with decay/ramp
+        this.shield_strength = 100; // 0-100, acts like inverse temperature
+        this.shield_max_strength = 100;
+        this.shield_regen_rate = 1; // Regen per frame when not taking damage
+        this.shield_impacts = []; // Array of {x, y, time, intensity} for impact glow effects
+        this.shield_glow_phase = 0; // For animated glow effect
         let speed=5+.5 + Math.random() * 4;
 
         switch (type) {
@@ -2645,6 +3847,7 @@ class Ship extends game_object {
                 this.set_rotation(270);
                 this.set_center(64, 64);
                 this.set_rotation_speed(10);
+                this.set_max_life(100);
                 this.bolt_type="bolt2";
                 this.missile_type="bolt3";
                 let frames=Math.random()*15+10;
@@ -2687,6 +3890,60 @@ class Ship extends game_object {
         this.booster.set_visible(false);
     }
 
+    /**
+     * Get shield strength as percentage (0-100)
+     */
+    get_shield_percentage() {
+        return (this.shield_strength / this.shield_max_strength) * 100;
+    }
+
+    /**
+     * Take damage - shields deflect damage based on strength percentage
+     * @param {number} amount - Damage amount
+     * @param {number} impactX - X position of impact in world space (optional)
+     * @param {number} impactY - Y position of impact in world space (optional)
+     */
+    damage(amount, impactX = 0, impactY = 0) {
+        // Calculate deflection based on shield strength
+        // 100% shields = 80% deflection (20% damage taken)
+        // 0% shields = 0% deflection (100% damage taken)
+        const maxDeflection = 0.80; // Max 80% deflection at full shields
+        const shieldPercentage = this.shield_strength / this.shield_max_strength;
+        const deflectionPercentage = shieldPercentage * maxDeflection;
+
+        // Calculate actual damage taken
+        const damageDeflected = amount * deflectionPercentage;
+        const damageTaken = amount - damageDeflected;
+
+        // Reduce shield strength based on damage (shields decay when hit)
+        const shieldDecay = amount * 0.15; // Shields lose 15% of incoming damage value
+        this.shield_strength -= shieldDecay;
+        if (this.shield_strength < 0) this.shield_strength = 0;
+
+        // Add impact glow effect at impact point
+        if (shieldPercentage > 0) {
+            // Convert world space impact to ship's local rotated space
+            const rotRad = (this.rotation % 360) * Math.PI / 180;
+            const cos = Math.cos(-rotRad);  // Negative because we're converting TO local space
+            const sin = Math.sin(-rotRad);
+
+            const localX = impactX * cos - impactY * sin;
+            const localY = impactX * sin + impactY * cos;
+
+            this.shield_impacts.push({
+                x: localX,
+                y: localY,
+                time: Date.now(),
+                intensity: Math.min(deflectionPercentage, 1) // Brighter at higher shield strength
+            });
+        }
+
+        // Apply damage to hull
+        super.damage(damageTaken);
+
+        console.log(`[Ship] Shields at ${(shieldPercentage * 100).toFixed(1)}% deflected ${deflectionPercentage.toFixed(1)}% (${damageDeflected.toFixed(1)} dmg), took ${damageTaken.toFixed(1)} damage`);
+    }
+
 
 
     fire_lazer() {
@@ -2710,16 +3967,34 @@ class Ship extends game_object {
         this.laser_fire_control.stop_firing();
     }
 
-    fire_missle() {
+    fire_missle(npcs) {
         if (this.missile_fire_control.can_fire()) {
-            let missle1 = this.get_relative_position(0, -80)
-            var projectile = new Projectile(this.window_manager,this.position.x + missle1.x, this.position.y + missle1.y, this.rotation, this.missile_type);
-            projectile.set_velocity(this.velocity);
-            projectile.accelerate(2);
-            this.projectiles.push(projectile);
-            this.missile_fire_control.stop_firing();
-        }
+            let missle1 = this.get_relative_position(0, -80);
 
+            // Create heat-seeking missile
+            var missile = new HeatSeekingMissile(
+                this.window_manager,
+                this.position.x + missle1.x,
+                this.position.y + missle1.y,
+                this.rotation
+            );
+
+            // Set initial velocity to match ship
+            missile.set_velocity(this.velocity);
+            missile.accelerate(2);
+
+            // Find and set target
+            if (npcs && npcs.length > 0) {
+                const target = missile.find_nearest_target(npcs);
+                if (target) {
+                    missile.set_target(target);
+                }
+            }
+
+            this.projectiles.push(missile);
+            this.missile_fire_control.stop_firing();
+            this.play("missile");
+        }
     }
 
     update_frame(deltaTime) {
@@ -2728,6 +4003,52 @@ class Ship extends game_object {
         this.missile_fire_control.update_frame();
         this.boost_fire_control.update_frame();
 
+        // Shield regeneration - automatically ramps back up when not taking damage
+        if (this.shield_strength < this.shield_max_strength) {
+            this.shield_strength += this.shield_regen_rate;
+            if (this.shield_strength > this.shield_max_strength) {
+                this.shield_strength = this.shield_max_strength;
+            }
+        }
+
+        // Update shield glow animation
+        this.shield_glow_phase += deltaTime * 3;
+
+        // Remove old impact effects (fade out after 1 second)
+        const currentTime = Date.now();
+        this.shield_impacts = this.shield_impacts.filter(impact =>
+            currentTime - impact.time < 1000
+        );
+
+        // Clamp player ship to screen boundaries
+        if (this.type === "ship" && this.bolt_type === "bolt3") { // User ship check
+            const viewport = this.graphics.viewport.virtual;
+            const margin = this.width / 2; // Half ship width for center-based positioning
+
+            // Clamp X position (left/right boundaries)
+            if (this.position.x < margin) {
+                this.position.x = margin;
+                this.velocity.x = 0; // Stop horizontal movement
+            }
+            if (this.position.x > viewport.width - margin) {
+                this.position.x = viewport.width - margin;
+                this.velocity.x = 0;
+            }
+
+            // Clamp Y position (top/bottom boundaries relative to world position)
+            const worldY = this.position.y - this.graphics.viewport.world.y;
+            const minY = margin;
+            const maxY = viewport.height - margin;
+
+            if (worldY < minY) {
+                this.position.y = this.graphics.viewport.world.y + minY;
+                this.velocity.y = Math.max(0, this.velocity.y); // Only stop upward movement
+            }
+            if (worldY > maxY) {
+                this.position.y = this.graphics.viewport.world.y + maxY;
+                this.velocity.y = Math.min(0, this.velocity.y); // Only stop downward movement
+            }
+        }
 
         const timestamp = Date.now(); // Corrected method to get current timestamp in milliseconds
 
@@ -2750,6 +4071,12 @@ class Ship extends game_object {
 
     render(window) {
         super.orient(window)
+
+        // Only draw shield during impact events (when there are active impacts)
+        if (this.shield_impacts.length > 0) {
+            this.render_shield();
+        }
+
         for (let thruster of this.thrusters) {
             thruster.orient()
             thruster.render()
@@ -2763,7 +4090,99 @@ class Ship extends game_object {
             projectile.render()
             projectile.de_orient()
         }
-        super.de_orient()
+        // Removed duplicate de_orient() - it was popping the viewport transform off the stack
+    }
+
+    render_shield() {
+        if (!this.graphics || !this.graphics.ctx) return;
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
+
+        ctx.save();
+
+        // Calculate shield opacity based on strength (affects impact brightness)
+        const shieldAlpha = (this.shield_strength / this.shield_max_strength);
+
+        // Shield bubble radius - the protective sphere around the ship
+        const shieldRadius = 80; // Shield extends beyond ship
+
+        // Render impact glows - show section of shield bubble around impact area
+        const currentTime = Date.now();
+        for (let impact of this.shield_impacts) {
+            const age = currentTime - impact.time;
+            const lifetime = 800;
+            const progress = age / lifetime;
+
+            // Fade out over time
+            const impactAlpha = (1 - progress) * impact.intensity * shieldAlpha;
+
+            // Pulse effect - oscillates during impact
+            const pulsePhase = (1 - progress) * Math.PI * 4; // 4 pulses over lifetime
+            const pulse = 0.7 + Math.sin(pulsePhase) * 0.3; // Oscillate between 0.4 and 1.0
+
+            // Calculate impact direction (normalize)
+            const distance = Math.sqrt(impact.x * impact.x + impact.y * impact.y) || 1;
+            const dirX = impact.x / distance;
+            const dirY = impact.y / distance;
+
+            // Project impact to shield surface
+            const impactX = dirX * shieldRadius;
+            const impactY = dirY * shieldRadius;
+
+            // Draw the shield arc/section around impact point
+            // Arc size expands over time
+            const arcSize = 60 + (progress * 40); // Angular size in degrees
+            const arcAngle = arcSize * Math.PI / 180;
+
+            // Calculate angle of impact direction
+            const impactAngle = Math.atan2(dirY, dirX);
+
+            // Draw multiple layers for depth - inner bright ring, outer glow
+            for (let layer = 0; layer < 3; layer++) {
+                const layerRadius = shieldRadius + (layer * 15);
+                const layerAlpha = impactAlpha * (1 - layer * 0.3) * pulse;
+
+                // Create gradient along the shield surface - BLUE
+                const gradient = ctx.createRadialGradient(
+                    0, 0, shieldRadius - 5,
+                    0, 0, layerRadius
+                );
+
+                gradient.addColorStop(0, `rgba(100, 150, 255, 0)`);
+                gradient.addColorStop(0.8, `rgba(80, 180, 255, ${layerAlpha * 0.7})`);
+                gradient.addColorStop(1, `rgba(100, 200, 255, ${layerAlpha * 0.9})`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                // Draw arc section around impact point
+                ctx.arc(0, 0, layerRadius,
+                    impactAngle - arcAngle / 2,
+                    impactAngle + arcAngle / 2);
+                ctx.arc(0, 0, shieldRadius - 5,
+                    impactAngle + arcAngle / 2,
+                    impactAngle - arcAngle / 2,
+                    true);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Add bright blue impact flash at center of arc with pulse
+            const flashGradient = ctx.createRadialGradient(
+                impactX, impactY, 0,
+                impactX, impactY, 30
+            );
+            flashGradient.addColorStop(0, `rgba(200, 230, 255, ${impactAlpha * pulse * 1.0})`);
+            flashGradient.addColorStop(0.4, `rgba(100, 180, 255, ${impactAlpha * pulse * 0.8})`);
+            flashGradient.addColorStop(0.7, `rgba(80, 150, 255, ${impactAlpha * pulse * 0.5})`);
+            flashGradient.addColorStop(1, `rgba(60, 120, 255, 0)`);
+
+            ctx.fillStyle = flashGradient;
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
     }
     async executeAction(action) {
        super.executeAction(action);
@@ -2772,71 +4191,338 @@ class Ship extends game_object {
        }
     }
 
+    destroy() {
+        // For player ship, create massive multi-ring expanding explosion
+        if (this.bolt_type === "bolt3") {  // User ship check
+            this.create_death_explosion();
+        }
+        super.destroy();
+    }
+
+    create_death_explosion() {
+        // Create more modest explosion effect to prevent browser lockup
+        const rings = 2;  // Reduced from 4 to 2
+        const explosionsPerRing = 6;  // Reduced from 12 to 6
+
+        // Get ship's current world position
+        const shipX = this.position.x;
+        const shipY = this.position.y;
+
+        // Get reference to level's NPC array to add explosions as world objects
+        const level = this.window_manager.modals.find(m => m.level);
+        if (!level || !level.level) {
+            console.error('[Ship] Cannot create death explosion - level not found');
+            return;
+        }
+
+        // Add a big central explosion at ship position immediately
+        let centerExp = new Explosion(this.window_manager, shipX, shipY);
+        centerExp.set_sub();
+        level.level.npc.push(centerExp);
+
+        // Create staggered rings with requestAnimationFrame instead of setTimeout
+        let currentRing = 0;
+        const createRing = () => {
+            if (currentRing >= rings) return;
+
+            const radius = 30 + (currentRing * 50);
+
+            // Create ring explosions
+            for (let i = 0; i < explosionsPerRing; i++) {
+                const angle = (i / explosionsPerRing) * Math.PI * 2;
+                const offsetX = Math.cos(angle) * radius;
+                const offsetY = Math.sin(angle) * radius;
+
+                let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
+                exp.set_sub();
+                level.level.npc.push(exp);
+            }
+
+            // Add 2 random explosions per ring (reduced from 5)
+            for (let i = 0; i < 2; i++) {
+                const randomAngle = Math.random() * Math.PI * 2;
+                const randomRadius = Math.random() * radius;
+                const offsetX = Math.cos(randomAngle) * randomRadius;
+                const offsetY = Math.sin(randomAngle) * randomRadius;
+
+                let exp = new Explosion(this.window_manager, shipX + offsetX, shipY + offsetY);
+                exp.set_sub();
+                level.level.npc.push(exp);
+            }
+
+            currentRing++;
+
+            // Schedule next ring using setTimeout (100ms delay)
+            if (currentRing < rings) {
+                setTimeout(createRing, 100);
+            }
+        };
+
+        // Start creating rings after a small delay
+        setTimeout(createRing, 100);
+    }
+
 }//end ship class
 
 
 
 
-class key_states {
-    constructor() {
-        this.states = [];
-        this.shift = false;
-        this.ctrl_state = false;
+class Boss extends game_object {
+    constructor(window_manager, x, y, type) {
+        switch (type) {
+            case 'interview':
+                super(window_manager, x, y, 128, 128,
+                    10,                   // mass - heavier than normal enemies
+                    0,                    // rotation
+                    6);                   // rotation speed
+
+                this.set_image('static/ships/teams.png', 64, 1, 270); // Using teams ship as placeholder
+                this.set_type("boss");
+                this.set_max_life(500); // Much higher health
+                this.set_center(64, 64);
+
+                // More complex AI pattern
+                let boss_action = [
+                    { type: "bank_right", frames: 5 },
+                    { type: "accelerate", frames: 10, speed: 3 },
+                    { type: "bank_left", frames: 10 },
+                    { type: "accelerate", frames: 10, speed: 3 },
+                    { type: "bank_left", frames: 10 },
+                    { type: "accelerate", frames: 10, speed: 3 },
+                    { type: "bank_right", frames: 5 },
+                    { type: "skip", frames: 5 }
+                ];
+
+                this.action_list = boss_action;
+                this.bolt_type = "bolt2";
+                this.projectiles = [];
+
+                // Boss fires more frequently
+                this.laser_fire_control = new fire_control(8, 2000, 1000);
+                break;
+        }
+
+        this.rotation = 180;
+        this.is_boss = true;
     }
 
-    up(key) {
-        if (!this.states[key] || !this.states[key].justStopped) { // Ensure the justStopped logic
-            this.states[key] = { pressed: false, up: true, down: false, justStopped: true };
+    // Boss can fire weapons
+    fire_lazer() {
+        if (this.laser_fire_control && this.laser_fire_control.can_fire()) {
+            // Fire from left side
+            let lazer1 = this.get_relative_position(-40, 35);
+            var projectile1 = new Projectile(
+                this.window_manager,
+                this.position.x + lazer1.x,
+                this.position.y + lazer1.y,
+                this.rotation,
+                this.bolt_type
+            );
+            projectile1.set_velocity(this.velocity);
+            projectile1.accelerate(3);
+            this.projectiles.push(projectile1);
+
+            // Fire from right side
+            let lazer2 = this.get_relative_position(+40, 35);
+            var projectile2 = new Projectile(
+                this.window_manager,
+                this.position.x + lazer2.x,
+                this.position.y + lazer2.y,
+                this.rotation,
+                this.bolt_type
+            );
+            projectile2.set_velocity(this.velocity);
+            projectile2.accelerate(3);
+            this.projectiles.push(projectile2);
         }
     }
 
-    down(key) {
-        if (!this.states[key] || !this.states[key].justPressed) { // Ensure the justPressed logic
-            this.states[key] = { pressed: true, up: false, down: true, justPressed: true };
+    update_frame(deltaTime) {
+        super.update_frame(deltaTime);
+
+        if (this.laser_fire_control) {
+            this.laser_fire_control.update_frame();
+
+            // Boss fires periodically
+            if (Math.random() < 0.05) { // 5% chance each frame
+                this.fire_lazer();
+            }
+        }
+
+        // Update projectiles
+        const timestamp = Date.now();
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const projectile = this.projectiles[i];
+            if (timestamp - projectile.created > 5000) {
+                this.projectiles.splice(i, 1);
+            } else {
+                projectile.update_frame(deltaTime);
+            }
         }
     }
 
-    get_state(key) {
-        if (key in this.states) {
-            return this.states[key];
+    render(window) {
+        super.orient(window);
+        super.render();
+        super.de_orient();
+
+        // Render boss projectiles
+        for (let projectile of this.projectiles) {
+            projectile.orient(window);
+            projectile.render();
+            projectile.de_orient();
         }
-        this.states[key] = { pressed: false, up: false, down: false };
-        return this.states[key];
     }
+}
+class Enemy extends game_object {
+    constructor(window_manager, x, y, type) {
+        let speed = 2 + Math.random() * 3;
 
-    is_pressed(key) {
-        return key in this.states && this.states[key].pressed;
-    }
+        switch (type) {
+            case 'chatgpt':
+                super(window_manager, x, y, 64, 64,
+                    3,                    // mass
+                    0,                    // rotation
+                    12);                  // rotation speed
+                this.set_image('static/debris/email.png'); // Placeholder
+                this.set_type("chatgpt");
+                this.set_max_life(80);
 
-    just_pressed(key) {
-        if (key in this.states && this.states[key].justPressed) {
-            this.states[key].justPressed = false; // Reset the justPressed state after checking
-            return true;
+                let chatgpt_action = [
+                    { type: "bank_left", frames: 2 },
+                    { type: "accelerate", frames: 4, speed: speed },
+                    { type: "bank_right", frames: 4 },
+                    { type: "accelerate", frames: 4, speed: speed },
+                    { type: "skip", frames: 3 }
+                ];
+                this.action_list = chatgpt_action;
+                break;
+
+            case 'resume':
+                super(window_manager, x, y, 64, 64,
+                    2,                    // mass
+                    0,                    // rotation
+                    10);                  // rotation speed
+                this.set_image('static/debris/pdf.png'); // Placeholder
+                this.set_type("resume");
+                this.set_max_life(60);
+
+                let resume_action = [
+                    { frames: 2, type: "strafe_left", speed: speed },
+                    { frames: 8, type: "accelerate", speed: speed },
+                    { frames: 2, type: "strafe_right", speed: speed },
+                    { frames: 8, type: "accelerate", speed: speed },
+                    { frames: 5, type: "skip" }
+                ];
+                this.action_list = resume_action;
+                break;
+
+            case 'application':
+                super(window_manager, x, y, 64, 64,
+                    4,                    // mass
+                    0,                    // rotation
+                    8);                   // rotation speed
+                this.set_image('static/debris/phone.png'); // Placeholder
+                this.set_type("application");
+                this.set_max_life(100);
+
+                let application_action = [
+                    { type: "accelerate", frames: 6, speed: speed },
+                    { type: "bank_left", frames: 3 },
+                    { type: "accelerate", frames: 6, speed: speed },
+                    { type: "bank_right", frames: 3 },
+                    { type: "skip", frames: 4 }
+                ];
+                this.action_list = application_action;
+                break;
         }
-        return false;
-    }
 
-    just_stopped(key) {
-        if (key in this.states && this.states[key].justStopped) {
-            this.states[key].justStopped = false; // Reset the justStopped state after checking
-            return true;
+        this.rotation = 180;
+    }
+}
+class Powerup extends game_object {
+    constructor(window_manager, x, y, type) {
+        super(window_manager, x, y, 48, 48,
+            0.5,                  // light mass
+            0,                    // rotation
+            5);                   // rotation speed
+
+        this.powerup_type = type;
+
+        switch (type) {
+            case 'health':
+                this.set_image('static/debris/pdf.png'); // Green PDF icon for health
+                this.set_type("powerup_health");
+                this.heal_amount = 1000; // Restore more health
+                break;
+
+            case 'shield':
+                this.set_image('static/debris/email.png'); // Blue email icon for shield
+                this.set_type("powerup_shield");
+                this.shield_duration = 5000; // 5 seconds of shield
+                break;
+
+            case 'weapon':
+                this.set_image('static/debris/phone.png'); // Orange phone icon for weapon
+                this.set_type("powerup_weapon");
+                break;
         }
-        return false;
+
+        this.set_center(24, 24);
+        this.set_max_life(1); // Destroyed on pickup
+
+        // Simple floating animation
+        let float_action = [
+            { type: "bank_left", frames: 2 },
+            { type: "bank_right", frames: 4 },
+            { type: "bank_left", frames: 2 },
+            { type: "skip", frames: 2 }
+        ];
+        this.action_list = float_action;
+        this.rotation = 180;
+
+        // Powerups drift slowly downward
+        this.velocity.y = 20;
     }
 
-    shift() {
-        if (this.shift) return true;
-        return false;
-    }
+    apply_to_ship(ship) {
+        switch (this.powerup_type) {
+            case 'health':
+                ship.life += this.heal_amount;
+                if (ship.life > ship.max_life) {
+                    ship.life = ship.max_life;
+                }
+                console.log(`Health restored! +${this.heal_amount} HP`);
+                break;
 
-    ctrl() {
-        if (this.ctrl_state) return true;
-        return false;
-    }
+            case 'shield':
+                // Activate shield on ship
+                if (!ship.shield_active) {
+                    ship.activate_shield(this.shield_duration);
+                    console.log(`Shield activated for ${this.shield_duration/1000} seconds!`);
+                } else {
+                    // Extend existing shield
+                    ship.shield_end_time += this.shield_duration;
+                    console.log(`Shield extended!`);
+                }
+                break;
 
-    event(event) {
-        this.shift = event.shiftKey;
-        this.ctrl_state = event.ctrlKey;
+            case 'weapon':
+                // Reduce fire control cooldown temporarily
+                if (ship.laser_fire_control) {
+                    ship.laser_fire_control.temprature = 0;
+                    ship.laser_fire_control.overheated = false;
+                }
+                if (ship.missile_fire_control) {
+                    ship.missile_fire_control.temprature = 0;
+                    ship.missile_fire_control.overheated = false;
+                }
+                console.log("Weapons cooled down!");
+                break;
+        }
+
+        // Mark for destruction after pickup
+        this.destroy();
     }
 }
 class fire_control {
@@ -2905,7 +4591,7 @@ class fire_control {
             return false;
         }
         if(this.is_firing==false) {
-            this.temprature-=1;
+            this.temprature-=2;  // Refill at 2x the decay rate
             this.rps=(this.max_rps*this.get_cooldown_percentage())/100;
             if(this.temprature<0) this.temprature=0;
         }
@@ -2940,16 +4626,17 @@ class level extends events{
         //this.level_url='https://aijobwars.com/static/levels/level.json';
         this.position = { x: 0, y: 0, width: 0, height: 0 }
         this.window_manager=window_manager;
+        this.audio_manager=window_manager.audio_manager;
         this.npc = [];
         this.explosions = [];
         this.projectiles =[];
         this.data=null;
         this.spaceship =null;
-        this.track=null;
+        this.track_key=null; // Key for background music in audio_manager
         this.speed=null;
         this.rows=0;
         this.columns=0;
-        this.master_volume=.5;
+        this.master_volume=0.4;
     }
 
     volume(level){
@@ -2960,8 +4647,15 @@ class level extends events{
         if(this.master_volume>1){
             this.master_volume=1;
         }
-        this.track.volume=this.master_volume;
-        this.spaceship.set_volume(this.master_volume);
+        this.audio_manager.set_master_volume(this.master_volume);
+    }
+
+    stop(){
+        // Stop all music and sounds associated with this level
+        if(this.track_key && this.audio_manager) {
+            console.log('[Level] Stopping track:', this.track_key);
+            this.audio_manager.stop(this.track_key);
+        }
     }
 
 
@@ -2975,13 +4669,17 @@ class level extends events{
                 // Parse the response body as text
                 return response.json();
             })
-            .then(level_data => {
+            .then(async level_data => {
                 // Parse YAML data
                 this.data = level_data;
                 let bg = this.data['background'];
                 let music = this.data['music'];
                 this.background=(bg);
-                this.track = new Audio(music);
+
+                // Load background music with Web Audio API
+                this.track_key = 'level_music';
+                await this.audio_manager.add(this.track_key, music);
+
                 this.speed = Number(this.data.speed);
                 this.rows = Number(this.data.rows);
                 this.columns = Number(this.data.columns);
@@ -3004,6 +4702,17 @@ class level extends events{
                             case 'e': block = new Derbis(this.window_manager,x, y, "email"); break;
                             case 'c': block = new Derbis(this.window_manager,x, y, "call"); break;
                             case 'w': block = new Derbis(this.window_manager,x, y, "webex"); break;
+                            case 'l': block = new Derbis(this.window_manager,x, y, "linkedin"); break;
+                            case 'z': block = new Derbis(this.window_manager,x, y, "zoom"); break;
+                            case 'f': block = new Derbis(this.window_manager,x, y, "facebook"); break;
+                            case 'r': block = new Derbis(this.window_manager,x, y, "reddit"); break;
+                            case 'g': block = new Enemy(this.window_manager,x, y, "chatgpt"); break;
+                            case 'R': block = new Enemy(this.window_manager,x, y, "resume"); break;
+                            case 'a': block = new Enemy(this.window_manager,x, y, "application"); break;
+                            case 'i': block = new Boss(this.window_manager,x, y, "interview"); break;
+                            case 'h': block = new Powerup(this.window_manager,x, y, "health"); break;
+                            case 's': block = new Powerup(this.window_manager,x, y, "shield"); break;
+                            case 'W': block = new Powerup(this.window_manager,x, y, "weapon"); break;
                             case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); block=this.spaceship; break;
                         }
                         this.npc.push(block);
@@ -3012,7 +4721,9 @@ class level extends events{
                     }
 
                 }
-                this.position.y = this.rows * 64 - window.innerHeight;
+                // Use virtual viewport dimensions for level positioning
+                const virtual_height = this.window_manager.graphics.viewport.virtual.height;
+                this.position.y = this.rows * 64 - virtual_height;
                 this.position.x = 0;
                 this.position.height = this.rows * 64;
                 this.position.width = this.columns * 64;
@@ -3039,14 +4750,14 @@ class level extends events{
     }
 
     boss_mode_on(){
-        this.G.game.style.display = 'none';
-        this.G.boss_mode.style.display = 'block';
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('boss_mode').style.display = 'block';
         this.G.boss_mode_activated=true;
         this.pause_game_mode();
     }
     boss_mode_off(){
-        this.G.game.style.display = 'block';
-        this.G.boss_mode.style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('boss_mode').style.display = 'none';
         this.G.boss_mode_activated=false;
         this.unpause_game_mode();
     }
@@ -3054,24 +4765,45 @@ class level extends events{
     pause(){
         document.getElementById('game-overlay').style.display = 'block';
         document.getElementById('game-underlay').style.display = 'block';
-        document.getElementById('game-paused').style.display = 'block'; 
+        document.getElementById('game-paused').style.display = 'block';
         this.pause_game_mode();
+
+        // Pause background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.pause(this.G.level.track_key);
+        }
     }
     unpause(){
         document.getElementById('game-overlay').style.display = 'none';
         document.getElementById('game-underlay').style.display = 'none';
         document.getElementById('game-paused').style.display = 'none';
         this.unpause_game_mode();
+
+        // Resume background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.resume(this.G.level.track_key);
+        }
     }
 
     toggle_sound(){
-        if(this.G.audio_manager.playing()){
-            this.G.level.track.pause();
-            this.G.audio_manager.sound_off();
+        const audio_manager = this.G.window_manager.audio_manager;
 
+        if(audio_manager.playSounds) {
+            // Turn sound OFF
+            audio_manager.sound_off();
+            // Stop background music
+            if(this.G.level.track_key) {
+                audio_manager.stop(this.G.level.track_key);
+            }
         } else {
-            this.G.level.track.play();
-            this.G.audio_manager.sound_on();
+            // Turn sound ON
+            audio_manager.sound_on();
+            // Resume background music with looping enabled
+            if(this.G.level.track_key) {
+                audio_manager.play(this.G.level.track_key, 0, true);
+            }
         }
     }
 
@@ -3118,12 +4850,13 @@ class level extends events{
         this.active=true;
         this.ok=false;
         this.cancel=false;
-        this.close=true;
-        this.title="Credits";
+        this.closeButton=true;
+        this.title="Help";
         let window_width=1024;
         let window_height=700;
-        let x=(graphics.viewport.given.width-window_width)/2;
-        let y=(graphics.viewport.given.height-window_height)/2;
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
         this.position = new rect(x, y, window_width,window_height,"left","top");
 
 
@@ -3149,56 +4882,57 @@ class level extends events{
     }
 
 
-}class prologue extends modal{
+}class prologue extends cinematic_player {
 
-    layout(){
-        this.ok=false
-        this.cancel=false
-        this.close=true;
-        this.title="Prologue";
-        this.text="";
-        this.active=true;
-        
-        let window_width=800;
-        let window_height=600;
-        let x=(this.graphics.viewport.given.width-window_width)/2;
-        let y=(this.graphics.viewport.given.height-window_height)/2;
+    layout() {
+        this.ok = false;
+        this.cancel = false;
+        this.closeButton = true;
+        this.title = "Prologue";
+        this.text = "";
+        this.active = true;
 
-        this.position = new rect(x, y, window_width,window_height,"left","top");
+        let window_width = 800;
+        let window_height = 600;
+        // Use virtual viewport dimensions for positioning (logical pixels, not physical)
+        let x = (this.graphics.viewport.virtual.width - window_width) / 2;
+        let y = (this.graphics.viewport.virtual.height - window_height) / 2;
+
+        this.position = new rect(x, y, window_width, window_height, "left", "top");
         this.resize();
         this.add_buttons();
 
-        this.player= new scene(this.window_manager,"static/storyboard/intro/intro_scene.json");
-        //this.on("close",()=>{ this.player.close(); })
-        this.render_callback(this.player.update_frame.bind(this.player));
+        this.setup_player("static/storyboard/intro/intro_scene.json");
     }
-
-    render(){
-        super.render();
-    }
-
-}class high_scores extends modal{
+}
+class high_scores extends modal{
     layout(){
         this.active=true;
         this.ok=false;
         this.cancel=false;
-        this.close=true;
+        this.closeButton=true;
         this.title="High Scores";
         this.text="";
         let window_width=800;
         let window_height=600;
-        let x=(this.graphics.viewport.given.width-window_width)/2;
-        let y=(this.graphics.viewport.given.height-window_height)/2;
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
         this.position = new rect(x, y, window_width,window_height,"left","top");
         this.resize();
         this.add_buttons();
         this.high_scores=null;
+        this.scroll_offset=0;
+        this.line_height=40;
         this.load_high_scores("static/json/highscores.json");
-        
+        this.render_callback(this.render_scores.bind(this));
 
+        // Mouse wheel scrolling
+        this._bound_wheel_handler = this.handle_wheel.bind(this);
+        this.canvas.addEventListener('wheel', this._bound_wheel_handler);
     }
 
-    async load_high_scores(){
+    async load_high_scores(jsonFileUrl){
         try {
                 const response = await fetch(jsonFileUrl);
                 if (!response.ok) {
@@ -3211,118 +4945,366 @@ class level extends events{
         }
      }
 
-    
+    handle_wheel(event) {
+        if (!this.active || !this.high_scores) return;
 
-    
-}class credits extends modal{
-    layout(){
-        this.active=true;
-        this.ok=false;
-        this.cancel=false;
-        this.close=true;
-        this.title="Credits";
-        this.text="";
-        let window_width=800;
-        let window_height=800;
-        let x=(this.graphics.viewport.given.width-window_width)/2;
-        let y=(this.graphics.viewport.given.height-window_height)/2;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
+        // Check if mouse is over the modal window
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        if (mouseX >= this.render_internal_rect.x &&
+            mouseX <= this.render_internal_rect.x + this.render_internal_rect.width &&
+            mouseY >= this.render_internal_rect.y &&
+            mouseY <= this.render_internal_rect.y + this.render_internal_rect.height) {
+
+            event.preventDefault();
+
+            // Scroll by wheel delta
+            this.scroll_offset += event.deltaY * 0.5;
+
+            // Clamp scroll offset
+            const header_height = 60;
+            const scrollable_height = this.render_internal_rect.height - header_height;
+            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+            this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
+        }
+    }
+
+    handle_keys(kb) {
+        if (!this.active || !this.high_scores) return;
+
+        // Arrow key scrolling
+        if (kb.is_pressed('ArrowUp')) {
+            this.scroll_offset -= 5;
+        }
+        if (kb.is_pressed('ArrowDown')) {
+            this.scroll_offset += 5;
+        }
+
+        // Page up/down scrolling
+        const header_height = 60;
+        const scrollable_height = this.render_internal_rect.height - header_height;
+
+        if (kb.just_stopped('PageUp')) {
+            this.scroll_offset -= scrollable_height;
+        }
+        if (kb.just_stopped('PageDown')) {
+            this.scroll_offset += scrollable_height;
+        }
+
+        // Home/End
+        if (kb.just_stopped('Home')) {
+            this.scroll_offset = 0;
+        }
+        if (kb.just_stopped('End')) {
+            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+            this.scroll_offset = max_scroll;
+        }
+
+        // Clamp scroll offset
+        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+        this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
+    }
+
+    render_scores(position) {
+        if (!this.high_scores) {
+            // Show loading text
+            let loading_pos = new rect(position.x + position.width/2, position.y + position.height/2, null, null, "center", "center");
+            this.graphics.font.draw_text(loading_pos, "Loading...", true, false);
+            return;
+        }
+
+        const ctx = this.graphics.ctx;
+        const header_height = 60; // Height reserved for header
+        const start_y = position.y + 70 - this.scroll_offset;
+        const header_y = position.y + 40;
+
+        // Draw column headers (fixed at top)
+        ctx.save();
+        ctx.fillStyle = '#00FFFF';
+        ctx.font = 'bold 18px monospace';
+
+        const rank_x = position.x + 20;
+        const name_x = position.x + 100;
+        const score_x = position.x + position.width - 150;
+
+        ctx.fillText("Rank", rank_x, header_y);
+        ctx.fillText("Name", name_x, header_y);
+        ctx.fillText("Score", score_x, header_y);
+
+        // Draw separator line
+        ctx.strokeStyle = '#00FFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(position.x + 10, header_y + 10);
+        ctx.lineTo(position.x + position.width - 10, header_y + 10);
+        ctx.stroke();
+
+        // Draw scores (clip to scrollable area below header)
+        ctx.font = '16px monospace';
+        for (let i = 0; i < this.high_scores.length; i++) {
+            const score = this.high_scores[i];
+            const y = start_y + (i * this.line_height);
+
+            // Skip if outside visible area (below header and above bottom)
+            if (y < position.y + header_height || y > position.y + position.height) {
+                continue;
+            }
+
+            // Highlight current player (if name matches)
+            if (score.name === "Chris Watkins") {
+                ctx.fillStyle = '#FFFF00';
+            } else {
+                // Gradient colors based on rank
+                if (score.rank === 1) ctx.fillStyle = '#FFD700'; // Gold
+                else if (score.rank === 2) ctx.fillStyle = '#C0C0C0'; // Silver
+                else if (score.rank === 3) ctx.fillStyle = '#CD7F32'; // Bronze
+                else ctx.fillStyle = '#00FF00'; // Green
+            }
+
+            ctx.fillText(score.rank.toString(), rank_x, y);
+            ctx.fillText(score.name, name_x, y);
+            ctx.fillText(score.score.toLocaleString(), score_x, y);
+        }
+
+        // Draw scrollbar if needed
+        const scrollable_height = position.height - header_height;
+        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+        if (max_scroll > 0) {
+            const scrollbar_height = Math.max(30, (scrollable_height / (this.high_scores.length * this.line_height)) * scrollable_height);
+            const scrollbar_y = position.y + header_height + ((this.scroll_offset / max_scroll) * (scrollable_height - scrollbar_height));
+            const scrollbar_x = position.x + position.width - 15;
+
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.fillRect(scrollbar_x, scrollbar_y, 10, scrollbar_height);
+        }
+
+        ctx.restore();
+    }
+
+    delete() {
+        // Remove wheel event listener
+        if (this._bound_wheel_handler) {
+            this.canvas.removeEventListener('wheel', this._bound_wheel_handler);
+        }
+        super.delete();
+    }
+}class credits extends cinematic_player {
+
+    layout() {
+        this.active = true;
+        this.ok = false;
+        this.cancel = false;
+        this.closeButton = true;
+        this.title = "Credits";
+        this.text = "";
+
+        let window_width = 800;
+        let window_height = 800;
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x = (this.graphics.viewport.virtual.width - window_width) / 2;
+        let y = (this.graphics.viewport.virtual.height - window_height) / 2;
+
+        this.position = new rect(x, y, window_width, window_height, "left", "top");
         this.resize();
         this.add_buttons();
 
-        this.player= new scene(this.window_manager,"static/storyboard/credits/credits.json");
-        this.on("close",()=>{ this.player.close(); })
-        this.render_callback(this.player.update_frame.bind(this.player));
+        this.setup_player("static/storyboard/credits/credits.json");
     }
-    
-
-    //render(){
-    //    super.render();
-    //}
-
 }
-
-class percentage_bar {
-    constructor(window_manager,overlay_position,underlay_position, overlay,underlay) {
-        this.graphics=window_manager.graphics;
-        this.overlay_position=overlay_position;
-        this.underlay_position=underlay_position;
-        this.underlay=underlay;
-        this.overlay=overlay;
+/**
+ * Base class for all UI components
+ * Handles parent-child relationships and coordinate transformations
+ * All UI elements should extend this to ensure consistent behavior
+ */
+class ui_component extends events {
+    constructor(parent, graphics, position) {
+        super();
+        this.parent = parent;
+        this.graphics = graphics;
+        this.position = position;  // Relative position within parent
+        this.anchor_position = null;  // Calculated absolute position of parent
+        this.children = [];
+        this.visible = true;
+        this.active = true;
     }
-    
-    render(percentage){
-        let percentage_width=parseInt((this.underlay_position.width*percentage)/100);
-        if (percentage_width!=0) {
-        let render_percentage= new rect(this.underlay_position.x,this.underlay_position.y,percentage_width,this.underlay_position.height);
-        //this.graphics.sprites.slice_3(this.underlay,render_percentage);
-            this.graphics.sprites.render(this.underlay,null, render_percentage,1,"none");
+
+    /**
+     * Add a child component
+     */
+    add_child(child) {
+        if (!this.children.includes(child)) {
+            this.children.push(child);
+            child.parent = this;
         }
-        this.graphics.sprites.slice_3(this.overlay,this.overlay_position);
-        //this.graphics.sprites.render(this.underlay,null, this.underlay_position,1,"none");
-        //this.graphics.sprites.render(this.overlay,null, this.overlay_position,1,"none");
     }
 
-    render2(percentage) {
-        let vp=this.graphics.viewport.given;
-        let x = this.x+vp.x;
-        let y = this.y+vp.y;
+    /**
+     * Remove a child component
+     */
+    remove_child(child) {
+        const index = this.children.indexOf(child);
+        if (index !== -1) {
+            this.children.splice(index, 1);
+            child.parent = null;
+        }
+    }
 
-        // Background with subtle gradient
-        let bgGradient = this.graphics.ctx.createLinearGradient(x, y, x, y + this.height);
-        bgGradient.addColorStop(0, '#222222'); // Light gray
-        bgGradient.addColorStop(1, '#000000'); // Almost white
-        this.graphics.ctx.fillStyle = bgGradient;
-        this.graphics.ctx.fillRect(x, y, this.width, this.height);
+    /**
+     * Get absolute position by adding relative position to anchor position
+     * This is the core coordinate transform that makes everything work
+     */
+    get_absolute_position() {
+        let absolute_position = this.position.clone();
+        if (this.anchor_position) {
+            absolute_position.add(this.anchor_position);
+        }
+        return absolute_position;
+    }
 
-        let adjusted_percentage=percentage;
-        if (adjusted_percentage<0)adjusted_percentage=0;
-        if (adjusted_percentage>100) adjusted_percentage=100;
-        
-        // Adjust bar color based on percentage
-        const redIntensity = Math.floor(255 * (1 - adjusted_percentage / 100));
-        const greenIntensity = Math.floor(255 * (adjusted_percentage/ 100));
-        this.graphics.ctx.fillStyle = `rgb(${redIntensity},${greenIntensity},0)`;
+    /**
+     * Update anchor position (called by parent when it moves/resizes)
+     */
+    resize(anchor_position) {
+        this.anchor_position = anchor_position;
 
-        // Fill the entire bar, adjusting color based on percentage
-        this.graphics.ctx.fillRect(x + 3, y + 3, (this.width - 6) * (adjusted_percentage/ 100), this.height - 6);
+        // Update all children with our absolute position as their anchor
+        const our_absolute = this.get_absolute_position();
+        for (let child of this.children) {
+            if (child.resize) {
+                child.resize(our_absolute);
+            }
+        }
+    }
 
-        // Draw outline
-        this.graphics.ctx.strokeStyle = '#AAA'; // Dark gray
-        this.graphics.ctx.lineWidth = 2;
-        this.graphics.ctx.strokeRect(x, y, this.width, this.height);
+    /**
+     * Update this component and all children
+     * Override this in subclasses to add custom update logic
+     */
+    update(deltaTime) {
+        if (!this.active) return;
 
-        // Draw percentage text
-        this.graphics.ctx.fillStyle = '#DDFFFF'; // Neon blue
-        this.graphics.ctx.fillStyle = `rgb(${redIntensity},${redIntensity},${redIntensity})`;
-        this.graphics.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
-        this.graphics.ctx.textAlign = 'center';
-        this.graphics.ctx.textBaseline = 'middle';
-        this.graphics.ctx.fillText(percentage.toFixed(0) + '%', x + this.width / 2, y + this.height / 2 - 10);
+        // Update all children
+        for (let child of this.children) {
+            if (child.update) {
+                child.update(deltaTime);
+            }
+        }
+    }
 
-        // Draw label text
-        this.graphics.ctx.font = '14px IBM Plex Sans, Arial, sans-serif';
-        this.graphics.ctx.fillText(this.label, x + this.width / 2, y + this.height / 2 + 10);
+    /**
+     * Render this component and all children
+     * Override render_self() in subclasses for custom rendering
+     */
+    render() {
+        if (!this.visible || !this.active) return;
+
+        // Render this component first
+        this.render_self();
+
+        // Then render all children
+        for (let child of this.children) {
+            if (child.render) {
+                child.render();
+            }
+        }
+    }
+
+    /**
+     * Override this to render the component itself
+     * Default: do nothing
+     */
+    render_self() {
+        // Override in subclass
+    }
+
+    /**
+     * Set visibility
+     */
+    set_visible(visible) {
+        this.visible = visible;
+    }
+
+    /**
+     * Set active state
+     */
+    set_active(active) {
+        this.active = active;
+        for (let child of this.children) {
+            if (child.set_active) {
+                child.set_active(active);
+            }
+        }
+    }
+
+    /**
+     * Cleanup
+     */
+    delete() {
+        // Destroy all children
+        for (let child of this.children) {
+            if (child.delete) {
+                child.delete();
+            }
+        }
+        this.children = [];
+        this.parent = null;
     }
 }
 
 
+class percentage_bar extends ui_component {
+    constructor(parent, graphics, position, overlay, underlay) {
+        super(parent, graphics, position);
+        this.underlay = underlay;
+        this.overlay = overlay;
+        this.percentage = 0;
+    }
 
-class percentage_bar_fluid extends percentage_bar{
-    constructor(window_manager,position, overlay,underlay) {    
-        let overlay_sprite=window_manager.graphics.sprites.get(overlay);
-        let underlay_sprite=window_manager.graphics.sprites.get(underlay);
+    /**
+     * Render the percentage bar
+     */
+    render_self() {
+        // Get current absolute position
+        const absolute_position = this.get_absolute_position();
 
-        let scale=overlay_sprite.position.get_scale(position);
-        let scaled_underlay=underlay_sprite.position.clone();
-        scaled_underlay.x=20;
-        scaled_underlay.y=9;
-        scaled_underlay.set_scale(scale);
-        scaled_underlay.add(position)
+        // Render underlay (fluid/progress)
+        let percentage_width = parseInt((absolute_position.width * this.percentage) / 100);
+        if (percentage_width != 0) {
+            // Calculate underlay position (inset from overlay)
+            const underlay_x = absolute_position.x + 20;
+            const underlay_y = absolute_position.y + 9;
+            let render_percentage = new rect(underlay_x, underlay_y, percentage_width * 0.85, absolute_position.height - 18);
+            this.graphics.sprites.render(this.underlay, null, render_percentage, 1, "none");
+        }
 
-        // Calculate the position of the underlay based on the scaled overlay
-        
-        super(window_manager,position,scaled_underlay,overlay,underlay);
+        // Render overlay (bar frame)
+        this.graphics.sprites.slice_3(this.overlay, absolute_position);
+    }
+
+    /**
+     * Update the bar with a new percentage value
+     */
+    set_percentage(percentage) {
+        this.percentage = percentage;
+    }
+
+    /**
+     * Backward compatibility - render with percentage parameter
+     */
+    render(percentage = null) {
+        if (percentage !== null) {
+            this.set_percentage(percentage);
+        }
+        super.render();
+    }
+}
+
+
+class percentage_bar_fluid extends percentage_bar {
+    constructor(parent, graphics, position, overlay, underlay) {
+        super(parent, graphics, position, overlay, underlay);
     }
 }
 class pause extends modal{
@@ -3330,14 +5312,15 @@ class pause extends modal{
         this.active=true;
         this.ok=true;
         this.cancel=false;
-        this.close=true;
+        this.closeButton=true;
         this.title="Paused";
         this.text="";
         let window_width=800;
         let window_height=600;
-        
-        let x=(graphics.viewport.given.width-window_width)/2;
-        let y=(graphics.viewport.given.height-window_height)/2;
+
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
         this.position = new rect(x, y, window_width,window_height,"left","top");
         this.resize();
         this.add_buttons();
@@ -3347,7 +5330,177 @@ class pause extends modal{
     //    super.render();
     //}
 
-}class scene {
+}// Base class for modals that play cinematic scenes with seekbar and pause controls
+class cinematic_player extends modal {
+
+    setup_player(scene_url) {
+        this.player = new scene(this.window_manager, scene_url);
+        this.on("close", () => { this.player.close(); });
+        this.player.on("complete", () => {
+            // Scene finished, close the modal
+            this.close();
+        });
+        this.render_callback(this.player.update_frame.bind(this.player));
+
+        // Resume audio context on first user interaction (browser autoplay policy)
+        this._resume_audio_once = async () => {
+            if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+                await this.audio_manager.audioContext.resume();
+                console.log('[CinematicPlayer] Audio context resumed on user interaction');
+            }
+        };
+        // Call it once immediately when modal opens
+        this._resume_audio_once();
+
+        // Create seekbar
+        let seekbar_position = new rect(10, this.internal_rect.height - 30, this.internal_rect.width - 20, 20, "left", "top");
+        this.seekbar = this.create_seekbar(
+            seekbar_position,
+            () => this.player.get_progress(),
+            (time) => this.player.seek_to(time, true)
+        );
+
+        // Listen for seek end to resume audio
+        this.seekbar.on('seek_end', () => {
+            this.player.end_seek();
+        });
+
+        // Add click handler for pause/play
+        this._bound_click_handler = this.handle_click.bind(this);
+        this.graphics.canvas.addEventListener('click', this._bound_click_handler);
+    }
+
+    create_seekbar(position, get_progress_callback, seek_callback) {
+        // Seekbar is positioned relative to the modal's internal rect (virtual coordinates)
+        let anchor_position = new rect(0, 0, 0, 0);
+        anchor_position.add(this.position);
+        anchor_position.add(this.internal_rect);
+
+        return new seekbar(this, this.graphics, position, anchor_position, get_progress_callback, seek_callback);
+    }
+
+    handle_click(event) {
+        if (!this.active || !this.player) return;
+
+        // Check if click is inside the modal window
+        const click_x = event.offsetX;
+        const click_y = event.offsetY;
+
+        if (click_x >= this.position.x &&
+            click_x <= this.position.x + this.position.width &&
+            click_y >= this.position.y &&
+            click_y <= this.position.y + this.position.height) {
+
+            // Don't toggle if clicking on the close button
+            if (this.closeButton && this.buttons) {
+                let clicking_button = false;
+                this.buttons.forEach((button) => {
+                    if (button.is_inside(click_x, click_y)) {
+                        clicking_button = true;
+                    }
+                });
+
+                // Don't toggle if clicking on seekbar
+                if (this.seekbar && this.seekbar.is_inside(click_x, click_y)) {
+                    clicking_button = true;
+                }
+
+                if (!clicking_button) {
+                    this.player.toggle_pause();
+                }
+            } else {
+                this.player.toggle_pause();
+            }
+        }
+    }
+
+    handle_keys(kb) {
+        if (!this.active || !this.player) return;
+
+        // Space to pause/play
+        if (kb.just_stopped(' ')) {
+            this.player.toggle_pause();
+        }
+
+        // Left/Right arrows to seek
+        if (kb.just_stopped('ArrowLeft')) {
+            const new_time = Math.max(0, this.player.elapsed - 5000); // 5 seconds back
+            this.player.seek_to(new_time, false);
+        }
+        if (kb.just_stopped('ArrowRight')) {
+            const new_time = this.player.elapsed + 5000; // 5 seconds forward
+            this.player.seek_to(new_time, false);
+        }
+    }
+
+    render() {
+        // Early exit if not active or graphics is deleted - BEFORE calling super
+        if (!this.active || !this.graphics || !this.graphics.ctx) return;
+
+        // Now safe to call super.render()
+        super.render();
+
+        // Render seekbar
+        if (this.seekbar) {
+            this.seekbar.render();
+        }
+
+        // Draw pause/play indicator in center of video area
+        if (this.player && this.graphics && this.graphics.ctx) {
+            const ctx = this.graphics.ctx;
+            if (!ctx || typeof ctx.save !== 'function') return;
+
+            const center_x = this.position.x + this.position.width / 2;
+            const center_y = this.position.y + this.position.height / 2;
+            const radius = 50;
+
+            ctx.save();
+
+            if (this.player.paused) {
+                // Draw pause icon (two vertical bars)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(center_x, center_y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const bar_width = 12;
+                const bar_height = 40;
+                const bar_spacing = 10;
+                ctx.fillRect(center_x - bar_spacing - bar_width, center_y - bar_height/2, bar_width, bar_height);
+                ctx.fillRect(center_x + bar_spacing, center_y - bar_height/2, bar_width, bar_height);
+            }
+
+            ctx.restore();
+        }
+    }
+
+    delete() {
+        // Set inactive first to stop rendering
+        this.active = false;
+
+        // Clean up seekbar
+        if (this.seekbar) {
+            this.seekbar.delete();
+            this.seekbar = null;
+        }
+
+        // Clean up click handler
+        if (this._bound_click_handler && this.graphics && this.graphics.canvas) {
+            this.graphics.canvas.removeEventListener('click', this._bound_click_handler);
+            this._bound_click_handler = null;
+        }
+
+        // Clean up player
+        if (this.player) {
+            this.player.close();
+            this.player = null;
+        }
+
+        super.delete();
+    }
+}
+class scene {
     constructor(window_manager,scene_url) {
         this.graphics = window_manager.graphics;
         this.audio_manager = window_manager.audio_manager;
@@ -3357,7 +5510,30 @@ class pause extends modal{
         this.start_time=null;
         this.current_img=null;
         this.playing=null;
+        this.paused=false;
+        this.scene_ended=false;
+        this.events = {};
+        this.manual_time_offset = 0; // For seeking
+        this.is_dragging_seekbar = false;
+        this.is_seeking = false; // Prevent audio from playing during seek
+        this._seek_timeout = null;
+        this.currently_playing_audio = new Set(); // Track which audio files are playing
         this.load_scene_data(this.scene_url);
+    }
+
+    on(event_name, callback) {
+        if (!this.events[event_name]) {
+            this.events[event_name] = [];
+        }
+        this.events[event_name].push(callback);
+    }
+
+    emit(event_name, data) {
+        if (this.events[event_name]) {
+            this.events[event_name].forEach((callback) => {
+                callback(data);
+            });
+        }
     }
 
     async load_scene_data(scene_url) { // Updated parameter name
@@ -3370,31 +5546,60 @@ class pause extends modal{
                 const sceneData = data;
                 // You can perform further operations with the sceneData variable if needed
                 return sceneData;
-            });                
+            });
         this.scene_data=data;
+
+        // Load all slides (async audio loading)
+        const loadPromises = [];
         for(let i=0;i<this.scene_data.length;i++){
-            this.load_slide(this.scene_data[i]); 
+            loadPromises.push(this.load_slide(this.scene_data[i]));
         }
-        console.log("try");
-        try {
-            this.graphics.sprites.on_load(this.play_scene.bind(this));
-        } catch (Exception) {
-            console.log("ON LOAD");
-            console.log(Exception);
-            // Handle the exception here
+
+        // Wait for all audio to finish loading
+        await Promise.all(loadPromises);
+
+        // Wait for sprites to load, then start playing
+        if (this.graphics.sprites.loaded) {
+            // Sprites already loaded, start immediately
+            this.play_scene();
+        } else {
+            // Wait for sprites to load
+            this.graphics.sprites.on("complete", this.play_scene.bind(this));
         }
     }
 
-    play_scene() {
+    async play_scene() {
+        // Resume audio context before playing (browser autoplay policy)
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
         this.playing=true;
-        console.log("Playing Scene");
+    }
+
+    get_total_duration() {
+        let max_end_time = 0;
+        const properties = ['images', 'audio', 'text'];
+
+        for (let property of properties) {
+            for (let i = 0; i < this.scene_data.length; i++) {
+                const slide = this.scene_data[i];
+                if (!(property in slide)) continue;
+                for (let j = 0; j < slide[property].length; j++) {
+                    let object = slide[property][j];
+                    let end_time = (object.timestamp + object.duration) * 1000;
+                    if (object.duration > 0 && end_time > max_end_time) {
+                        max_end_time = end_time;
+                    }
+                }
+            }
+        }
+        return max_end_time;
     }
 
     get_objects_in_time() {
         const objectsToShow = [];
         const properties = ['images', 'audio', 'text'];
-    
-        this.elapsed = Date.now() - this.start_time;
     
         for (let property of properties) {
     
@@ -3422,11 +5627,78 @@ class pause extends modal{
         return objectsToShow;
     }
 
-    
+
+    seek_to(time_ms, is_dragging) {
+        // Stop all currently playing audio
+        this.stop_all_audio();
+        this.currently_playing_audio.clear();
+
+        // Reset start time to seek position
+        this.start_time = Date.now() - time_ms;
+        this.manual_time_offset = time_ms;
+        this.scene_ended = false;
+
+        // Only prevent audio playback if actively dragging
+        if (is_dragging) {
+            this.is_seeking = true;
+        } else {
+            // For non-dragging seeks (keyboard, etc), allow audio immediately
+            this.is_seeking = false;
+        }
+    }
+
+    end_seek() {
+        // Allow audio to play again after dragging ends
+        this.is_seeking = false;
+    }
+
+    stop_all_audio() {
+        if (this.scene_data) {
+            for (let i = 0; i < this.scene_data.length; i++) {
+                const slide = this.scene_data[i];
+                if (slide.audio) {
+                    for (let j = 0; j < slide.audio.length; j++) {
+                        const audio = slide.audio[j];
+                        this.audio_manager.stop(audio.path);
+                    }
+                }
+            }
+        }
+    }
+
+    toggle_pause() {
+        this.paused = !this.paused;
+        if (this.paused) {
+            // Store elapsed time when pausing and stop all audio
+            this.manual_time_offset = this.elapsed;
+            this.stop_all_audio();
+            this.currently_playing_audio.clear();
+        } else {
+            // Resume from stored time
+            this.start_time = Date.now() - this.manual_time_offset;
+        }
+    }
+
     update_frame(position) {
         if (!this.playing || !this.scene_data) return;
         if(this.start_time==null) {
             this.start_time=Date.now();
+        }
+
+        // Calculate elapsed time
+        if (this.paused) {
+            this.elapsed = this.manual_time_offset;
+        } else {
+            this.elapsed = Date.now() - this.start_time;
+        }
+
+        // Check if scene has ended (but not if we just seeked there manually)
+        if (!this.scene_ended && !this.is_seeking) {
+            let total_duration = this.get_total_duration();
+            if (this.elapsed >= total_duration) {
+                this.scene_ended = true;
+                this.emit("complete", {});
+            }
         }
 
         let objects=this.get_objects_in_time();
@@ -3441,11 +5713,64 @@ class pause extends modal{
 
         }
 
-        for(let i=0;i<objects.length;i++ ) {
-            let object=objects[i];
-            if(object.type=='audio') {
-                if (this.audio_manager.is_playing(object.data.path) == false) {
-                    this.audio_manager.play(object.data.path);
+        // Handle audio - only play if not paused and not seeking
+        if (!this.paused && !this.is_seeking) {
+            // Get list of audio that should be playing at this time
+            let should_be_playing = new Set();
+            for(let i=0;i<objects.length;i++ ) {
+                let object=objects[i];
+                if(object.type=='audio') {
+                    should_be_playing.add(object.data.path);
+                }
+            }
+
+            // Stop audio that shouldn't be playing anymore
+            for (let audio_path of this.currently_playing_audio) {
+                if (!should_be_playing.has(audio_path)) {
+                    this.audio_manager.stop(audio_path);
+                    this.currently_playing_audio.delete(audio_path);
+                }
+            }
+
+            // Start audio that should be playing but isn't
+            for (let audio_path of should_be_playing) {
+                if (!this.currently_playing_audio.has(audio_path)) {
+                    // Find ALL instances of this audio in the timeline to get the one that matches current time
+                    let matching_audio = null;
+                    let current_elapsed_seconds = this.elapsed / 1000;
+
+                    // Search through all slides for this audio
+                    for (let i = 0; i < this.scene_data.length; i++) {
+                        const slide = this.scene_data[i];
+                        if (!slide.audio) continue;
+
+                        for (let j = 0; j < slide.audio.length; j++) {
+                            const audio = slide.audio[j];
+                            if (audio.path === audio_path) {
+                                const audio_start = audio.timestamp;
+                                const audio_end = audio.timestamp + audio.duration;
+
+                                // Check if current time falls within this audio's playback window
+                                if (current_elapsed_seconds >= audio_start && current_elapsed_seconds <= audio_end) {
+                                    matching_audio = audio;
+                                    break;
+                                }
+                            }
+                        }
+                        if (matching_audio) break;
+                    }
+
+                    if (matching_audio) {
+                        // Calculate how far into THIS specific audio instance we should be
+                        const offset_in_audio = current_elapsed_seconds - matching_audio.timestamp;
+
+                        // Only play with offset if we're past the start and within duration
+                        if (offset_in_audio >= 0 && offset_in_audio <= matching_audio.duration) {
+                            // Add to Set BEFORE playing to prevent duplicate calls on subsequent frames
+                            this.currently_playing_audio.add(audio_path);
+                            this.audio_manager.play(audio_path, offset_in_audio);
+                        }
+                    }
                 }
             }
         }
@@ -3479,16 +5804,21 @@ class pause extends modal{
 
     
     
-    load_slide(slide) {
-        
+    async load_slide(slide) {
         //add all the images for this slide
-        for(let i=0;i<slide.images.length;i++) {
-            this.graphics.sprites.add(slide.images[i].path);
+        if (slide.images) {
+            for(let i=0;i<slide.images.length;i++) {
+                this.graphics.sprites.add(slide.images[i].path);
+            }
         }
 
-        //add all the images for this slide
-        for(let i=0;i<slide.audio.length;i++) {
-            this.audio_manager.add(slide.audio[i].path);
+        //add all the audio for this slide (and wait for it to decode)
+        if (slide.audio) {
+            const audioPromises = [];
+            for(let i=0;i<slide.audio.length;i++) {
+                audioPromises.push(this.audio_manager.add(slide.audio[i].path));
+            }
+            await Promise.all(audioPromises);
         }
     }
 
@@ -3497,16 +5827,26 @@ class pause extends modal{
         this.audio.currentTime = timestamp;
         this.audio.play();
     }
+
+    get_progress() {
+        return {
+            current: this.elapsed || 0,
+            total: this.get_total_duration(),
+            paused: this.paused
+        };
+    }
+
     close(){
         this.playing=false;
-        //stop all audio playback
-        for (let i = 0; i < this.scene_data.length; i++) {
-            const slide = this.scene_data[i];
-            for (let j = 0; j < slide.audio.length; j++) {
-                const audio = slide.audio[j];
-                this.audio_manager.stop(audio.path);
-            }
+
+        // Clear any pending seek timeout
+        if (this._seek_timeout) {
+            clearTimeout(this._seek_timeout);
         }
+
+        // Stop all audio playback
+        this.stop_all_audio();
+        this.currently_playing_audio.clear();
     }
 }
 class game extends modal{
@@ -3514,127 +5854,275 @@ class game extends modal{
         this.active=true;
         this.ok=false
         this.cancel=false
-        this.close=true;
+        this.closeButton=true;
         this.title="Level - 1";
         this.text="";
-        this.resize();
-        this.add_buttons();
-        this.no_skin();
-
 
         this.level_start = false;
         this.lastFrameTime = Date.now(); //keeping game loop frame time
         this.boss_mode_activated = false;
         this.pause_game = false;
-        
+
+        // Death animation tracking
+        this.player_dying = false;
+        this.death_started_time = 0;
+        this.death_explosion_duration = 2000; // 2 seconds for explosion to finish
+
+        // Score tracking
+        this.score = 0;
+        this.kills = 0;
+
         this.ui = new ui(this.ctx, this);
         this.level = new level(this.window_manager);
-        this.level.load('https://aijobwars.com/static/levels/level.json');
+        this.level.load('static/levels/level.json');
         this.level.on("loaded",this.start_level.bind(this));
 
-        this.laser_bar   = new percentage_bar_fluid(this.window_manager, new rect(10, 10+1*50, 200, 40), "bar","bar-red-fluid");
-        this.missile_bar = new percentage_bar_fluid(this.window_manager, new rect(30, 10+2*50, 200, 40), "bar","bar-orange-fluid");
-        this.booster_bar = new percentage_bar_fluid(this.window_manager, new rect(30, 10+3*50, 200, 40), "bar","bar-blue-fluid");
-        this.health_bar  = new percentage_bar_fluid(this.window_manager, new rect(10, 10+4*50, 200, 40), "bar","bar-green-fluid");
-        
-        //this.laser_timeout =  new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        //this.missile_timeout =  new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        //this.booster_timeout = new percentage_bar_fluid(this.window_manager, new rect(10, 10, 200, 40), "bar","bar-red-fluid");
-        this.render_callback(this.updateFrame);
+        // Create HUD bars as children of this modal
+        // Just specify their RELATIVE position - parent will handle absolute positioning
+        this.laser_bar   = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+1*50, 200, 40), "bar", "bar-red-fluid");
+        this.missile_bar = new percentage_bar_fluid(this, this.graphics, new rect(30, 10+2*50, 200, 40), "bar", "bar-orange-fluid");
+        this.booster_bar = new percentage_bar_fluid(this, this.graphics, new rect(30, 10+3*50, 200, 40), "bar", "bar-blue-fluid");
+        this.shield_bar  = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+4*50, 200, 40), "bar", "bar-blue-fluid");
+        this.health_bar  = new percentage_bar_fluid(this, this.graphics, new rect(10, 10+5*50, 200, 40), "bar", "bar-green-fluid");
+
+        // Add bars to parent's ui_components array for automatic management
+        this.ui_components.push(this.laser_bar, this.missile_bar, this.booster_bar, this.shield_bar, this.health_bar);
+
+        // NOW call resize and add_buttons AFTER components are created
+        this.resize();
+        this.add_buttons();
+        this.no_skin();
+
+        this.render_callback(this.updateFrame.bind(this));
 
     }
 
     resize(){
-        let x=0;//this.graphics.viewport.given.x;
-        let y=this.graphics.viewport.given.y;
-        let window_width=this.graphics.viewport.given.width;;
-        let window_height=this.graphics.viewport.given.height;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
-        super.resize();
-    }
+        // Use virtual viewport dimensions (logical pixels, not physical)
+        let x = 0;
+        let y = 0;
+        let window_width = this.graphics.viewport.virtual.width;
+        let window_height = this.graphics.viewport.virtual.height;
+        this.position = new rect(x, y, window_width, window_height, "left", "top");
 
+        // Game window has no_skin(), so internal_rect equals position (no padding)
+        this.internal_rect = new rect(0, 0, this.position.width, this.position.height, "left", "top");
 
+        // Create render positions
+        this.render_position = this.position.clone();
+        this.render_internal_rect = this.internal_rect.clone();
 
+        // Add positions together (in this case, both are at 0,0 so it doesn't change anything)
+        this.render_internal_rect.add(this.render_position);
 
-    // Function to update canvas size and draw the background image
-    single_collsion(obj2,j=0){
-        let window = { y1: this.level.position.y, y2: this.level.position.y + this.graphics.viewport.virtual.height }
-        let collisions=[];
-        for (let i = j; i < this.level.npc.length; i++) {
-            const obj1 = this.level.npc[i];
-            if (obj1.position.y < window.y1 || obj1.position.y > window.y2) continue;
-            if (obj2.position.y < window.y1 || obj2.position.y > window.y2) continue;
-            if (obj1 == obj2) continue; //wtf and why.. fix this bullshittery
-
-                if (obj1.check_collision(obj2)) {
-                    collisions.push([obj1,obj2]);
-                    
-                }
+        // Resize all ui_components with game window position as anchor (no padding)
+        for (let i = 0; i < this.ui_components.length; i++) {
+            if (this.ui_components[i].resize) {
+                this.ui_components[i].resize(this.render_position);
             }
-            return collisions;
+        }
+
+        // Resize close button if it exists
+        if (this.closeButton && typeof this.closeButton.resize === 'function') {
+            this.closeButton.resize(this.render_position);
+        }
     }
+
+
+
+
 
 
 
     check_collisions() {
-        let collisions=[];
-        /*for (let i = 0; i < this.level.npc.length; i++) {
-            const obj1 = this.level.npc[i];
-            let collision=this.single_collsion(obj1,i+1);
-            if(collision.length>0) {
-                collisions.push(...collision);
+        let collisions = [];
+        let window = {
+            y1: this.level.position.y,
+            y2: this.level.position.y + this.graphics.viewport.virtual.height
+        };
+
+        // Check spaceship against all NPCs
+        if (this.level.spaceship) {
+            for (let i = 0; i < this.level.npc.length; i++) {
+                const npc = this.level.npc[i];
+                // Skip checking collision with itself
+                if (npc === this.level.spaceship) continue;
+                if (npc.position.y < window.y1 || npc.position.y > window.y2) continue;
+                if (this.level.spaceship.check_collision(npc)) {
+                    collisions.push({
+                        obj1: this.level.spaceship,
+                        obj2: npc,
+                        type: 'ship_npc'
+                    });
+                }
             }
-        }*/
 
-        /*
+            // Check spaceship projectiles against NPCs
+            if (this.level.spaceship.projectiles.length > 0 && Math.random() < 0.1) {
+                console.log('[Game] Checking', this.level.spaceship.projectiles.length, 'projectiles against', this.level.npc.length, 'NPCs');
+            }
+            for (let p = 0; p < this.level.spaceship.projectiles.length; p++) {
+                const projectile = this.level.spaceship.projectiles[p];
+                for (let i = 0; i < this.level.npc.length; i++) {
+                    const npc = this.level.npc[i];
+                    // Skip checking collision with player's own ship
+                    if (npc === this.level.spaceship) continue;
+                    if (npc.position.y < window.y1 || npc.position.y > window.y2) continue;
+                    if (projectile.check_collision(npc)) {
+                        collisions.push({
+                            obj1: projectile,
+                            obj2: npc,
+                            type: 'projectile_npc'
+                        });
+                    }
+                }
+            }
+        }
 
+        // Check NPC projectiles against spaceship (including boss projectiles)
         for (let i = 0; i < this.level.npc.length; i++) {
-            for(let e=0;e<this.level.npc[e].projectiles;e++){
-                let obj1 = this.level.npc[e].projectiles[e];
-                this.single_collsion(obj1);
+            const npc = this.level.npc[i];
+            if (npc.type !== "ship" && npc.type !== "boss") continue;
+            if (!npc.projectiles) continue;
+
+            for (let p = 0; p < npc.projectiles.length; p++) {
+                const projectile = npc.projectiles[p];
+                if (this.level.spaceship && projectile.check_collision(this.level.spaceship)) {
+                    collisions.push({
+                        obj1: projectile,
+                        obj2: this.level.spaceship,
+                        type: 'enemy_projectile_ship'
+                    });
+                }
             }
-        }
-        
-        for(let i=0;i<this.level.spaceship.projectiles;i++){
-            let obj1 = this.level.spaceship.projectiles[i];
-            this.single_collsion(obj1);
-        }
-        */
-        let obj1 = this.level.spaceship;
-        let collision=this.single_collsion(obj1);
-        if(collision.length>0) {
-            collisions.push(...collision);
         }
 
-        // ok we have all objects intersecting... lets do a single IMPACT.. 
-        // and for those that are still intersecting.. 
-        // we will loop until the thing is nolonger intersecting
-        if (collisions.length>0) console.log("IN Collision");
-        let deltaTime=10/24;
-        for( let i=0;i<collisions.length;i++){
-            let is_it_colliding  = collisions[i][0].check_collision(collisions[i][1]);
-            if (is_it_colliding==false) continue; 
-                
-            collisions[i][0].impact(collisions[i][1]);
-            let colliding = false;
-            for (let o = 0; o < 100000 && colliding; o++) {
-                collisions[i][0].update_position(deltaTime);
-                collisions[i][1].update_position(deltaTime);
-                colliding = collisions[i][0].check_collision(collisions[i][1]);
-                console.log("Pushing awaay");
+        // Handle all collisions
+        this.handle_collisions(collisions);
+    }
+
+    handle_collisions(collisions) {
+        for (let collision of collisions) {
+            const {obj1, obj2, type} = collision;
+
+            switch(type) {
+                case 'ship_npc':
+                    // Check if it's a powerup
+                    if (obj2.type && obj2.type.startsWith('powerup_')) {
+                        obj2.apply_to_ship(obj1);
+                    } else {
+                        // Player ship hit an NPC enemy/debris
+                        // Apply physics-based collision response (bounce)
+                        obj1.impact2(obj2);
+
+                        // Calculate impact position relative to ship center for shield effect
+                        const impactX = obj2.position.x - obj1.position.x;
+                        const impactY = obj2.position.y - obj1.position.y;
+                        obj1.damage(500, impactX, impactY);  // Collision does heavy damage - 10 collisions to kill
+                        obj2.damage(50);
+                        obj1.explosion();
+                        obj2.explosion();
+                    }
+                    break;
+
+                case 'projectile_npc':
+                    // Don't destroy powerups with projectiles, just pass through
+                    if (obj2.type && obj2.type.startsWith('powerup_')) {
+                        break;
+                    }
+                    // Player projectile hit NPC
+                    console.log('[Game] Player projectile HIT:', obj2.type, 'Life:', obj2.life, '→', obj2.life - 25);
+                    obj1.destroy();
+                    obj2.damage(25);
+                    obj2.explosion();
+
+                    // Award score and check for kill
+                    this.score += 10;
+                    if (obj2.life <= 0) {
+                        this.kills++;
+                        // Bonus points for destroying enemy
+                        if (obj2.type === "boss") {
+                            this.score += 500;
+                        } else if (obj2.type === "ship") {
+                            this.score += 100;
+                        } else {
+                            this.score += 25;
+                        }
+                    }
+                    break;
+
+                case 'enemy_projectile_ship':
+                    // Enemy projectile hit player
+                    // Apply physics collision if shields are up (bounce projectiles)
+                    if (obj2.shield_strength > 0) {
+                        obj1.impact2(obj2);  // Bounce projectile off shields
+                    }
+
+                    // Calculate impact position relative to ship center
+                    const impactX = obj1.position.x - obj2.position.x;
+                    const impactY = obj1.position.y - obj2.position.y;
+                    obj1.destroy();
+                    obj2.damage(250, impactX, impactY);  // Increased damage - should take ~20 hits to kill
+                    obj2.explosion();
+                    break;
             }
         }
-        
     }
 
 
     updateFrame() {
-        //this.events.handle_keys();
-
         // Calculate deltaTime (time since last frame)
         const currentTime = Date.now();
         const deltaTime = (currentTime - this.lastFrameTime) / 1000; // Convert to seconds
         this.lastFrameTime = currentTime;
+
+        // window_manager already applies viewport transform, so we work in virtual coordinates
+        const viewport = this.graphics.viewport;
+
+        // Draw green border around game area for debugging
+        this.graphics.ctx.strokeStyle = '#00FF00';
+        this.graphics.ctx.lineWidth = 4;
+        this.graphics.ctx.strokeRect(this.position.x, this.position.y, this.position.width, this.position.height);
+
+        // Modal already handles clipping, so we don't need to save/restore here
+        // Removing ctx.save() and ctx.restore() to preserve viewport transform
+
+        // Render scrolling background before everything else
+        this.render_background();
+
+        // Skip updates if game is paused (but continue rendering)
+        if (this.pause_game) {
+            // Still render the game state, just don't update it
+            let window = {
+                y1: this.level.position.y,
+                y2: this.level.position.y + this.graphics.viewport.virtual.height
+            };
+
+            // Render NPCs
+            for (let b = 0; b < this.level.npc.length; b++) {
+                let npc = this.level.npc[b];
+                if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
+                    if (npc.type == "ship" || npc.type == "boss") {
+                        npc.render({ x: 0, y: window.y1 });
+                    } else {
+                        npc.orient({ x: 0, y: window.y1 });
+                        npc.render();
+                        npc.de_orient();
+                    }
+                }
+            }
+
+            // Render score
+            this.render_score();
+
+            // Draw game over overlay if player is dead
+            if (this.level.spaceship && this.level.spaceship.life <= 0) {
+                this.draw_game_over_overlay();
+            }
+
+            // No need to restore - modal handles it
+            return;
+        }
 
         // Clear any previous drawings
         //this.graphics.updateCanvasSizeAndDrawImage(this.level.position);
@@ -3645,7 +6133,7 @@ class game extends modal{
             this.level_start = false;
         }
 
-        
+
         this.graphics.viewport.world.y = this.level.position.y;
         let window = {
             y1: this.level.position.y,
@@ -3655,81 +6143,189 @@ class game extends modal{
         this.level.npc = this.level.npc.filter(npc => !npc.destroy_object);
 
 
-        // looks like we are just updating things that are not in the viewport...
+        // Update NPCs in viewport
         for (let b = 0; b < this.level.npc.length; b++) {
             let npc = this.level.npc[b];
             if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
                 npc.update_motion(deltaTime);
-
-                let collisions=this.single_collsion(npc,b+1);
-                if(collisions.length!=0) {
-                    npc.restore_state();
-                    for(let c=0;c<collisions.length;c++){
-                        npc.impact(collisions[c][0]);
-                        npc.update_motion(deltaTime)
-                
-                    }
-                }
             }
         }
 
+        // Check collisions after all motion updates
+        this.check_collisions();
 
 
-        //render
+
+        // Render NPCs and their explosions
         for (let b = 0; b < this.level.npc.length; b++) {
             let npc = this.level.npc[b];
             if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
+                npc.update_frame(deltaTime);
 
-                if (npc.type == "ship") {
-                    npc.update_frame(deltaTime)
+                if (npc.type == "ship" || npc.type == "boss") {
                     npc.render({ x: 0, y: window.y1 });
-
                 } else {
-                    npc.update_frame(deltaTime)
                     npc.orient({ x: 0, y: window.y1 });
                     npc.render();
                     npc.de_orient();
                 }
-
             }
-
         }
 
+        // Update and render spaceship
+        if (this.level.spaceship != null) {
+            // Check if player died
+            if (this.level.spaceship.life <= 0) {
+                if (!this.player_dying) {
+                    // Start death sequence
+                    this.player_dying = true;
+                    this.death_started_time = Date.now();
+                    console.log('[Game] Player death - starting explosion sequence');
+                } else {
+                    // Check if explosion animation is complete
+                    const time_since_death = Date.now() - this.death_started_time;
+                    if (time_since_death >= this.death_explosion_duration) {
+                        this.game_over();
+                        return;
+                    }
+                }
+            }
 
-        let percentage1 = this.level.spaceship.laser_fire_control.get_cooldown_percentage();
-        this.laser_bar.render(percentage1);
-        let percentage3 = this.level.spaceship.missile_fire_control.get_cooldown_percentage();
-        this.missile_bar.render(percentage3);
-        let percentage5 = this.level.spaceship.get_life_percentage();
-        this.health_bar.render(percentage5);
-        let percentage6 = this.level.spaceship.boost_fire_control.get_cooldown_percentage();
-        this.booster_bar.render(percentage6);
-        /*
-        let percentage2 = this.level.spaceship.laser_fire_control.timeout_percentage();
-        this.laser_timeout.render(percentage2);
+            this.level.spaceship.update_frame(deltaTime);
+            this.level.spaceship.render({ x: 0, y: window.y1 });
+        }
 
-        let percentage4 = this.level.spaceship.missile_fire_control.timeout_percentage();
-        this.missile_timeout.render(percentage4);
+        // No need to restore - modal handles it
 
+        // Update bar percentages (modal will render them automatically after this callback returns)
+        if (this.level.spaceship != null && this.laser_bar && this.missile_bar && this.booster_bar && this.shield_bar && this.health_bar) {
+            this.laser_bar.set_percentage(this.level.spaceship.laser_fire_control.get_cooldown_percentage());
+            this.missile_bar.set_percentage(this.level.spaceship.missile_fire_control.get_cooldown_percentage());
+            this.booster_bar.set_percentage(this.level.spaceship.boost_fire_control.get_cooldown_percentage());
+            this.shield_bar.set_percentage(this.level.spaceship.get_shield_percentage());
+            this.health_bar.set_percentage(this.level.spaceship.get_life_percentage());
+        }
 
-
-        let percentage7 = this.level.spaceship.boost_fire_control.timeout_percentage();
-        this.booster_timeout.render(percentage7);
-
-*/
-        //this.check_collisions();
-        //if(this.level.spaceship!=null) {
-        //    this.level.spaceship.update_frame(deltaTime);
-        //    this.level.spaceship.render({ x: 0, y: window.y1 });
-        //}
+        // Render score display
+        this.render_score();
     }
 
+    render_background() {
+        if (!this.level || !this.level.background || !this.graphics || !this.graphics.ctx) return;
 
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
 
-    start_level() {
+        const bg_sprite = this.graphics.sprites.get(this.level.background);
+        if (!bg_sprite) {
+            console.warn('[Game] Background sprite not loaded:', this.level.background);
+            return;
+        }
+
+        // Use virtual viewport dimensions - canvas transform handles scaling
+        const viewport = this.graphics.viewport.virtual;
+        const bg_height = bg_sprite.height;
+        const bg_width = bg_sprite.width;
+
+        // Scale background to fill viewport width
+        const scale = viewport.width / bg_width;
+        const scaled_height = bg_height * scale;
+
+        // Calculate how much of the level we've scrolled through (0 to 1)
+        const total_level_height = this.level.position.height;
+        const scroll_progress = 1 - (this.level.position.y / total_level_height);
+
+        // Map scroll progress to background position
+        // Background should scroll from bottom (start) to top (end)
+        const bg_y_offset = (scaled_height - viewport.height) * scroll_progress;
+
+        // Draw background - tile vertically if needed
+        const tiles_needed = Math.ceil(viewport.height / scaled_height) + 1;
+        for (let i = -1; i < tiles_needed; i++) {
+            const y_pos = i * scaled_height - bg_y_offset;
+            // drawImage with 5 params: image, dx, dy, dWidth, dHeight
+            ctx.drawImage(
+                bg_sprite.image,
+                0,              // destination x
+                y_pos,          // destination y
+                viewport.width,  // destination width
+                scaled_height   // destination height
+            );
+        }
+    }
+
+    render_score() {
+        if (!this.ctx || typeof this.ctx.save !== 'function') return;
+
+        const scoreText = `Score: ${this.score}  Kills: ${this.kills}`;
+        // Position relative to game window
+        const x = this.position.x + this.position.width - 250;
+        const y = this.position.y + 30;
+
+        this.ctx.save();
+        this.ctx.fillStyle = '#00FF00';
+        this.ctx.font = '20px monospace';
+        this.ctx.fillText(scoreText, x, y);
+        this.ctx.restore();
+    }
+
+    game_over() {
+        // Stop the game
+        this.pause_game = true;
+        this.level_start = false;
+    }
+
+    draw_game_over_overlay() {
+        // Display game over message
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
+
+        // Use virtual viewport dimensions - canvas transform handles scaling
+        const centerX = this.graphics.viewport.virtual.width / 2;
+        const centerY = this.graphics.viewport.virtual.height / 2;
+
+        ctx.save();
+
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
+
+        // Game Over text
+        ctx.fillStyle = '#FF0000';
+        ctx.font = 'bold 72px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', centerX, centerY - 60);
+
+        // Score
+        ctx.fillStyle = '#00FF00';
+        ctx.font = 'bold 36px monospace';
+        ctx.fillText(`Final Score: ${this.score}`, centerX, centerY + 20);
+        ctx.fillText(`Kills: ${this.kills}`, centerX, centerY + 70);
+
+        // Instructions
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '24px monospace';
+        ctx.fillText('Press ESC to return to menu', centerX, centerY + 130);
+
+        ctx.restore();
+    }
+
+    async start_level() {
         this.level_start = true;
-        if (this.track1Sound != null && this.play_sounds) {
-            this.track1Sound.play();
+
+        // Set the background from the level
+        if (this.level.background) {
+            this.set_background(this.level.background);
+        }
+
+        // Resume audio context and play background music
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
+        // Play level music with looping enabled
+        if (this.level.track_key) {
+            this.audio_manager.play(this.level.track_key, 0, true);
         }
     }
 
@@ -3744,7 +6340,7 @@ class game extends modal{
             if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate();
             if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
             if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
-            if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle();
+            if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
             if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(50);
             if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(50);
             if (kb.is_pressed('w') || kb.is_pressed('W')) 
@@ -3769,18 +6365,40 @@ class game extends modal{
 
         }
 
-/*
         if (kb.just_stopped('Escape')) {
+            // If player is dead, close the game and return to menu
+            if (this.level.spaceship && this.level.spaceship.life <= 0) {
+                this.close();
+                return;
+            }
 
-            if (this.G.boss_mode_activated) this.G.ui.boss_mode_off();
-            else if (kb.ctrl()) this.G.ui.boss_mode_on();
-
-            else if (this.G.pause_game == true) this.G.ui.unpause();
-            else this.G.ui.pause();
-            
+            if (this.boss_mode_activated) {
+                this.ui.boss_mode_off();
+            } else if (kb.ctrl()) {
+                this.ui.boss_mode_on();
+            } else if (this.pause_game == true) {
+                this.ui.unpause();
+            } else {
+                this.ui.pause();
+            }
         }
-  */
-    } 
+    }
+
+    delete() {
+        // Stop the level music when closing the game
+        if (this.level && this.level.track_key && this.audio_manager) {
+            console.log('[Game] Stopping music:', this.level.track_key);
+            this.audio_manager.stop(this.level.track_key);
+        }
+
+        // Also stop the level if it exists
+        if (this.level) {
+            this.level.stop();
+        }
+
+        // Call parent delete
+        super.delete();
+    }
 }function dialog() {
     document.getElementById('next_btn').addEventListener('click', function () {
       // Handle OK button click event

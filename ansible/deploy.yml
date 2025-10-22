@@ -1,0 +1,161 @@
+---
+- name: Build and Deploy AI Job Wars
+  hosts: localhost
+  gather_facts: no
+  vars:
+    project_root: "{{ playbook_dir }}"
+    html_dir: "{{ project_root }}/html"
+    static_dir: "{{ html_dir }}/static"
+    bundle_output: "{{ static_dir }}/js/bundle.js"
+    bundle_min_output: "{{ static_dir }}/js/bundle.min.js"
+    files_list: "{{ project_root }}/files.txt"
+    remote_host: "10.90.0.45"
+    deploy_user: "root"
+    remote_path: "/web/aijobwars.com/"
+
+    # JavaScript files in dependency order
+    js_files:
+      - "{{ static_dir }}/js/windows/events.js"
+      - "{{ static_dir }}/js/windows/containers.js"
+      - "{{ static_dir }}/js/windows/audio.js"
+      - "{{ static_dir }}/js/windows/sprites.js"
+      - "{{ static_dir }}/js/windows/font.js"
+      - "{{ static_dir }}/js/windows/button.js"
+      - "{{ static_dir }}/js/windows/seekbar.js"
+      - "{{ static_dir }}/js/windows/modal.js"
+      - "{{ static_dir }}/js/windows/viewport.js"
+      - "{{ static_dir }}/js/windows/window_manager.js"
+      - "{{ static_dir }}/js/windows/graphics.js"
+      - "{{ static_dir }}/js/windows/kb.js"
+      - "{{ static_dir }}/js/ui/menu.js"
+      - "{{ static_dir }}/js/objects/motion.js"
+      - "{{ static_dir }}/js/objects/object.js"
+      - "{{ static_dir }}/js/objects/explosion.js"
+      - "{{ static_dir }}/js/objects/debris.js"
+      - "{{ static_dir }}/js/objects/projectile.js"
+      - "{{ static_dir }}/js/objects/missiles.js"
+      - "{{ static_dir }}/js/objects/ship.js"
+      - "{{ static_dir }}/js/objects/boss.js"
+      - "{{ static_dir }}/js/objects/enemy.js"
+      - "{{ static_dir }}/js/objects/powerup.js"
+      - "{{ static_dir }}/js/logic/fire_control.js"
+      - "{{ static_dir }}/js/logic/level.js"
+      - "{{ static_dir }}/js/logic/ui.js"
+      - "{{ static_dir }}/js/ui/help.js"
+      - "{{ static_dir }}/js/ui/prologue.js"
+      - "{{ static_dir }}/js/ui/high_scores.js"
+      - "{{ static_dir }}/js/ui/credits.js"
+      - "{{ static_dir }}/js/ui-components/ui_component.js"
+      - "{{ static_dir }}/js/ui-components/percentage_bar.js"
+      - "{{ static_dir }}/js/ui/pause.js"
+      - "{{ static_dir }}/js/ui/cinematic_player.js"
+      - "{{ static_dir }}/js/cinematic/scene.js"
+      - "{{ static_dir }}/js/ui/game.js"
+      - "{{ static_dir }}/js/intro.js"
+
+  tasks:
+    - name: Bundle JavaScript files
+      tags: ['bundle', 'build']
+      block:
+        - name: Remove old bundle files
+          file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - "{{ bundle_output }}"
+            - "{{ bundle_min_output }}"
+
+        - name: Concatenate JavaScript files
+          shell: "cat {{ js_files | join(' ') }} > {{ bundle_output }}"
+          args:
+            chdir: "{{ project_root }}"
+
+        - name: Check if uglifyjs is installed
+          command: which uglifyjs
+          register: uglifyjs_check
+          failed_when: false
+          changed_when: false
+
+        - name: Install uglifyjs if missing
+          command: npm install -g uglify-js
+          when: uglifyjs_check.rc != 0
+          become: yes
+
+        - name: Minify bundle with uglifyjs
+          command: "uglifyjs {{ bundle_output }} -o {{ bundle_min_output }}"
+
+        - name: Show bundle stats
+          stat:
+            path: "{{ item }}"
+          loop:
+            - "{{ bundle_output }}"
+            - "{{ bundle_min_output }}"
+          register: bundle_stats
+
+        - name: Display bundle sizes
+          debug:
+            msg: |
+              Bundle created successfully:
+              - {{ bundle_output }}: {{ (bundle_stats.results[0].stat.size / 1024) | round(2) }} KB
+              - {{ bundle_min_output }}: {{ (bundle_stats.results[1].stat.size / 1024) | round(2) }} KB
+              - Compression: {{ ((1 - bundle_stats.results[1].stat.size / bundle_stats.results[0].stat.size) * 100) | round(2) }}%
+
+    - name: Generate file list for deployment
+      tags: ['filelist', 'build']
+      block:
+        - name: Find static files
+          find:
+            paths: "{{ static_dir }}"
+            patterns:
+              - "*.png"
+              - "*.webp"
+              - "*.js"
+              - "*.json"
+              - "*.mp3"
+              - "*.wav"
+            recurse: yes
+          register: static_files
+
+        - name: Find HTML files
+          find:
+            paths: "{{ html_dir }}"
+            patterns: "*.html"
+            recurse: no
+          register: html_files
+
+        - name: Create files list with relative paths
+          copy:
+            content: |
+              {% for file in static_files.files + html_files.files %}
+              {{ file.path | regex_replace('^' + project_root + '/', '') }}
+              {% endfor %}
+            dest: "{{ files_list }}"
+
+        - name: Show file count
+          debug:
+            msg: "Generated file list with {{ (static_files.files | length) + (html_files.files | length) }} files"
+
+    - name: Deploy to remote server
+      tags: ['deploy', 'never']
+      block:
+        - name: Sync files to remote server using rsync
+          command: >
+            rsync -avz
+            --files-from={{ files_list }}
+            {{ project_root }}/
+            {{ deploy_user }}@{{ remote_host }}:{{ remote_path }}
+          register: rsync_result
+
+        - name: Display rsync output
+          debug:
+            var: rsync_result.stdout_lines
+
+        - name: Verify deployment
+          debug:
+            msg: "Deployment to {{ deploy_user }}@{{ remote_host }}:{{ remote_path }} completed successfully"
+
+  handlers:
+    - name: Cleanup temporary files
+      file:
+        path: "{{ bundle_output }}"
+        state: absent

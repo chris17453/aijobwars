@@ -8,12 +8,37 @@ class window_manager extends events{
       this.audio_manager = new audio_manager();
       this.modals = [];
       this.active_modal=null;
-      
+      this.boss_mode_activated = false;
+
       this.kb = new key_states();
+
+      // DEBUG: Frame stepping mode - disabled by default (F12 to toggle, F11 to step)
+      this.debug_frame_step = false;
+      this.debug_render_next_frame = false;
+      this.debug_frame_count = 0;
 
       window.addEventListener('keydown', (event) => {
           this.kb.down(event.key);
           this.kb.event(event)
+
+          // F12 = Toggle frame stepping mode
+          if (event.key === 'F12') {
+              this.debug_frame_step = !this.debug_frame_step;
+              console.log('[DEBUG] Frame stepping:', this.debug_frame_step ? 'ENABLED - Press F11 to render next frame' : 'DISABLED');
+              event.preventDefault();
+              return;
+          }
+
+          // F11 = Render next frame (when in frame step mode)
+          if (event.key === 'F11') {
+              if (this.debug_frame_step) {
+                  this.debug_render_next_frame = true;
+                  console.log('[DEBUG] ========== RENDERING FRAME', ++this.debug_frame_count, '==========');
+              }
+              event.preventDefault();
+              return;
+          }
+
           switch (event.key) {
               case 'F5': break;
               default: event.preventDefault();
@@ -26,17 +51,25 @@ class window_manager extends events{
           this.kb.event(event)
           switch (event.key) {
               case 'F5': break;
+              case 'F11': break;
+              case 'F12': break;
               default: event.preventDefault();
           }
       });
 
       setInterval(() => {
+          // Skip rendering if in frame step mode and F11 wasn't pressed
+          if (this.debug_frame_step && !this.debug_render_next_frame) {
+              return;
+          }
+          this.debug_render_next_frame = false; // Reset after rendering one frame
+
           this.graphics.recalc_canvas();
           if (this.has_windows() > 0) {
-              this.handle_keys();  
+              this.handle_keys();
               this.resize();
               this.render();
-          } 
+          }
         },1000 / 24);
     }
 
@@ -92,8 +125,47 @@ class window_manager extends events{
       }
     }
     handle_keys(){
-      if (this.active_modal) {
+      // Handle global boss mode (Tab key only)
+      if (this.kb.just_stopped('Tab')) {
+        if (this.boss_mode_activated) {
+          this.boss_mode_off();
+        } else {
+          this.boss_mode_on();
+        }
+        return; // Don't pass Tab to modals
+      }
+
+      // If boss mode is active, ESC exits it
+      if (this.kb.just_stopped('Escape') && this.boss_mode_activated) {
+        this.boss_mode_off();
+        return; // Don't pass to modal
+      }
+
+      // Pass remaining key events to active modal
+      if (this.active_modal && !this.boss_mode_activated) {
         this.active_modal.handle_keys(this.kb);
+      }
+    }
+
+    boss_mode_on(){
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('boss_mode').style.display = 'block';
+      this.boss_mode_activated = true;
+
+      // Pause all audio
+      if (this.audio_manager) {
+        this.audio_manager.sound_off();
+      }
+    }
+
+    boss_mode_off(){
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('boss_mode').style.display = 'none';
+      this.boss_mode_activated = false;
+
+      // Resume audio
+      if (this.audio_manager) {
+        this.audio_manager.sound_on();
       }
     }
     resize(){
@@ -142,7 +214,7 @@ class window_manager extends events{
             this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
           }
 
-            this.active_modal.render();
+          this.active_modal.render();
 
           // Restore the canvas state (removes the scale transformation)
           this.graphics.ctx.restore();

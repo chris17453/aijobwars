@@ -108,7 +108,9 @@ class sprites extends events{
                 x: x,
                 y: y,
                 width: width || image.width,
-                height: height || image.height
+                height: height || image.height,
+                collision_mask: null,  // Cache for collision mask
+                mask_bounds: null      // Cache for mask bounds
             };
 
         });
@@ -126,10 +128,47 @@ class sprites extends events{
         });
     }    
 
+    get_or_create_collision_mask(key, position) {
+        const sprite = this.sprites[key];
+        if (!sprite) {
+            console.log("Missing image: " + key);
+            return null;
+        }
+
+        // Return cached mask if it exists
+        if (sprite.collision_mask && sprite.mask_bounds) {
+            return {
+                collision_mask: sprite.collision_mask,
+                mask_bounds: sprite.mask_bounds
+            };
+        }
+
+        // Generate mask for the first time
+        const pixelData = this.get_data(key, position);
+        if (!pixelData) return null;
+
+        // Create boolean mask (true = solid pixel)
+        sprite.collision_mask = new Array(position.width * position.height);
+        for (let i = 0; i < position.width * position.height; i++) {
+            const alpha = pixelData[i * 4 + 3]; // Get alpha channel
+            sprite.collision_mask[i] = alpha > 50; // Threshold for solid pixels
+        }
+
+        // Calculate tight bounding box from mask
+        sprite.mask_bounds = this.get_bounds(key, position);
+
+        console.log(`[Sprite] Collision mask generated for '${key}': ${position.width}x${position.height}`);
+
+        return {
+            collision_mask: sprite.collision_mask,
+            mask_bounds: sprite.mask_bounds
+        };
+    }
+
     get_bounds(key,position){
         let data=this.get_data(key,position);
-        
-        
+
+
         let left = position.width;
         let top = position.height;
         let right = 0;

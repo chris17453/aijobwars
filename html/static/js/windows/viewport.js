@@ -54,10 +54,10 @@ class viewport {
         const scaleY = this.given.height / this.virtual.height;
 
         // Use the smaller scale factor to ensure everything fits (letterbox if needed)
+        // Allow both upscaling and downscaling to fit any screen size
         const uniformScale = Math.min(scaleX, scaleY);
 
-        // Don't scale beyond 1:1 (no upscaling past native resolution)
-        this.scale.x = Math.min(uniformScale, 1.0);
-        this.scale.y = Math.min(uniformScale, 1.0);
+        this.scale.x = uniformScale;
+        this.scale.y = uniformScale;
     }
 }
