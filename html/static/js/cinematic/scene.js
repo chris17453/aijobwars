@@ -73,6 +73,8 @@ class scene {
         }
 
         this.playing=true;
+        this.paused=false;  // Ensure we start unpaused
+        this.start_time = Date.now();  // Initialize start time
     }
 
     get_total_duration() {

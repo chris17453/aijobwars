@@ -21,6 +21,8 @@ class modal {
       this.buttons = [];
       this.images = [];
       this.ui_components = [];  // Array for ui_component-based elements
+      this.no_close = false;  // Flag to prevent ESC from closing
+      this.kb = null;  // Modal's own keyboard state tracker
     } catch (error) {
       this.logger.error(`modal constructor: ${error.message}`);
     }
@@ -34,6 +36,9 @@ class modal {
       this.audio_manager = window_manager.audio_manager;
       this.canvas = this.graphics.canvas;
       this.sprites = this.graphics.sprites;
+
+      // Create modal's own keyboard state tracker
+      this.kb = new key_states();
     } catch (error) {
       this.logger.error(`init: ${error.message}`);
     }
@@ -111,7 +116,7 @@ class modal {
         anchor_position.add(this.position); // Only add modal position, NOT internal_rect
         this.closeButton = new button(this, this.graphics, "", button_position, anchor_position, null, "window-close-up", "window-close-down");
         this.closeButton.on("click", () => {
-          this.emit("close", { instance: this });
+          this.close();  // Call close() which will emit event AND call delete()
         });
       }
 
@@ -137,8 +142,42 @@ class modal {
     }
   }
 
+  // Called by window_manager to update modal's keyboard state from global events
+  update_keyboard_state(key, is_down) {
+    try {
+      if (!this.kb) return;
+      if (is_down) {
+        this.kb.down(key);
+      } else {
+        this.kb.up(key);
+      }
+    } catch (error) {
+      this.logger.error(`update_keyboard_state: ${error.message}`);
+    }
+  }
+
+  // Called every frame to process keyboard input and emit events
   handle_keys() {
-    // Placeholder for handling keys if needed
+    try {
+      if (!this.active || !this.kb) return;
+
+      // Emit keyboard event for child components to listen to
+      this.emit("keys", { kb: this.kb });
+
+      // Handle ESC key - emit "escape" event first for modal to override
+      if (this.kb.just_stopped('Escape')) {
+        // Emit escape event - modals can listen and prevent default close
+        let escapeEvent = { instance: this, defaultPrevented: false };
+        this.emit("escape", escapeEvent);
+
+        // Only close if no_close is false AND event wasn't prevented
+        if (!this.no_close && !escapeEvent.defaultPrevented) {
+          this.close();
+        }
+      }
+    } catch (error) {
+      this.logger.error(`handle_keys: ${error.message}`);
+    }
   }
 
   resize() {
@@ -270,6 +309,15 @@ class modal {
   handle_key_down(event) {
     try {
       if (this.active !== true) return;
+
+      // ESC closes modal unless no_close flag is set
+      if (event.key === 'Escape' && !this.no_close) {
+        this.close();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       this.emit("keydown", { instance: this, event: event });
     } catch (error) {
       this.logger.error(`handle_key_down: ${error.message}`);

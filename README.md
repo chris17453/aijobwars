@@ -1,76 +1,102 @@
-
 # AI Job Wars
 
-- Dynamic Particulate Simulation System (DPSS)
+A retro space shooter built with vanilla JavaScript and HTML5 Canvas. Classic arcade-style gameplay with cinematic cutscenes.
 
-## A POC project that
+![Loading Screen](assets/Loading%20Page.png)
 
-- demonstrates a a python backnd
-- server client connection via websockets
-- a front end in javascript
-- rendering game componentes from the server side to multiple browsers
+## Features
+
+- Pure JavaScript canvas rendering (no frameworks)
+- Cinematic engine with timeline-based scene playback
+- Modal window system with responsive viewport scaling
+- Particle system for explosions and effects
+- Audio manager with Web Audio API
+- Boss mode (Tab key hides game with fake spreadsheet)
+- Virtual viewport (1920x1080) scales to any screen size
+
+## Screenshots
+
+### Main Menu
+![Main Menu](assets/game.png)
+
+### Prologue Cinematic
+![Prologue](assets/prologue.png)
+
+### Credits
+![Credits](assets/credits.png)
+
+### High Scores
+![High Scores](assets/highscore.png)
 
 ## Controls
 
-| Key           | Action                 |
-|---------------|------------------------|
-| Q             | Quit the game          |
-| Arrow Left    | Bank left              |
-| Arrow Right   | Bank right             |
-| Arrow Up      | Accelerate             |
-| Arrow Down    | Decelerate             |
-| STRAFING      | WASD                   |
-| Space         | Fire lasers            |
-| Enter         | Fire Missiles          |
-| M             | Sound                  |
-| +             | Volume up              |
-| -             | Volume down            |
-| Escape        | Toggle Pause           |
-| CTRL + Escape | Turn on boss mode      |
-| Escape        | Exit (from boss mode)  |
+| Key           | Action                              |
+|---------------|-------------------------------------|
+| Arrow Keys    | Move ship (up/down/left/right)      |
+| W/A/S/D       | Strafe                              |
+| Space         | Fire lasers                         |
+| Enter         | Fire missiles                       |
+| Escape        | Pause                               |
+| Tab           | Boss mode (fake spreadsheet)        |
+| M             | Toggle sound                        |
+| +/-           | Volume                              |
+| F12           | Toggle frame stepping (debug)       |
+| F11           | Step frame (when paused)            |
 
-## Play
+## Installation
 
-- Just download the code and open index.html
-- Visit the site. [AIJOBWARSC.COM](https://AIJOBWARS.COM)
+### Local
+```bash
+ansible-playbook ansible/deploy.yml --tags bundle
+cd html && python3 -m http.server 8000
+```
+Open http://localhost:8000
 
-## Open source autio was fount at opengameart.org
+### Quick Play
+Open `html/index.html` in a browser, or visit [AIJOBWARS.COM](https://AIJOBWARS.COM)
 
-- references below
+## Architecture
 
-# AUDIO Track
+### Core Systems
+- **Window Manager** - Modal window stack with event routing
+- **Graphics** - Virtual 1920x1080 viewport with automatic scaling
+- **Sprites** - Image cache with 9-slice scaling for UI
+- **Audio** - Web Audio API with decoded buffer cache
+- **Cinematic** - Timeline-based scene player with audio sync
+- **Input** - Keyboard state tracking
 
-- Location: https://opengameart.org/content/chiploop
-- Author: https://opengameart.org/users/iamoneabe
-- Web: https://iamoneabe.itch.io/sonic-eternity
+### Project Structure
+```
+html/static/js/
+├── windows/      # Modal/window system
+├── ui/           # UI components
+├── logic/        # Game logic
+├── cinematic/    # Scene player
+└── lib/          # Utils
+```
 
-## Sound effects
+### Build
+```bash
+# Bundle JS
+ansible-playbook ansible/deploy.yml --tags bundle
 
-- Location: https://opengameart.org/content/512-sound-effects-8-bit-style
-- Author: https://opengameart.org/users/subspaceaudio
+# Deploy
+ansible-playbook ansible/deploy.yml
+```
 
-## Pixel graphics
+## Attribution
 
-- https://opengameart.org/content/pixel-art-spells
-- Author: [DevWizard](https://opengameart.org/users/devwizard)
+### Audio
+- Music: [Chiploop](https://opengameart.org/content/chiploop) by [iamoneabe](https://opengameart.org/users/iamoneabe)
+- SFX: [512 8-bit Sound Effects](https://opengameart.org/content/512-sound-effects-8-bit-style) by [SubspaceAudio](https://opengameart.org/users/subspaceaudio)
 
-## Font
+### Graphics
+- Spells: [Pixel Art Spells](https://opengameart.org/content/pixel-art-spells) by [DevWizard](https://opengameart.org/users/devwizard)
+- Explosions: [Explosion Set 1](https://opengameart.org/content/explosion-set-1-m484-games) by [Master484](https://opengameart.org/users/master484)
 
-- [profontwindows](https://www.fontsquirrel.com/fonts/profontwindows)
-- [profontwindows License](/static/fonts/ProFont Redistribution Terms.txt)
-- [Font generator](https://www.textstudio.com/")
+### Font
+- [ProFont Windows](https://www.fontsquirrel.com/fonts/profontwindows) - [License](/static/fonts/ProFont%20Redistribution%20Terms.txt)
 
-## Explosion set
+## License
 
-- https://opengameart.org/content/explosion-set-1-m484-games
-- Author: https://opengameart.org/users/master484
-
-## MAYBE?
-- https://zintoki.itch.io/space-breaker
-
-## NEXT
-
-- colision
-- explosions
-- spaceships
-- spaceships firing/ auto targeting
+Code is open source. Assets follow their respective licenses (see attribution links).

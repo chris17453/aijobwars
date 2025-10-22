@@ -92,10 +92,21 @@ class Ship extends game_object {
     }
 
     boost() {
-        if (this.boost_fire_control.can_fire()) {
+        // Boost applies continuous acceleration while held, not fire-rate limited
+        if (!this.boost_fire_control.overheated) {
             this.booster.set_visible(true);
-            this.accelerate(100);
-            console.log("BOOST");
+            this.accelerate(200);  // Higher acceleration for boost
+
+            // Heat up the boost system
+            this.boost_fire_control.temprature += 0.5;  // Gradual heat buildup
+            if (this.boost_fire_control.temprature > this.boost_fire_control.max_tempreture) {
+                this.boost_fire_control.temprature = this.boost_fire_control.max_tempreture;
+                this.boost_fire_control.overheated = true;
+                this.boost_fire_control.overheated_cooldown_start = 0;
+            }
+            this.boost_fire_control.is_firing = true;
+        } else {
+            this.booster.set_visible(false);
         }
     }
 
@@ -165,16 +176,16 @@ class Ship extends game_object {
             let lazer1 = this.get_relative_position(-60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
-            projectile.accelerate(5);
+            projectile.accelerate(50);
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
-            projectile.accelerate(5);
+            projectile.accelerate(50);
             this.projectiles.push(projectile);
             this.play("lazer");
-            
+
         }
     }
     stop_firing_lazer() {
@@ -195,7 +206,7 @@ class Ship extends game_object {
 
             // Set initial velocity to match ship
             missile.set_velocity(this.velocity);
-            missile.accelerate(2);
+            missile.accelerate(30);
 
             // Find and set target
             if (npcs && npcs.length > 0) {
@@ -222,6 +233,14 @@ class Ship extends game_object {
             this.shield_strength += this.shield_regen_rate;
             if (this.shield_strength > this.shield_max_strength) {
                 this.shield_strength = this.shield_max_strength;
+            }
+        }
+
+        // Health regeneration - heal over time (1.0 per second)
+        if (this.life < this.max_life) {
+            this.life += 1.0 * deltaTime * 60; // deltaTime is in seconds, multiply by 60 for per-second rate
+            if (this.life > this.max_life) {
+                this.life = this.max_life;
             }
         }
 

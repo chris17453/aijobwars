@@ -3,7 +3,7 @@
   hosts: localhost
   gather_facts: no
   vars:
-    project_root: "{{ playbook_dir }}"
+    project_root: "{{ playbook_dir | dirname }}"
     html_dir: "{{ project_root }}/html"
     static_dir: "{{ html_dir }}/static"
     bundle_output: "{{ static_dir }}/js/bundle.js"
@@ -113,6 +113,7 @@
               - "*.json"
               - "*.mp3"
               - "*.wav"
+              - "*.css"
             recurse: yes
           register: static_files
 

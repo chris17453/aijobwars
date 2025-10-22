@@ -235,6 +235,9 @@ class sprites extends events{
         }
         if (src==null) src=new rect(s.x,s.y,s.width,s.height);
 
+        // DEBUG: Track save/restore
+        this.ctx._saveCount = (this.ctx._saveCount || 0) + 1;
+
         // Save the current context state
         this.ctx.save();
 
@@ -310,6 +313,7 @@ class sprites extends events{
 
         // Restore the context state
         this.ctx.restore();
+        this.ctx._saveCount = (this.ctx._saveCount || 1) - 1;
     }
 
     get(key) {

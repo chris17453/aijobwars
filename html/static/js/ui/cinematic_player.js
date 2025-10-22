@@ -3,7 +3,7 @@ class cinematic_player extends modal {
 
     setup_player(scene_url) {
         this.player = new scene(this.window_manager, scene_url);
-        this.on("close", () => { this.player.close(); });
+        this.on("close", () => { if (this.player) this.player.close(); });
         this.player.on("complete", () => {
             // Scene finished, close the modal
             this.close();
@@ -20,17 +20,22 @@ class cinematic_player extends modal {
         // Call it once immediately when modal opens
         this._resume_audio_once();
 
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_cinematic_keys(data.kb);
+        });
+
         // Create seekbar
         let seekbar_position = new rect(10, this.internal_rect.height - 30, this.internal_rect.width - 20, 20, "left", "top");
         this.seekbar = this.create_seekbar(
             seekbar_position,
-            () => this.player.get_progress(),
-            (time) => this.player.seek_to(time, true)
+            () => this.player ? this.player.get_progress() : null,
+            (time) => { if (this.player) this.player.seek_to(time, true); }
         );
 
         // Listen for seek end to resume audio
         this.seekbar.on('seek_end', () => {
-            this.player.end_seek();
+            if (this.player) this.player.end_seek();
         });
 
         // Add click handler for pause/play
@@ -50,26 +55,33 @@ class cinematic_player extends modal {
     handle_click(event) {
         if (!this.active || !this.player) return;
 
-        // Check if click is inside the modal window
-        const click_x = event.offsetX;
-        const click_y = event.offsetY;
+        // Transform mouse coordinates from physical to virtual space
+        const viewport = this.graphics.viewport;
+        const scale = viewport.scale;
+        const renderedWidth = viewport.virtual.width * scale.x;
+        const renderedHeight = viewport.virtual.height * scale.y;
+        const offsetX = (viewport.given.width - renderedWidth) / 2;
+        const offsetY = (viewport.given.height - renderedHeight) / 2;
+        const virtual_click_x = (event.offsetX - offsetX) / scale.x;
+        const virtual_click_y = (event.offsetY - offsetY) / scale.y;
 
-        if (click_x >= this.position.x &&
-            click_x <= this.position.x + this.position.width &&
-            click_y >= this.position.y &&
-            click_y <= this.position.y + this.position.height) {
+        // Check if click is inside the modal window (using virtual coordinates)
+        if (virtual_click_x >= this.position.x &&
+            virtual_click_x <= this.position.x + this.position.width &&
+            virtual_click_y >= this.position.y &&
+            virtual_click_y <= this.position.y + this.position.height) {
 
             // Don't toggle if clicking on the close button
             if (this.closeButton && this.buttons) {
                 let clicking_button = false;
                 this.buttons.forEach((button) => {
-                    if (button.is_inside(click_x, click_y)) {
+                    if (button.is_inside(event.offsetX, event.offsetY)) {
                         clicking_button = true;
                     }
                 });
 
-                // Don't toggle if clicking on seekbar
-                if (this.seekbar && this.seekbar.is_inside(click_x, click_y)) {
+                // Don't toggle if clicking on seekbar (seekbar handles transformation internally)
+                if (this.seekbar && this.seekbar.is_inside(event.offsetX, event.offsetY)) {
                     clicking_button = true;
                 }
 
@@ -82,7 +94,7 @@ class cinematic_player extends modal {
         }
     }
 
-    handle_keys(kb) {
+    handle_cinematic_keys(kb) {
         if (!this.active || !this.player) return;
 
         // Space to pause/play

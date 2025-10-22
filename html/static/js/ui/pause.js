@@ -17,8 +17,4 @@ class pause extends modal{
         this.add_buttons();
     }
 
-    //render(){
-    //    super.render();
-    //}
-
 }

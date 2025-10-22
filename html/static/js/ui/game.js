@@ -4,6 +4,7 @@ class game extends modal{
         this.ok=false
         this.cancel=false
         this.closeButton=true;
+        this.no_close=true;  // Prevent default ESC close - we handle it custom with pause
         this.title="Level - 1";
         this.text="";
 
@@ -41,6 +42,17 @@ class game extends modal{
         this.resize();
         this.add_buttons();
         this.no_skin();
+
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_game_keys(data.kb);
+        });
+
+        // Override ESC key to pause instead of close
+        this.on("escape", (event) => {
+            event.defaultPrevented = true;  // Prevent modal from closing
+            this.handle_escape();
+        });
 
         this.render_callback(this.updateFrame.bind(this));
 
@@ -167,7 +179,7 @@ class game extends modal{
                         // Calculate impact position relative to ship center for shield effect
                         const impactX = obj2.position.x - obj1.position.x;
                         const impactY = obj2.position.y - obj1.position.y;
-                        obj1.damage(500, impactX, impactY);  // Collision does heavy damage - 10 collisions to kill
+                        obj1.damage(50, impactX, impactY);  // Reduced collision damage - ~40 collisions to kill with shields
                         obj2.damage(50);
                         obj1.explosion();
                         obj2.explosion();
@@ -202,10 +214,8 @@ class game extends modal{
 
                 case 'enemy_projectile_ship':
                     // Enemy projectile hit player
-                    // Apply physics collision if shields are up (bounce projectiles)
-                    if (obj2.shield_strength > 0) {
-                        obj1.impact2(obj2);  // Bounce projectile off shields
-                    }
+                    // Projectiles don't bounce - they hit or fly past
+                    // (removed impact2 bounce)
 
                     // Calculate impact position relative to ship center
                     const impactX = obj1.position.x - obj2.position.x;
@@ -479,7 +489,7 @@ class game extends modal{
     }
 
 
-    handle_keys(kb) {
+    handle_game_keys(kb) {
         if (this.active==false) return;
 
         // Only accept gameplay input if level has started AND game is not paused
@@ -487,16 +497,16 @@ class game extends modal{
             // In your game loop, check keysPressed object to determine actions
             if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
             if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
-            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate();
-            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate();
+            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(100);
+            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(100);
             if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
             if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
             if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
-            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(50);
-            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(50);
+            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(100);
+            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(100);
             if (kb.is_pressed('w') || kb.is_pressed('W'))
-            this.level.spaceship.accelerate(50);
-            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(50);
+            this.level.spaceship.accelerate(100);
+            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(100);
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
@@ -509,21 +519,20 @@ class game extends modal{
             if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
             if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
         }
+    }
 
-        // ESC key for pause/unpause
-        if (kb.just_stopped('Escape')) {
-            // If player is dead, close the game and return to menu
-            if (this.level.spaceship && this.level.spaceship.life <= 0) {
-                this.close();
-                return;
-            }
+    handle_escape() {
+        // If player is dead, close the game and return to menu
+        if (this.level.spaceship && this.level.spaceship.life <= 0) {
+            this.close();
+            return;
+        }
 
-            // Toggle pause
-            if (this.pause_game == true) {
-                this.ui.unpause();
-            } else {
-                this.ui.pause();
-            }
+        // Toggle pause
+        if (this.pause_game == true) {
+            this.ui.unpause();
+        } else {
+            this.ui.pause();
         }
     }
 

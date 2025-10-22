@@ -36,9 +36,6 @@ class ui{
     }
 
     pause(){
-        document.getElementById('game-overlay').style.display = 'block';
-        document.getElementById('game-underlay').style.display = 'block';
-        document.getElementById('game-paused').style.display = 'block';
         this.pause_game_mode();
 
         // Pause background music
@@ -46,11 +43,16 @@ class ui{
         if (this.G.level && this.G.level.track_key && audio_manager) {
             audio_manager.pause(this.G.level.track_key);
         }
+
+        // Create and show the pause modal
+        let pause_modal = new pause();
+        pause_modal.on('ok', () => {
+            this.unpause();
+        });
+        this.G.window_manager.add(pause_modal);
     }
+
     unpause(){
-        document.getElementById('game-overlay').style.display = 'none';
-        document.getElementById('game-underlay').style.display = 'none';
-        document.getElementById('game-paused').style.display = 'none';
         this.unpause_game_mode();
 
         // Resume background music

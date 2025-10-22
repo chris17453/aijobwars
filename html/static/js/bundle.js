@@ -704,6 +704,9 @@ class sprites extends events{
         }
         if (src==null) src=new rect(s.x,s.y,s.width,s.height);
 
+        // DEBUG: Track save/restore
+        this.ctx._saveCount = (this.ctx._saveCount || 0) + 1;
+
         // Save the current context state
         this.ctx.save();
 
@@ -779,6 +782,7 @@ class sprites extends events{
 
         // Restore the context state
         this.ctx.restore();
+        this.ctx._saveCount = (this.ctx._saveCount || 1) - 1;
     }
 
     get(key) {
@@ -1320,6 +1324,7 @@ class seekbar extends events {
     render() {
         try {
             if (this.active !== true) return;
+            if (!this.ctx || !this.graphics || !this.position || !this.anchor_position) return;
 
             const progress_data = this.get_progress_callback();
             if (!progress_data) return;
@@ -1541,6 +1546,8 @@ class modal {
       this.buttons = [];
       this.images = [];
       this.ui_components = [];  // Array for ui_component-based elements
+      this.no_close = false;  // Flag to prevent ESC from closing
+      this.kb = null;  // Modal's own keyboard state tracker
     } catch (error) {
       this.logger.error(`modal constructor: ${error.message}`);
     }
@@ -1554,6 +1561,9 @@ class modal {
       this.audio_manager = window_manager.audio_manager;
       this.canvas = this.graphics.canvas;
       this.sprites = this.graphics.sprites;
+
+      // Create modal's own keyboard state tracker
+      this.kb = new key_states();
     } catch (error) {
       this.logger.error(`init: ${error.message}`);
     }
@@ -1631,7 +1641,7 @@ class modal {
         anchor_position.add(this.position); // Only add modal position, NOT internal_rect
         this.closeButton = new button(this, this.graphics, "", button_position, anchor_position, null, "window-close-up", "window-close-down");
         this.closeButton.on("click", () => {
-          this.emit("close", { instance: this });
+          this.close();  // Call close() which will emit event AND call delete()
         });
       }
 
@@ -1657,8 +1667,42 @@ class modal {
     }
   }
 
+  // Called by window_manager to update modal's keyboard state from global events
+  update_keyboard_state(key, is_down) {
+    try {
+      if (!this.kb) return;
+      if (is_down) {
+        this.kb.down(key);
+      } else {
+        this.kb.up(key);
+      }
+    } catch (error) {
+      this.logger.error(`update_keyboard_state: ${error.message}`);
+    }
+  }
+
+  // Called every frame to process keyboard input and emit events
   handle_keys() {
-    // Placeholder for handling keys if needed
+    try {
+      if (!this.active || !this.kb) return;
+
+      // Emit keyboard event for child components to listen to
+      this.emit("keys", { kb: this.kb });
+
+      // Handle ESC key - emit "escape" event first for modal to override
+      if (this.kb.just_stopped('Escape')) {
+        // Emit escape event - modals can listen and prevent default close
+        let escapeEvent = { instance: this, defaultPrevented: false };
+        this.emit("escape", escapeEvent);
+
+        // Only close if no_close is false AND event wasn't prevented
+        if (!this.no_close && !escapeEvent.defaultPrevented) {
+          this.close();
+        }
+      }
+    } catch (error) {
+      this.logger.error(`handle_keys: ${error.message}`);
+    }
   }
 
   resize() {
@@ -1790,6 +1834,15 @@ class modal {
   handle_key_down(event) {
     try {
       if (this.active !== true) return;
+
+      // ESC closes modal unless no_close flag is set
+      if (event.key === 'Escape' && !this.no_close) {
+        this.close();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       this.emit("keydown", { instance: this, event: event });
     } catch (error) {
       this.logger.error(`handle_key_down: ${error.message}`);
@@ -1837,7 +1890,6 @@ class modal {
       if (this.skin) {
         this.sprites.slice_9("window", this.render_position);
       }
-      let internal = this.internal_rect.clone();
 
       ctx.save();
       ctx.beginPath();
@@ -1862,23 +1914,24 @@ class modal {
       if (this.ui_components) {
         this.ui_components.forEach((component) => component.render());
       }
-      // Render images (in virtual coordinates - canvas transform handles scaling)
+
+      // Render text using render_internal_rect (absolute position with parent offset)
+      if (this.text) {
+        this.graphics.font.draw_text(this.render_internal_rect, this.text, true, true);
+      }
+
+      // Restore context (using cached ctx reference)
+      ctx.restore();
+
+      // Render images OUTSIDE the clipped region (in virtual coordinates)
       if (this.images) {
         for (let i = 0; i < this.images.length; i++) {
           let image = this.images[i];
           let image_pos = image.position.clone();
           // No viewport.given offset - we're in virtual coordinate space
-          this.graphics.sprites.render(image.key, image_pos, 1, "none");
+          this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
         }
       }
-
-      // Render text
-      if (this.text) {
-        this.graphics.font.draw_text(internal, this.text, true, true);
-      }
-
-      // Restore context (using cached ctx reference)
-      ctx.restore();
 
       if (this.skin && this.sprites && this.graphics.font) {
         this.sprites.slice_3("window-title", this.render_title_position);
@@ -2022,6 +2075,7 @@ class window_manager extends events{
       this.audio_manager = new audio_manager();
       this.modals = [];
       this.active_modal=null;
+      this.boss_mode_activated = false;
 
       this.kb = new key_states();
 
@@ -2052,6 +2106,11 @@ class window_manager extends events{
               return;
           }
 
+          // Forward keyboard events to active modal's keyboard state
+          if (this.active_modal && this.active_modal.update_keyboard_state) {
+              this.active_modal.update_keyboard_state(event.key, true);
+          }
+
           switch (event.key) {
               case 'F5': break;
               default: event.preventDefault();
@@ -2062,6 +2121,12 @@ class window_manager extends events{
       window.addEventListener('keyup', (event) => {
           this.kb.up(event.key);
           this.kb.event(event)
+
+          // Forward keyboard events to active modal's keyboard state
+          if (this.active_modal && this.active_modal.update_keyboard_state) {
+              this.active_modal.update_keyboard_state(event.key, false);
+          }
+
           switch (event.key) {
               case 'F5': break;
               case 'F11': break;
@@ -2138,8 +2203,47 @@ class window_manager extends events{
       }
     }
     handle_keys(){
-      if (this.active_modal) {
-        this.active_modal.handle_keys(this.kb);
+      // Handle global boss mode (Tab key only)
+      if (this.kb.just_stopped('Tab')) {
+        if (this.boss_mode_activated) {
+          this.boss_mode_off();
+        } else {
+          this.boss_mode_on();
+        }
+        return; // Don't pass Tab to modals
+      }
+
+      // If boss mode is active, ESC exits it
+      if (this.kb.just_stopped('Escape') && this.boss_mode_activated) {
+        this.boss_mode_off();
+        return; // Don't pass to modal
+      }
+
+      // Let active modal process its own keyboard events
+      if (this.active_modal && !this.boss_mode_activated) {
+        this.active_modal.handle_keys();
+      }
+    }
+
+    boss_mode_on(){
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('boss_mode').style.display = 'block';
+      this.boss_mode_activated = true;
+
+      // Pause all audio
+      if (this.audio_manager) {
+        this.audio_manager.sound_off();
+      }
+    }
+
+    boss_mode_off(){
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('boss_mode').style.display = 'none';
+      this.boss_mode_activated = false;
+
+      // Resume audio
+      if (this.audio_manager) {
+        this.audio_manager.sound_on();
       }
     }
     resize(){
@@ -2148,8 +2252,21 @@ class window_manager extends events{
 
     render() {
         if (this.active_modal) {
+          // DEBUG: Track save/restore balance
+          const initialSaveCount = this.graphics.ctx._saveCount || 0;
+
           // Save the current canvas state
           this.graphics.ctx.save();
+          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 0) + 1;
+
+          // ALWAYS render base gradient background FIRST (before any transformations)
+          // Fill the ENTIRE canvas, not just the viewport
+          const baseGradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.given.height);
+          baseGradient.addColorStop(0, '#0a1628');    // Dark blue top
+          baseGradient.addColorStop(0.5, '#06292e');  // Teal middle (existing body bg)
+          baseGradient.addColorStop(1, '#0d1b2a');    // Dark blue bottom
+          this.graphics.ctx.fillStyle = baseGradient;
+          this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.given.width, this.graphics.viewport.given.height);
 
           // Apply viewport scaling and centering transformation
           // This makes everything drawn in virtual coordinates automatically scale to physical pixels
@@ -2192,6 +2309,13 @@ class window_manager extends events{
 
           // Restore the canvas state (removes the scale transformation)
           this.graphics.ctx.restore();
+          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 1) - 1;
+
+          // DEBUG: Verify save/restore balance
+          const finalSaveCount = this.graphics.ctx._saveCount || 0;
+          if (finalSaveCount !== initialSaveCount) {
+            console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}, Modal: ${this.active_modal.constructor.name}`);
+          }
         }
         //this.modals.forEach(window => window.render());
     }
@@ -2444,6 +2568,7 @@ class window_manager extends events{
         // Store button data for resize recalculation
         this.menu_buttons = [];
         this.title_image = null;
+        this.glow_phase = 0;  // For pulsing glow animation
     }
 
     layout(){
@@ -2451,7 +2576,8 @@ class window_manager extends events{
         this.set_background("menu");
         this.ok=false;
         this.cancel=false;
-        this.closeButton=true;
+        this.closeButton=false;  // No close button for main menu
+        this.no_close=true;  // Prevent ESC from closing main menu
         this.title="Menu";
         this.text="";
         this.active=true;
@@ -2470,6 +2596,13 @@ class window_manager extends events{
         this.resize();
         this.add_buttons();
 
+        // Listen to modal's keyboard events for help
+        this.on("keys", (data) => {
+            if (data.kb.just_stopped('h') || data.kb.just_stopped('H')) {
+                this.show_help();
+            }
+        });
+
         //layout options - keep gradient for visual effect
         this.add_bg_gradient(0, 'rgba(0,0,0,0.3)');
         this.add_bg_gradient(.7, 'rgba(211,211,211,0.2)');
@@ -2478,6 +2611,129 @@ class window_manager extends events{
 
         // Create buttons with viewport-relative positions
         this.create_menu_buttons();
+    }
+
+    render() {
+        // Copy parent render logic but insert glow before title image
+        if (this.active === false) return;
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.sprites) return;
+        if (!this.render_position || !this.internal_rect || !this.render_internal_rect) return;
+
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
+
+        if (this.skin) {
+            this.sprites.slice_9("window", this.render_position);
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(
+            this.render_internal_rect.x,
+            this.render_internal_rect.y,
+            this.render_internal_rect.width,
+            this.render_internal_rect.height
+        );
+        ctx.clip();
+
+        if (this.external_render_callback != null) {
+            this.external_render_callback(this.render_internal_rect);
+        }
+
+        // Render buttons
+        if (this.buttons) {
+            this.buttons.forEach((button) => button.render());
+        }
+
+        // Render ui_components
+        if (this.ui_components) {
+            this.ui_components.forEach((component) => component.render());
+        }
+
+        // Render text
+        if (this.text) {
+            this.graphics.font.draw_text(this.render_internal_rect, this.text, true, true);
+        }
+
+        ctx.restore();
+
+        // Render images with glow effect (title is here)
+        if (this.images) {
+            for (let i = 0; i < this.images.length; i++) {
+                let image = this.images[i];
+
+                // Apply glow effect to title image
+                if (image === this.title_image) {
+                    this.render_title_with_glow(image);
+                } else {
+                    let image_pos = image.position.clone();
+                    this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+                }
+            }
+        }
+
+        if (this.skin && this.sprites && this.graphics.font) {
+            this.sprites.slice_3("window-title", this.render_title_position);
+            this.graphics.font.draw_text(this.render_title_position, this.title, true, false);
+        }
+        if (this.closeButton != null && typeof this.closeButton.render === "function") {
+            this.closeButton.render();
+        }
+    }
+
+    render_title_with_glow(image) {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+
+        // Update glow animation phase
+        this.glow_phase += 0.05;
+
+        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
+        const pulse = 25 + Math.sin(this.glow_phase) * 15;
+
+        ctx.save();
+
+        // Draw the title multiple times with increasing glow for stronger effect
+        // Layer 1: Strongest glow (underneath)
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+        ctx.shadowBlur = pulse * 2;
+        let image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 2: Medium glow
+        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
+        ctx.shadowBlur = pulse * 1.5;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 3: Soft glow
+        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
+        ctx.shadowBlur = pulse;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Final layer: No shadow (crisp title on top)
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        ctx.restore();
+
+        // Extra cleanup to ensure no shadow state leaks
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    show_help() {
+        let modal = new help();
+        this.window_manager.add(modal);
     }
 
     create_menu_buttons() {
@@ -2495,7 +2751,7 @@ class window_manager extends events{
         // Store button definitions
         this.menu_buttons = [
             { label: "New Game", callback: this.new_game, y_offset: y, style: "cyan" },
-            { label: "Story So Far", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
+            { label: "Prologue", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
             { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
             { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
             { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - 110, style: "red" }
@@ -2665,8 +2921,9 @@ class window_manager extends events{
         direction %= 360;
 
         var rotationInRadians = direction * Math.PI / 180;
-        var ax = Math.sin(rotationInRadians) * this.mass * speed;
-        var ay = -Math.cos(rotationInRadians) * this.mass * speed;
+        // F = ma, so a = F/m (acceleration inversely proportional to mass)
+        var ax = Math.sin(rotationInRadians) * speed / this.mass;
+        var ay = -Math.cos(rotationInRadians) * speed / this.mass;
 
         this.acceleration.x += ax;
         this.acceleration.y += ay;
@@ -3563,10 +3820,10 @@ class Projectile extends game_object {
                     { type: "accelerate", frames: 1 }
                 ];
                 super(window_manager, x, y, 16, 16,
-                    800,                    // mass
-                    rotation,                      // rotation
+                    0.5,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P3.png', 16, 4, 270);
                 this.set_velocity_loss_off();
                 this.set_center(8, 8);
@@ -3578,10 +3835,10 @@ class Projectile extends game_object {
 
             case 'bolt1':
                 super(window_manager, x, y, 16, 16,
-                    400,                    // mass
-                    rotation,                      // rotation
+                    0.6,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P1.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -3594,10 +3851,10 @@ class Projectile extends game_object {
                 break;
             case 'bolt2':
                 super(window_manager, x, y, 16, 16,
-                    200,                    // mass
-                    rotation,                      // rotation
+                    0.6,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P2.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -3610,27 +3867,27 @@ class Projectile extends game_object {
                 break;
             case 'bolt3':
                 super(window_manager, x, y, 16, 16,
-                    800,                    // mass
-                    rotation,                      // rotation
+                    0.5,                  // mass (very light projectile for bouncing)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P3.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
                 actions = [
-                    { type: "accelerate", frames: 1, speed: 10 }
+                    { type: "accelerate", frames: 1, speed: 50 }
                 ];
-                //this.action_list=actions;
+                this.action_list=actions;
 
                 break;
             case 'bolt4':
                 super(window_manager, x, y, 16, 16,
-                    100,                    // mass
-                    rotation,                      // rotation
+                    1,                    // mass (heavier missile, but still light vs ships)
+                    rotation,             // rotation
                     4,
-                );                     // ropration speed
+                );                        // rotation speed
                 this.set_image('static/projectiles/P4.png', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
@@ -3790,9 +4047,9 @@ class Ship extends game_object {
 
     constructor(window_manager, x, y, type) {
         super(window_manager, x, y, 128, 153,
-            1,                    // mass
-            0,                      // rotation
-            8);                     // ropration speed
+            10,                   // mass (balanced for responsive movement and collision physics)
+            0,                    // rotation
+            8);                   // rotation speed
         
         this.boost_fire_control = new fire_control(1);
         this.laser_fire_control = new fire_control(5);
@@ -3878,10 +4135,21 @@ class Ship extends game_object {
     }
 
     boost() {
-        if (this.boost_fire_control.can_fire()) {
+        // Boost applies continuous acceleration while held, not fire-rate limited
+        if (!this.boost_fire_control.overheated) {
             this.booster.set_visible(true);
-            this.accelerate(100);
-            console.log("BOOST");
+            this.accelerate(200);  // Higher acceleration for boost
+
+            // Heat up the boost system
+            this.boost_fire_control.temprature += 0.5;  // Gradual heat buildup
+            if (this.boost_fire_control.temprature > this.boost_fire_control.max_tempreture) {
+                this.boost_fire_control.temprature = this.boost_fire_control.max_tempreture;
+                this.boost_fire_control.overheated = true;
+                this.boost_fire_control.overheated_cooldown_start = 0;
+            }
+            this.boost_fire_control.is_firing = true;
+        } else {
+            this.booster.set_visible(false);
         }
     }
 
@@ -3951,16 +4219,16 @@ class Ship extends game_object {
             let lazer1 = this.get_relative_position(-60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
-            projectile.accelerate(5);
+            projectile.accelerate(50);
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, this.bolt_type);
             projectile.set_velocity(this.velocity);
-            projectile.accelerate(5);
+            projectile.accelerate(50);
             this.projectiles.push(projectile);
             this.play("lazer");
-            
+
         }
     }
     stop_firing_lazer() {
@@ -3981,7 +4249,7 @@ class Ship extends game_object {
 
             // Set initial velocity to match ship
             missile.set_velocity(this.velocity);
-            missile.accelerate(2);
+            missile.accelerate(30);
 
             // Find and set target
             if (npcs && npcs.length > 0) {
@@ -4008,6 +4276,14 @@ class Ship extends game_object {
             this.shield_strength += this.shield_regen_rate;
             if (this.shield_strength > this.shield_max_strength) {
                 this.shield_strength = this.shield_max_strength;
+            }
+        }
+
+        // Health regeneration - heal over time (1.0 per second)
+        if (this.life < this.max_life) {
+            this.life += 1.0 * deltaTime * 60; // deltaTime is in seconds, multiply by 60 for per-second rate
+            if (this.life > this.max_life) {
+                this.life = this.max_life;
             }
         }
 
@@ -4381,7 +4657,7 @@ class Enemy extends game_object {
         switch (type) {
             case 'chatgpt':
                 super(window_manager, x, y, 64, 64,
-                    3,                    // mass
+                    5,                    // mass (medium debris)
                     0,                    // rotation
                     12);                  // rotation speed
                 this.set_image('static/debris/email.png'); // Placeholder
@@ -4400,7 +4676,7 @@ class Enemy extends game_object {
 
             case 'resume':
                 super(window_manager, x, y, 64, 64,
-                    2,                    // mass
+                    4,                    // mass (light debris)
                     0,                    // rotation
                     10);                  // rotation speed
                 this.set_image('static/debris/pdf.png'); // Placeholder
@@ -4419,7 +4695,7 @@ class Enemy extends game_object {
 
             case 'application':
                 super(window_manager, x, y, 64, 64,
-                    4,                    // mass
+                    6,                    // mass (medium debris)
                     0,                    // rotation
                     8);                   // rotation speed
                 this.set_image('static/debris/phone.png'); // Placeholder
@@ -4754,19 +5030,6 @@ class level extends events{
         document.getElementById('boss_mode').style.display = 'block';
         this.G.boss_mode_activated=true;
         this.pause_game_mode();
-    }
-    boss_mode_off(){
-        document.getElementById('game').style.display = 'block';
-        document.getElementById('boss_mode').style.display = 'none';
-        this.G.boss_mode_activated=false;
-        this.unpause_game_mode();
-    }
-
-    pause(){
-        document.getElementById('game-overlay').style.display = 'block';
-        document.getElementById('game-underlay').style.display = 'block';
-        document.getElementById('game-paused').style.display = 'block';
-        this.pause_game_mode();
 
         // Pause background music
         const audio_manager = this.G.window_manager.audio_manager;
@@ -4774,10 +5037,37 @@ class level extends events{
             audio_manager.pause(this.G.level.track_key);
         }
     }
+    boss_mode_off(){
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('boss_mode').style.display = 'none';
+        this.G.boss_mode_activated=false;
+        this.unpause_game_mode();
+
+        // Resume background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.resume(this.G.level.track_key);
+        }
+    }
+
+    pause(){
+        this.pause_game_mode();
+
+        // Pause background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.pause(this.G.level.track_key);
+        }
+
+        // Create and show the pause modal
+        let pause_modal = new pause();
+        pause_modal.on('ok', () => {
+            this.unpause();
+        });
+        this.G.window_manager.add(pause_modal);
+    }
+
     unpause(){
-        document.getElementById('game-overlay').style.display = 'none';
-        document.getElementById('game-underlay').style.display = 'none';
-        document.getElementById('game-paused').style.display = 'none';
         this.unpause_game_mode();
 
         // Resume background music
@@ -4862,20 +5152,18 @@ class level extends events{
 
         this.text = "| Key           | Action                 |\n" +
             "|---------------|------------------------|\n" +
-            "| Q             | Quit the game          |\n" +
-            "| Arrow Left    | Bank left              |\n" +
-            "| Arrow Right   | Bank right             |\n" +
-            "| Arrow Up      | Accelerate             |\n" +
-            "| Arrow Down    | Decelerate             |\n" +
-            "| STRAFING      | WASD                   |\n" +
+            "| Arrow Keys    | Bank left/right        |\n" +
+            "|               | Accelerate/decelerate  |\n" +
+            "| WASD          | Strafe movement        |\n" +
             "| Space         | Fire lasers            |\n" +
             "| Enter         | Fire Missiles          |\n" +
+            "| Shift         | Boost                  |\n" +
             "| M             | Toggle Sound           |\n" +
             "| +             | Volume up              |\n" +
             "| -             | Volume down            |\n" +
             "| Escape        | Toggle Pause           |\n" +
-            "| CTRL + Escape | Turn on boss mode      |\n" +
-            "| Escape        | Exit (from boss mode)  |\n";
+            "| Tab           | Boss Mode (toggle)     |\n" +
+            "| H             | Show this help         |\n";
 
             this.resize();
             this.add_buttons();
@@ -4927,6 +5215,11 @@ class high_scores extends modal{
         this.load_high_scores("static/json/highscores.json");
         this.render_callback(this.render_scores.bind(this));
 
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_scroll_keys(data.kb);
+        });
+
         // Mouse wheel scrolling
         this._bound_wheel_handler = this.handle_wheel.bind(this);
         this.canvas.addEventListener('wheel', this._bound_wheel_handler);
@@ -4971,7 +5264,7 @@ class high_scores extends modal{
         }
     }
 
-    handle_keys(kb) {
+    handle_scroll_keys(kb) {
         if (!this.active || !this.high_scores) return;
 
         // Arrow key scrolling
@@ -5326,16 +5619,12 @@ class pause extends modal{
         this.add_buttons();
     }
 
-    //render(){
-    //    super.render();
-    //}
-
 }// Base class for modals that play cinematic scenes with seekbar and pause controls
 class cinematic_player extends modal {
 
     setup_player(scene_url) {
         this.player = new scene(this.window_manager, scene_url);
-        this.on("close", () => { this.player.close(); });
+        this.on("close", () => { if (this.player) this.player.close(); });
         this.player.on("complete", () => {
             // Scene finished, close the modal
             this.close();
@@ -5352,17 +5641,22 @@ class cinematic_player extends modal {
         // Call it once immediately when modal opens
         this._resume_audio_once();
 
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_cinematic_keys(data.kb);
+        });
+
         // Create seekbar
         let seekbar_position = new rect(10, this.internal_rect.height - 30, this.internal_rect.width - 20, 20, "left", "top");
         this.seekbar = this.create_seekbar(
             seekbar_position,
-            () => this.player.get_progress(),
-            (time) => this.player.seek_to(time, true)
+            () => this.player ? this.player.get_progress() : null,
+            (time) => { if (this.player) this.player.seek_to(time, true); }
         );
 
         // Listen for seek end to resume audio
         this.seekbar.on('seek_end', () => {
-            this.player.end_seek();
+            if (this.player) this.player.end_seek();
         });
 
         // Add click handler for pause/play
@@ -5382,26 +5676,33 @@ class cinematic_player extends modal {
     handle_click(event) {
         if (!this.active || !this.player) return;
 
-        // Check if click is inside the modal window
-        const click_x = event.offsetX;
-        const click_y = event.offsetY;
+        // Transform mouse coordinates from physical to virtual space
+        const viewport = this.graphics.viewport;
+        const scale = viewport.scale;
+        const renderedWidth = viewport.virtual.width * scale.x;
+        const renderedHeight = viewport.virtual.height * scale.y;
+        const offsetX = (viewport.given.width - renderedWidth) / 2;
+        const offsetY = (viewport.given.height - renderedHeight) / 2;
+        const virtual_click_x = (event.offsetX - offsetX) / scale.x;
+        const virtual_click_y = (event.offsetY - offsetY) / scale.y;
 
-        if (click_x >= this.position.x &&
-            click_x <= this.position.x + this.position.width &&
-            click_y >= this.position.y &&
-            click_y <= this.position.y + this.position.height) {
+        // Check if click is inside the modal window (using virtual coordinates)
+        if (virtual_click_x >= this.position.x &&
+            virtual_click_x <= this.position.x + this.position.width &&
+            virtual_click_y >= this.position.y &&
+            virtual_click_y <= this.position.y + this.position.height) {
 
             // Don't toggle if clicking on the close button
             if (this.closeButton && this.buttons) {
                 let clicking_button = false;
                 this.buttons.forEach((button) => {
-                    if (button.is_inside(click_x, click_y)) {
+                    if (button.is_inside(event.offsetX, event.offsetY)) {
                         clicking_button = true;
                     }
                 });
 
-                // Don't toggle if clicking on seekbar
-                if (this.seekbar && this.seekbar.is_inside(click_x, click_y)) {
+                // Don't toggle if clicking on seekbar (seekbar handles transformation internally)
+                if (this.seekbar && this.seekbar.is_inside(event.offsetX, event.offsetY)) {
                     clicking_button = true;
                 }
 
@@ -5414,7 +5715,7 @@ class cinematic_player extends modal {
         }
     }
 
-    handle_keys(kb) {
+    handle_cinematic_keys(kb) {
         if (!this.active || !this.player) return;
 
         // Space to pause/play
@@ -5575,6 +5876,8 @@ class scene {
         }
 
         this.playing=true;
+        this.paused=false;  // Ensure we start unpaused
+        this.start_time = Date.now();  // Initialize start time
     }
 
     get_total_duration() {
@@ -5855,6 +6158,7 @@ class game extends modal{
         this.ok=false
         this.cancel=false
         this.closeButton=true;
+        this.no_close=true;  // Prevent default ESC close - we handle it custom with pause
         this.title="Level - 1";
         this.text="";
 
@@ -5892,6 +6196,17 @@ class game extends modal{
         this.resize();
         this.add_buttons();
         this.no_skin();
+
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_game_keys(data.kb);
+        });
+
+        // Override ESC key to pause instead of close
+        this.on("escape", (event) => {
+            event.defaultPrevented = true;  // Prevent modal from closing
+            this.handle_escape();
+        });
 
         this.render_callback(this.updateFrame.bind(this));
 
@@ -6018,7 +6333,7 @@ class game extends modal{
                         // Calculate impact position relative to ship center for shield effect
                         const impactX = obj2.position.x - obj1.position.x;
                         const impactY = obj2.position.y - obj1.position.y;
-                        obj1.damage(500, impactX, impactY);  // Collision does heavy damage - 10 collisions to kill
+                        obj1.damage(50, impactX, impactY);  // Reduced collision damage - ~40 collisions to kill with shields
                         obj2.damage(50);
                         obj1.explosion();
                         obj2.explosion();
@@ -6053,10 +6368,8 @@ class game extends modal{
 
                 case 'enemy_projectile_ship':
                     // Enemy projectile hit player
-                    // Apply physics collision if shields are up (bounce projectiles)
-                    if (obj2.shield_strength > 0) {
-                        obj1.impact2(obj2);  // Bounce projectile off shields
-                    }
+                    // Projectiles don't bounce - they hit or fly past
+                    // (removed impact2 bounce)
 
                     // Calculate impact position relative to ship center
                     const impactX = obj1.position.x - obj2.position.x;
@@ -6330,58 +6643,56 @@ class game extends modal{
     }
 
 
-    handle_keys(kb) {
+    handle_game_keys(kb) {
         if (this.active==false) return;
-        if (this.level_start == true) {
+
+        // Only accept gameplay input if level has started AND game is not paused
+        if (this.level_start == true && !this.pause_game) {
             // In your game loop, check keysPressed object to determine actions
             if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
             if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
-            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate();
-            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate();
+            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(100);
+            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(100);
             if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
             if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
             if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
-            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(50);
-            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(50);
-            if (kb.is_pressed('w') || kb.is_pressed('W')) 
-            this.level.spaceship.accelerate(50);
-            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(50);
-            //if (kb.is_pressed('Escape')) this.G.level.spaceship.pause();
+            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(100);
+            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(100);
+            if (kb.is_pressed('w') || kb.is_pressed('W'))
+            this.level.spaceship.accelerate(100);
+            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(100);
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
-            
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
+        }
+
+        // These controls work even when paused
+        if (this.level_start == true) {
             if (kb.just_stopped('+')) this.level.volume(+1);
             if (kb.just_stopped('-')) this.level.volume(-1);
-            /*
-            if (kb.just_stopped('ArrowLeft')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowRight')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowUp')) this.audio_manager.sound_off();
-            if (kb.just_stopped('ArrowDown')) this.audio_manager.sound_off();
-*/
             if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
-
             if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
+        }
+    }
 
+    handle_escape() {
+        // If player is dead, close the game and return to menu
+        if (this.level.spaceship && this.level.spaceship.life <= 0) {
+            this.close();
+            return;
         }
 
-        if (kb.just_stopped('Escape')) {
-            // If player is dead, close the game and return to menu
-            if (this.level.spaceship && this.level.spaceship.life <= 0) {
-                this.close();
-                return;
-            }
-
-            if (this.boss_mode_activated) {
-                this.ui.boss_mode_off();
-            } else if (kb.ctrl()) {
-                this.ui.boss_mode_on();
-            } else if (this.pause_game == true) {
-                this.ui.unpause();
-            } else {
-                this.ui.pause();
-            }
+        // Toggle pause
+        if (this.pause_game == true) {
+            this.ui.unpause();
+        } else {
+            this.ui.pause();
         }
+    }
+
+    help() {
+        let modal = new help();
+        this.window_manager.add(modal);
     }
 
     delete() {

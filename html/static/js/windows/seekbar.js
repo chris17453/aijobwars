@@ -38,6 +38,7 @@ class seekbar extends events {
     render() {
         try {
             if (this.active !== true) return;
+            if (!this.ctx || !this.graphics || !this.position || !this.anchor_position) return;
 
             const progress_data = this.get_progress_callback();
             if (!progress_data) return;

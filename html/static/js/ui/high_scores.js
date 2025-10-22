@@ -20,6 +20,11 @@ class high_scores extends modal{
         this.load_high_scores("static/json/highscores.json");
         this.render_callback(this.render_scores.bind(this));
 
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_scroll_keys(data.kb);
+        });
+
         // Mouse wheel scrolling
         this._bound_wheel_handler = this.handle_wheel.bind(this);
         this.canvas.addEventListener('wheel', this._bound_wheel_handler);
@@ -64,7 +69,7 @@ class high_scores extends modal{
         }
     }
 
-    handle_keys(kb) {
+    handle_scroll_keys(kb) {
         if (!this.active || !this.high_scores) return;
 
         // Arrow key scrolling

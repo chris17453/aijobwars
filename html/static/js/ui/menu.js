@@ -5,6 +5,7 @@ class menu extends modal{
         // Store button data for resize recalculation
         this.menu_buttons = [];
         this.title_image = null;
+        this.glow_phase = 0;  // For pulsing glow animation
     }
 
     layout(){
@@ -12,7 +13,8 @@ class menu extends modal{
         this.set_background("menu");
         this.ok=false;
         this.cancel=false;
-        this.closeButton=true;
+        this.closeButton=false;  // No close button for main menu
+        this.no_close=true;  // Prevent ESC from closing main menu
         this.title="Menu";
         this.text="";
         this.active=true;
@@ -31,6 +33,13 @@ class menu extends modal{
         this.resize();
         this.add_buttons();
 
+        // Listen to modal's keyboard events for help
+        this.on("keys", (data) => {
+            if (data.kb.just_stopped('h') || data.kb.just_stopped('H')) {
+                this.show_help();
+            }
+        });
+
         //layout options - keep gradient for visual effect
         this.add_bg_gradient(0, 'rgba(0,0,0,0.3)');
         this.add_bg_gradient(.7, 'rgba(211,211,211,0.2)');
@@ -39,6 +48,129 @@ class menu extends modal{
 
         // Create buttons with viewport-relative positions
         this.create_menu_buttons();
+    }
+
+    render() {
+        // Copy parent render logic but insert glow before title image
+        if (this.active === false) return;
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.sprites) return;
+        if (!this.render_position || !this.internal_rect || !this.render_internal_rect) return;
+
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
+
+        if (this.skin) {
+            this.sprites.slice_9("window", this.render_position);
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(
+            this.render_internal_rect.x,
+            this.render_internal_rect.y,
+            this.render_internal_rect.width,
+            this.render_internal_rect.height
+        );
+        ctx.clip();
+
+        if (this.external_render_callback != null) {
+            this.external_render_callback(this.render_internal_rect);
+        }
+
+        // Render buttons
+        if (this.buttons) {
+            this.buttons.forEach((button) => button.render());
+        }
+
+        // Render ui_components
+        if (this.ui_components) {
+            this.ui_components.forEach((component) => component.render());
+        }
+
+        // Render text
+        if (this.text) {
+            this.graphics.font.draw_text(this.render_internal_rect, this.text, true, true);
+        }
+
+        ctx.restore();
+
+        // Render images with glow effect (title is here)
+        if (this.images) {
+            for (let i = 0; i < this.images.length; i++) {
+                let image = this.images[i];
+
+                // Apply glow effect to title image
+                if (image === this.title_image) {
+                    this.render_title_with_glow(image);
+                } else {
+                    let image_pos = image.position.clone();
+                    this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+                }
+            }
+        }
+
+        if (this.skin && this.sprites && this.graphics.font) {
+            this.sprites.slice_3("window-title", this.render_title_position);
+            this.graphics.font.draw_text(this.render_title_position, this.title, true, false);
+        }
+        if (this.closeButton != null && typeof this.closeButton.render === "function") {
+            this.closeButton.render();
+        }
+    }
+
+    render_title_with_glow(image) {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+
+        // Update glow animation phase
+        this.glow_phase += 0.05;
+
+        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
+        const pulse = 25 + Math.sin(this.glow_phase) * 15;
+
+        ctx.save();
+
+        // Draw the title multiple times with increasing glow for stronger effect
+        // Layer 1: Strongest glow (underneath)
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+        ctx.shadowBlur = pulse * 2;
+        let image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 2: Medium glow
+        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
+        ctx.shadowBlur = pulse * 1.5;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 3: Soft glow
+        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
+        ctx.shadowBlur = pulse;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Final layer: No shadow (crisp title on top)
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        ctx.restore();
+
+        // Extra cleanup to ensure no shadow state leaks
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    show_help() {
+        let modal = new help();
+        this.window_manager.add(modal);
     }
 
     create_menu_buttons() {
@@ -56,7 +188,7 @@ class menu extends modal{
         // Store button definitions
         this.menu_buttons = [
             { label: "New Game", callback: this.new_game, y_offset: y, style: "cyan" },
-            { label: "Story So Far", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
+            { label: "Prologue", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
             { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
             { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
             { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - 110, style: "red" }

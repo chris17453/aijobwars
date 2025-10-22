@@ -65,9 +65,9 @@ class Projectile extends game_object {
                 this.expire(5);
                 this.set_type("bolt");
                 actions = [
-                    { type: "accelerate", frames: 1, speed: 10 }
+                    { type: "accelerate", frames: 1, speed: 50 }
                 ];
-                //this.action_list=actions;
+                this.action_list=actions;
 
                 break;
             case 'bolt4':

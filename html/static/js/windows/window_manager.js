@@ -39,6 +39,11 @@ class window_manager extends events{
               return;
           }
 
+          // Forward keyboard events to active modal's keyboard state
+          if (this.active_modal && this.active_modal.update_keyboard_state) {
+              this.active_modal.update_keyboard_state(event.key, true);
+          }
+
           switch (event.key) {
               case 'F5': break;
               default: event.preventDefault();
@@ -49,6 +54,12 @@ class window_manager extends events{
       window.addEventListener('keyup', (event) => {
           this.kb.up(event.key);
           this.kb.event(event)
+
+          // Forward keyboard events to active modal's keyboard state
+          if (this.active_modal && this.active_modal.update_keyboard_state) {
+              this.active_modal.update_keyboard_state(event.key, false);
+          }
+
           switch (event.key) {
               case 'F5': break;
               case 'F11': break;
@@ -141,9 +152,9 @@ class window_manager extends events{
         return; // Don't pass to modal
       }
 
-      // Pass remaining key events to active modal
+      // Let active modal process its own keyboard events
       if (this.active_modal && !this.boss_mode_activated) {
-        this.active_modal.handle_keys(this.kb);
+        this.active_modal.handle_keys();
       }
     }
 
@@ -174,8 +185,21 @@ class window_manager extends events{
 
     render() {
         if (this.active_modal) {
+          // DEBUG: Track save/restore balance
+          const initialSaveCount = this.graphics.ctx._saveCount || 0;
+
           // Save the current canvas state
           this.graphics.ctx.save();
+          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 0) + 1;
+
+          // ALWAYS render base gradient background FIRST (before any transformations)
+          // Fill the ENTIRE canvas, not just the viewport
+          const baseGradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.given.height);
+          baseGradient.addColorStop(0, '#0a1628');    // Dark blue top
+          baseGradient.addColorStop(0.5, '#06292e');  // Teal middle (existing body bg)
+          baseGradient.addColorStop(1, '#0d1b2a');    // Dark blue bottom
+          this.graphics.ctx.fillStyle = baseGradient;
+          this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.given.width, this.graphics.viewport.given.height);
 
           // Apply viewport scaling and centering transformation
           // This makes everything drawn in virtual coordinates automatically scale to physical pixels
@@ -218,6 +242,13 @@ class window_manager extends events{
 
           // Restore the canvas state (removes the scale transformation)
           this.graphics.ctx.restore();
+          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 1) - 1;
+
+          // DEBUG: Verify save/restore balance
+          const finalSaveCount = this.graphics.ctx._saveCount || 0;
+          if (finalSaveCount !== initialSaveCount) {
+            console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}, Modal: ${this.active_modal.constructor.name}`);
+          }
         }
         //this.modals.forEach(window => window.render());
     }
