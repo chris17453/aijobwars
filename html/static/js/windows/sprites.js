@@ -55,6 +55,9 @@ class sprites extends events{
         this.add("static/explosion/exp_9_128x128_35frames_strip35.png",    "static/explosion/exp_9_128x128_35frames_strip35.png");
         this.add("static/ships/ship1.png",    "static/ships/ship1.png");
         this.add("static/ships/teams.png",    "static/ships/teams.png");
+        this.add("static/ships/linkedin.png", "static/ships/linkedin.png");
+        this.add("static/ships/chatgpt.png",  "static/ships/chatgpt.png");
+        this.add("static/ships/resume.png",   "static/ships/resume.png");
         this.add("static/projectiles/Arcane Bolt.png",   "static/projectiles/Arcane Bolt.png");
         this.add("static/projectiles/Firebomb.png", "static/projectiles/Firebomb.png");
         this.add("static/ships/Water Bolt.png",    "static/ships/Water Bolt.png");

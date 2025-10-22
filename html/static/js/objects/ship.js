@@ -116,6 +116,33 @@ class Ship extends game_object {
     }
 
     /**
+     * Reverse thrust - applies force in opposite direction of velocity to brake
+     */
+    reverse_thrust() {
+        // Calculate magnitude of current velocity
+        const velocityMagnitude = Math.sqrt(
+            this.velocity.x * this.velocity.x +
+            this.velocity.y * this.velocity.y
+        );
+
+        if (velocityMagnitude < 0.5) {
+            // Ship is almost stopped, just zero it out
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+            return;
+        }
+
+        // Calculate unit vector in opposite direction of velocity
+        const reverseX = -this.velocity.x / velocityMagnitude;
+        const reverseY = -this.velocity.y / velocityMagnitude;
+
+        // Apply strong braking force (300 is stronger than boost)
+        const brakeForce = 300;
+        this.velocity.x += reverseX * brakeForce / this.mass;
+        this.velocity.y += reverseY * brakeForce / this.mass;
+    }
+
+    /**
      * Get shield strength as percentage (0-100)
      */
     get_shield_percentage() {

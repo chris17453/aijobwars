@@ -524,6 +524,9 @@ class sprites extends events{
         this.add("static/explosion/exp_9_128x128_35frames_strip35.png",    "static/explosion/exp_9_128x128_35frames_strip35.png");
         this.add("static/ships/ship1.png",    "static/ships/ship1.png");
         this.add("static/ships/teams.png",    "static/ships/teams.png");
+        this.add("static/ships/linkedin.png", "static/ships/linkedin.png");
+        this.add("static/ships/chatgpt.png",  "static/ships/chatgpt.png");
+        this.add("static/ships/resume.png",   "static/ships/resume.png");
         this.add("static/projectiles/Arcane Bolt.png",   "static/projectiles/Arcane Bolt.png");
         this.add("static/projectiles/Firebomb.png", "static/projectiles/Firebomb.png");
         this.add("static/ships/Water Bolt.png",    "static/ships/Water Bolt.png");
@@ -4546,6 +4549,84 @@ class Ship extends game_object {
 class Boss extends game_object {
     constructor(window_manager, x, y, type) {
         switch (type) {
+            case 'chatgpt':
+                super(window_manager, x, y, 192, 192,  // Large boss
+                    15,                   // mass - very heavy
+                    0,                    // rotation
+                    4);                   // rotation speed
+
+                this.set_image('static/ships/chatgpt.png');
+                this.set_type("boss");
+                this.set_max_life(1000); // High health for boss
+                this.set_center(96, 96);
+
+                // Complex movement pattern
+                let chatgpt_boss_action = [
+                    { type: "strafe_left", frames: 8, speed: 2 },
+                    { type: "accelerate", frames: 12, speed: 2 },
+                    { type: "strafe_right", frames: 16, speed: 2 },
+                    { type: "accelerate", frames: 12, speed: 2 },
+                    { type: "strafe_left", frames: 8, speed: 2 },
+                    { type: "skip", frames: 6 }
+                ];
+
+                this.action_list = chatgpt_boss_action;
+                this.bolt_type = "bolt3";
+                this.projectiles = [];
+
+                // 6 cannon positions for chatGPT boss
+                this.cannons = [
+                    { x: -60, y: 40 },  // Left top
+                    { x: -60, y: 80 },  // Left bottom
+                    { x: 60, y: 40 },   // Right top
+                    { x: 60, y: 80 },   // Right bottom
+                    { x: -30, y: 60 },  // Center left
+                    { x: 30, y: 60 }    // Center right
+                ];
+
+                // Boss fires more frequently
+                this.laser_fire_control = new fire_control(12, 1500, 800);
+                break;
+
+            case 'resume':
+                super(window_manager, x, y, 192, 192,  // Large boss
+                    15,                   // mass - very heavy
+                    0,                    // rotation
+                    4);                   // rotation speed
+
+                this.set_image('static/ships/resume.png');
+                this.set_type("boss");
+                this.set_max_life(1000); // High health for boss
+                this.set_center(96, 96);
+
+                // Complex movement pattern
+                let resume_boss_action = [
+                    { type: "bank_left", frames: 6 },
+                    { type: "accelerate", frames: 10, speed: 2 },
+                    { type: "bank_right", frames: 12 },
+                    { type: "accelerate", frames: 10, speed: 2 },
+                    { type: "bank_left", frames: 6 },
+                    { type: "skip", frames: 6 }
+                ];
+
+                this.action_list = resume_boss_action;
+                this.bolt_type = "bolt3";
+                this.projectiles = [];
+
+                // 6 cannon positions for resume boss
+                this.cannons = [
+                    { x: -70, y: 30 },  // Left top
+                    { x: -70, y: 90 },  // Left bottom
+                    { x: 70, y: 30 },   // Right top
+                    { x: 70, y: 90 },   // Right bottom
+                    { x: 0, y: 45 },    // Center top
+                    { x: 0, y: 75 }     // Center bottom
+                ];
+
+                // Boss fires more frequently
+                this.laser_fire_control = new fire_control(12, 1500, 800);
+                break;
+
             case 'interview':
                 super(window_manager, x, y, 128, 128,
                     10,                   // mass - heavier than normal enemies
@@ -4582,34 +4663,50 @@ class Boss extends game_object {
         this.is_boss = true;
     }
 
-    // Boss can fire weapons
+    // Boss can fire weapons from multiple cannons
     fire_lazer() {
         if (this.laser_fire_control && this.laser_fire_control.can_fire()) {
-            // Fire from left side
-            let lazer1 = this.get_relative_position(-40, 35);
-            var projectile1 = new Projectile(
-                this.window_manager,
-                this.position.x + lazer1.x,
-                this.position.y + lazer1.y,
-                this.rotation,
-                this.bolt_type
-            );
-            projectile1.set_velocity(this.velocity);
-            projectile1.accelerate(3);
-            this.projectiles.push(projectile1);
+            // If boss has cannons array, fire from all cannons
+            if (this.cannons && this.cannons.length > 0) {
+                for (let cannon of this.cannons) {
+                    let cannonPos = this.get_relative_position(cannon.x, cannon.y);
+                    var projectile = new Projectile(
+                        this.window_manager,
+                        this.position.x + cannonPos.x,
+                        this.position.y + cannonPos.y,
+                        this.rotation,
+                        this.bolt_type
+                    );
+                    projectile.set_velocity(this.velocity);
+                    projectile.accelerate(30);
+                    this.projectiles.push(projectile);
+                }
+            } else {
+                // Fallback to old 2-cannon system for interview boss
+                let lazer1 = this.get_relative_position(-40, 35);
+                var projectile1 = new Projectile(
+                    this.window_manager,
+                    this.position.x + lazer1.x,
+                    this.position.y + lazer1.y,
+                    this.rotation,
+                    this.bolt_type
+                );
+                projectile1.set_velocity(this.velocity);
+                projectile1.accelerate(30);
+                this.projectiles.push(projectile1);
 
-            // Fire from right side
-            let lazer2 = this.get_relative_position(+40, 35);
-            var projectile2 = new Projectile(
-                this.window_manager,
-                this.position.x + lazer2.x,
-                this.position.y + lazer2.y,
-                this.rotation,
-                this.bolt_type
-            );
-            projectile2.set_velocity(this.velocity);
-            projectile2.accelerate(3);
-            this.projectiles.push(projectile2);
+                let lazer2 = this.get_relative_position(+40, 35);
+                var projectile2 = new Projectile(
+                    this.window_manager,
+                    this.position.x + lazer2.x,
+                    this.position.y + lazer2.y,
+                    this.rotation,
+                    this.bolt_type
+                );
+                projectile2.set_velocity(this.velocity);
+                projectile2.accelerate(30);
+                this.projectiles.push(projectile2);
+            }
         }
     }
 
@@ -4660,18 +4757,23 @@ class Enemy extends game_object {
                     5,                    // mass (medium debris)
                     0,                    // rotation
                     12);                  // rotation speed
-                this.set_image('static/debris/email.png'); // Placeholder
+                this.set_image('static/ships/chatgpt.png');
                 this.set_type("chatgpt");
                 this.set_max_life(80);
+                this.projectiles = [];
+                this.bolt_type = "bolt2";
 
                 let chatgpt_action = [
                     { type: "bank_left", frames: 2 },
                     { type: "accelerate", frames: 4, speed: speed },
+                    { type: "lazer", frames: 1, speed: 5 },
                     { type: "bank_right", frames: 4 },
                     { type: "accelerate", frames: 4, speed: speed },
+                    { type: "lazer", frames: 1, speed: 5 },
                     { type: "skip", frames: 3 }
                 ];
                 this.action_list = chatgpt_action;
+                this.action_position.frame = parseInt(Math.random() * chatgpt_action.length);
                 break;
 
             case 'resume':
@@ -4679,18 +4781,23 @@ class Enemy extends game_object {
                     4,                    // mass (light debris)
                     0,                    // rotation
                     10);                  // rotation speed
-                this.set_image('static/debris/pdf.png'); // Placeholder
+                this.set_image('static/ships/resume.png');
                 this.set_type("resume");
                 this.set_max_life(60);
+                this.projectiles = [];
+                this.bolt_type = "bolt2";
 
                 let resume_action = [
                     { frames: 2, type: "strafe_left", speed: speed },
                     { frames: 8, type: "accelerate", speed: speed },
+                    { frames: 1, type: "lazer", speed: 5 },
                     { frames: 2, type: "strafe_right", speed: speed },
                     { frames: 8, type: "accelerate", speed: speed },
+                    { frames: 1, type: "lazer", speed: 5 },
                     { frames: 5, type: "skip" }
                 ];
                 this.action_list = resume_action;
+                this.action_position.frame = parseInt(Math.random() * resume_action.length);
                 break;
 
             case 'application':
@@ -4710,10 +4817,87 @@ class Enemy extends game_object {
                     { type: "skip", frames: 4 }
                 ];
                 this.action_list = application_action;
+                this.action_position.frame = parseInt(Math.random() * application_action.length);
+                break;
+
+            case 'linkedin':
+                super(window_manager, x, y, 64, 64,
+                    5,                    // mass (medium)
+                    0,                    // rotation
+                    10);                  // rotation speed
+                this.set_image('static/ships/linkedin.png');
+                this.set_type("linkedin");
+                this.set_max_life(70);
+                this.projectiles = [];
+                this.bolt_type = "bolt2";
+
+                let linkedin_action = [
+                    { type: "bank_left", frames: 3 },
+                    { type: "accelerate", frames: 6, speed: speed },
+                    { type: "lazer", frames: 1, speed: 5 },
+                    { type: "strafe_right", frames: 2, speed: speed },
+                    { type: "accelerate", frames: 6, speed: speed },
+                    { type: "lazer", frames: 1, speed: 5 },
+                    { type: "bank_right", frames: 3 },
+                    { type: "skip", frames: 4 }
+                ];
+                this.action_list = linkedin_action;
+                this.action_position.frame = parseInt(Math.random() * linkedin_action.length);
                 break;
         }
 
         this.rotation = 180;
+    }
+
+    fire_lazer() {
+        if (!this.bolt_type || !this.projectiles) return;
+
+        let lazer1 = this.get_relative_position(0, 60); // Fire from center-bottom of enemy ship
+        var projectile = new Projectile(this.window_manager, this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
+        projectile.set_velocity(this.velocity);
+        projectile.accelerate(50);
+        this.projectiles.push(projectile);
+    }
+
+    update_frame(deltaTime) {
+        super.update_frame(deltaTime);
+
+        // Update and cleanup projectiles
+        if (this.projectiles) {
+            const timestamp = Date.now();
+            for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                const projectile = this.projectiles[i];
+                if (timestamp - projectile.created > 5000) {
+                    this.projectiles.splice(i, 1);
+                } else {
+                    projectile.update_frame(deltaTime);
+                }
+            }
+        }
+    }
+
+    render(window) {
+        super.orient(window);
+        super.render();
+        super.de_orient();
+
+        // Render projectiles
+        if (this.projectiles) {
+            for (let projectile of this.projectiles) {
+                projectile.orient(window);
+                projectile.render();
+                projectile.de_orient();
+            }
+        }
+    }
+
+    async executeAction(action) {
+        super.executeAction(action);
+        switch (action.type) {
+            case 'lazer':
+                this.fire_lazer();
+                break;
+        }
     }
 }
 class Powerup extends game_object {
@@ -4984,6 +5168,7 @@ class level extends events{
                             case 'r': block = new Derbis(this.window_manager,x, y, "reddit"); break;
                             case 'g': block = new Enemy(this.window_manager,x, y, "chatgpt"); break;
                             case 'R': block = new Enemy(this.window_manager,x, y, "resume"); break;
+                            case 'L': block = new Enemy(this.window_manager,x, y, "linkedin"); break;
                             case 'a': block = new Enemy(this.window_manager,x, y, "application"); break;
                             case 'i': block = new Boss(this.window_manager,x, y, "interview"); break;
                             case 'h': block = new Powerup(this.window_manager,x, y, "health"); break;
@@ -6546,10 +6731,10 @@ class game extends modal{
 
         // Calculate how much of the level we've scrolled through (0 to 1)
         const total_level_height = this.level.position.height;
-        const scroll_progress = 1 - (this.level.position.y / total_level_height);
+        const scroll_progress = (this.level.position.y / total_level_height);
 
         // Map scroll progress to background position
-        // Background should scroll from bottom (start) to top (end)
+        // Background scrolls downward as level progresses (same direction as level movement)
         const bg_y_offset = (scaled_height - viewport.height) * scroll_progress;
 
         // Draw background - tile vertically if needed

@@ -86,6 +86,7 @@ class level extends events{
                             case 'r': block = new Derbis(this.window_manager,x, y, "reddit"); break;
                             case 'g': block = new Enemy(this.window_manager,x, y, "chatgpt"); break;
                             case 'R': block = new Enemy(this.window_manager,x, y, "resume"); break;
+                            case 'L': block = new Enemy(this.window_manager,x, y, "linkedin"); break;
                             case 'a': block = new Enemy(this.window_manager,x, y, "application"); break;
                             case 'i': block = new Boss(this.window_manager,x, y, "interview"); break;
                             case 'h': block = new Powerup(this.window_manager,x, y, "health"); break;
