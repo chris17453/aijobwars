@@ -55,6 +55,8 @@ class game_object extends motion {
         this.old_acceleration=null;
         this.old_velocity=null;
         this.old_position=null;
+        this.collision_mask = null; // Pixel-perfect collision mask
+        this.mask_bounds = null; // Tight bounding box from mask
 
         this.id=game_object.uuid_generator.next().value;
     }
@@ -85,14 +87,18 @@ class game_object extends motion {
     }
     damage(damage) {
         this.life -= damage;
-        if (this.life < 0) this.destroy();
-
+        if (this.life <= 0) {
+            this.life = 0;
+            this.destroy();
+        }
     }
     set_max_life(max_life) {
         this.max_life = max_life;
         this.life = max_life;
     }
     get_life_percentage() {
+        if (this.life < 0) return 0;
+        if (this.life > this.max_life) return 100;
         return parseInt((this.life / this.max_life) * 100);
     }
 
@@ -145,6 +151,36 @@ class game_object extends motion {
         this.frame_width = frame_width;
         this.img=img_URL;
         this.graphics.sprites.add(img_URL);
+
+        // Generate collision mask after image is loaded
+        this.generate_collision_mask();
+    }
+
+    generate_collision_mask() {
+        // Wait for sprite to load, then generate mask
+        setTimeout(() => {
+            try {
+                const position = new rect(0, 0, this.width, this.height);
+
+                // Get pixel data from sprite
+                const pixelData = this.graphics.sprites.get_data(this.img, position);
+                if (!pixelData) return;
+
+                // Create boolean mask (true = solid pixel)
+                this.collision_mask = new Array(this.width * this.height);
+                for (let i = 0; i < this.width * this.height; i++) {
+                    const alpha = pixelData[i * 4 + 3]; // Get alpha channel
+                    this.collision_mask[i] = alpha > 50; // Threshold for solid pixels
+                }
+
+                // Calculate tight bounding box from mask
+                this.mask_bounds = this.graphics.sprites.get_bounds(this.img, position);
+
+                console.log(`[${this.type}] Collision mask generated: ${this.width}x${this.height}, bounds:`, this.mask_bounds);
+            } catch (error) {
+                console.error(`[${this.type}] Failed to generate collision mask:`, error);
+            }
+        }, 100); // Small delay to ensure sprite is loaded
     }
 
     image_rotate(rotation) {
@@ -155,8 +191,10 @@ class game_object extends motion {
     set_sound(action, sound_URL) {
         //cache this to save the some ChannelSplitterNode.apply. early  optimization bites you in the ass
         this.sounds[this.type+action]=sound_URL;
-        this.audio_manager.add(this.type+action, sound_URL);
-
+        // Fire and forget - load audio in background
+        this.audio_manager.add(this.type+action, sound_URL).catch(err => {
+            console.error(`Failed to load sound ${sound_URL}:`, err);
+        });
     }
 
 
@@ -236,6 +274,7 @@ class game_object extends motion {
     }//end update frame
 
     orient(window = null) {
+        if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
 
         this.graphics.ctx.save();
         let scale = this.graphics.viewport.scale.x;
@@ -335,6 +374,7 @@ class game_object extends motion {
             let sourceHeight = this.height;
 
             // Save the current context state
+            if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
             this.graphics.ctx.save();
 
             // Clip to the region of the drawn imagery
@@ -355,6 +395,7 @@ class game_object extends motion {
             this.graphics.ctx.restore();
         } else {
             // Save the current context state
+            if (!this.graphics || !this.graphics.ctx || typeof this.graphics.ctx.save !== 'function') return;
             this.graphics.ctx.save();
 
             // Clip to the region of the drawn imagery

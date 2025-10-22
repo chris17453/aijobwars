@@ -131,26 +131,99 @@ class motion{
     }
 
     check_collision(otherObject) {
-        // Calculate the center coordinates of both objects
+        // First, do a fast bounding box check
+        // Use mask_bounds if available for tighter collision
+        const thisBounds = this.mask_bounds || {
+            x: 0,
+            y: 0,
+            width: this.width,
+            height: this.height
+        };
+        const otherBounds = otherObject.mask_bounds || {
+            x: 0,
+            y: 0,
+            width: otherObject.width,
+            height: otherObject.height
+        };
+
+        // Calculate actual positions with bounds
+        const thisLeft = this.position.x + thisBounds.x;
+        const thisRight = thisLeft + thisBounds.width;
+        const thisTop = this.position.y + thisBounds.y;
+        const thisBottom = thisTop + thisBounds.height;
+
+        const otherLeft = otherObject.position.x + otherBounds.x;
+        const otherRight = otherLeft + otherBounds.width;
+        const otherTop = otherObject.position.y + otherBounds.y;
+        const otherBottom = otherTop + otherBounds.height;
+
+        // Fast AABB check - if bounding boxes don't overlap, no collision
+        if (thisRight < otherLeft || thisLeft > otherRight ||
+            thisBottom < otherTop || thisTop > otherBottom) {
+            return false;
+        }
+
+        // If both objects have collision masks, do pixel-perfect check
+        if (this.collision_mask && otherObject.collision_mask) {
+            return this.check_pixel_collision(otherObject);
+        }
+
+        // Fall back to circular collision for objects without masks
         let thisCenterX = this.position.x + this.width / 2;
         let thisCenterY = this.position.y + this.height / 2;
         let otherCenterX = otherObject.position.x + otherObject.width / 2;
         let otherCenterY = otherObject.position.y + otherObject.height / 2;
 
-        // Calculate the distance between the centers of the objects
-        let distanceX = Math.abs(thisCenterX - otherCenterX);
-        let distanceY = Math.abs(thisCenterY - otherCenterY);
+        let dx = thisCenterX - otherCenterX;
+        let dy = thisCenterY - otherCenterY;
+        let distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Calculate the combined width and height of both objects
-        let combinedWidth = (this.width + otherObject.width) / 2;
-        let combinedHeight = (this.height + otherObject.height) / 2;
+        // Use smaller radii (50% of average dimension) for tighter collisions with masks
+        let thisRadius = Math.min(this.width, this.height) * 0.5;
+        let otherRadius = Math.min(otherObject.width, otherObject.height) * 0.5;
+        let combinedRadius = thisRadius + otherRadius;
 
-        // Check if the distance between the centers is less than the combined width and height
-        if (distanceX < combinedWidth && distanceY < combinedHeight) {
-            // Collision detected or adjacent
-            return true;
+        return distance < combinedRadius;
+    }
+
+    check_pixel_collision(otherObject) {
+        // Calculate overlap region
+        const overlapLeft = Math.max(this.position.x, otherObject.position.x);
+        const overlapRight = Math.min(
+            this.position.x + this.width,
+            otherObject.position.x + otherObject.width
+        );
+        const overlapTop = Math.max(this.position.y, otherObject.position.y);
+        const overlapBottom = Math.min(
+            this.position.y + this.height,
+            otherObject.position.y + otherObject.height
+        );
+
+        // Sample pixels in overlap region (every 4 pixels for performance)
+        const step = 4;
+        for (let y = overlapTop; y < overlapBottom; y += step) {
+            for (let x = overlapLeft; x < overlapRight; x += step) {
+                // Get local coordinates for both objects
+                const thisX = Math.floor(x - this.position.x);
+                const thisY = Math.floor(y - this.position.y);
+                const otherX = Math.floor(x - otherObject.position.x);
+                const otherY = Math.floor(y - otherObject.position.y);
+
+                // Check if coordinates are in bounds
+                if (thisX >= 0 && thisX < this.width && thisY >= 0 && thisY < this.height &&
+                    otherX >= 0 && otherX < otherObject.width && otherY >= 0 && otherY < otherObject.height) {
+
+                    const thisIndex = thisY * this.width + thisX;
+                    const otherIndex = otherY * otherObject.width + otherX;
+
+                    // If both pixels are solid, we have a collision
+                    if (this.collision_mask[thisIndex] && otherObject.collision_mask[otherIndex]) {
+                        return true;
+                    }
+                }
+            }
         }
-        // No collision
+
         return false;
     }
 

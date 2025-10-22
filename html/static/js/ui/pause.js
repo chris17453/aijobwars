@@ -3,14 +3,15 @@ class pause extends modal{
         this.active=true;
         this.ok=true;
         this.cancel=false;
-        this.close=true;
+        this.closeButton=true;
         this.title="Paused";
         this.text="";
         let window_width=800;
         let window_height=600;
-        
-        let x=(graphics.viewport.given.width-window_width)/2;
-        let y=(graphics.viewport.given.height-window_height)/2;
+
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
         this.position = new rect(x, y, window_width,window_height,"left","top");
         this.resize();
         this.add_buttons();

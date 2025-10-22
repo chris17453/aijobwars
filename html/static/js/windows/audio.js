@@ -1,10 +1,18 @@
 class audio_manager {
     constructor(logger) {
-        this.defaultSounds = new Map();
-        this.playingSounds = new Map();
+        this.audioBuffers = new Map(); // Decoded audio buffers
+        this.audioSources = new Map(); // Currently playing sources
         this.playSounds = true;
         this.defaultVolume = 0.4;
         this.logger = logger || console;
+
+        // Create Web Audio API context
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Create master gain node for volume control
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.gain.value = this.defaultVolume;
+        this.masterGain.connect(this.audioContext.destination);
     }
 
     sanitize_path(path) {
@@ -15,17 +23,20 @@ class audio_manager {
         return path.replace(/[<>"'`;]/g, '');
     }
 
-    add(key, audioPath = null) {
+    async add(key, audioPath = null) {
         try {
             if (audioPath === null) audioPath = key;
             audioPath = this.sanitize_path(audioPath);
-            const sound = new Audio(audioPath);
-            sound.volume = this.defaultVolume;
-            this.defaultSounds.set(key, sound);
-            if (!this.playingSounds.has(key)) {
-                this.playingSounds.set(key, []);
-            }
-            return sound;
+
+            // Fetch and decode audio buffer
+            const response = await fetch(audioPath);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+            // Store the decoded buffer
+            this.audioBuffers.set(key, audioBuffer);
+
+            return audioBuffer;
         } catch (error) {
             console.error(`add(${key}): ${error.message}`);
             throw error;
@@ -34,8 +45,8 @@ class audio_manager {
 
     get(key) {
         try {
-            if (this.defaultSounds.has(key)) {
-                return this.defaultSounds.get(key);
+            if (this.audioBuffers.has(key)) {
+                return this.audioBuffers.get(key);
             } else {
                 console.warn(`get(${key}): Sound not found`);
                 return false;
@@ -48,97 +59,114 @@ class audio_manager {
 
     is_playing(key) {
         try {
-            if (!this.playingSounds.has(key)) {
-                return false;
-            }
-            return this.playingSounds.get(key).length > 0;
+            return this.audioSources.has(key) && this.audioSources.get(key) !== null;
         } catch (error) {
             console.error(`is_playing(${key}): ${error.message}`);
             return false;
         }
     }
 
-    async play(key) {
-        console.log("Attempting Playing: " + key);
+    async play(key, startTime = 0, loop = false) {
         try {
-            if (this.playSounds && this.defaultSounds.has(key)) {
-                const defaultSound = this.defaultSounds.get(key);
-                const clonedSound = defaultSound.cloneNode(true);
-                this.playingSounds.get(key).push(clonedSound);
-                await new Promise((resolve, reject) => {
-                    clonedSound.addEventListener('loadeddata', resolve, { once: true });
-                    clonedSound.addEventListener('error', (e) => {
-                        console.error(`play(${key}): Error loading audio`, e);
-                        reject(e);
-                    }, { once: true });
-                });
-                clonedSound.volume = this.defaultVolume;
-                await clonedSound.play();
-                console.log("Playing: " + key);
-                clonedSound.addEventListener('ended', () => {
-                    const index = this.playingSounds.get(key).indexOf(clonedSound);
-                    if (index !== -1) {
-                        this.playingSounds.get(key).splice(index, 1);
-                    }
-                });
-            } else {
-                console.warn(`play(${key}): Sound not available or playback disabled`);
+            // Resume audio context if suspended (browser autoplay policy)
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
             }
+
+            if (!this.playSounds || !this.audioBuffers.has(key)) {
+                console.warn(`play(${key}): Sound not available or playback disabled`);
+                return;
+            }
+
+            // Stop any currently playing instance
+            this.stop(key);
+
+            const audioBuffer = this.audioBuffers.get(key);
+
+            // Create source node
+            const source = this.audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.loop = loop; // Enable looping for background music
+
+            // Create gain node for this source
+            const gainNode = this.audioContext.createGain();
+            gainNode.gain.value = 1.0;
+
+            // Connect: source -> gain -> master gain -> destination
+            source.connect(gainNode);
+            gainNode.connect(this.masterGain);
+
+            // Store source and gain for later control
+            this.audioSources.set(key, { source, gainNode, startedAt: this.audioContext.currentTime - startTime });
+
+            // Start playback from offset
+            source.start(0, startTime);
+
+            // Clean up when finished (only for non-looping sounds)
+            if (!loop) {
+                source.onended = () => {
+                    if (this.audioSources.get(key)?.source === source) {
+                        this.audioSources.delete(key);
+                    }
+                };
+            }
+
         } catch (error) {
-            console.error(`play(${key}): ${error.message}`);
+            console.error(`play(${key}): ${error.message}`, error);
         }
     }
 
-    async stop(key) {
+    stop(key) {
         try {
-            if (this.playingSounds.has(key)) {
-                this.playingSounds.get(key).forEach(sound => {
-                    try {
-                        sound.pause();
-                        sound.currentTime = 0;
-                    } catch (error) {
-                        console.error(`stop(${key}) inner error: ${error.message}`);
-                    }
-                });
-                this.playingSounds.set(key, []);
-            } else {
-                console.warn(`stop(${key}): No active sounds`);
+            const sourceData = this.audioSources.get(key);
+            if (sourceData) {
+                try {
+                    sourceData.source.stop();
+                } catch (e) {
+                    // Already stopped
+                }
+                this.audioSources.delete(key);
             }
         } catch (error) {
             console.error(`stop(${key}): ${error.message}`);
         }
     }
 
-    async pause(key) {
+    pause(key) {
+        // Web Audio API doesn't have pause, so we stop and track position
         try {
-            if (this.playingSounds.has(key)) {
-                this.playingSounds.get(key).forEach(sound => {
-                    try {
-                        sound.pause();
-                    } catch (error) {
-                        console.error(`pause(${key}) inner error: ${error.message}`);
-                    }
-                });
-            } else {
-                console.warn(`pause(${key}): No active sounds`);
+            const sourceData = this.audioSources.get(key);
+            if (sourceData) {
+                const elapsed = this.audioContext.currentTime - sourceData.startedAt;
+                const wasLooping = sourceData.source.loop;
+                this.stop(key);
+                // Store pause position and loop state
+                this.audioSources.set(key + '_paused', { elapsed, loop: wasLooping });
             }
         } catch (error) {
             console.error(`pause(${key}): ${error.message}`);
         }
     }
 
+    async resume(key) {
+        // Resume from paused position
+        try {
+            const pausedData = this.audioSources.get(key + '_paused');
+            if (pausedData) {
+                const startTime = pausedData.elapsed || 0;
+                const loop = pausedData.loop || false;
+                this.audioSources.delete(key + '_paused');
+                await this.play(key, startTime, loop);
+            }
+        } catch (error) {
+            console.error(`resume(${key}): ${error.message}`);
+        }
+    }
+
     sound_off() {
         try {
             this.playSounds = false;
-            this.playingSounds.forEach((sounds, key) => {
-                sounds.forEach(sound => {
-                    try {
-                        sound.pause();
-                    } catch (error) {
-                        console.error(`sound_off(${key}) inner error: ${error.message}`);
-                    }
-                });
-            });
+            this.masterGain.gain.value = 0;
         } catch (error) {
             console.error(`sound_off: ${error.message}`);
         }
@@ -147,15 +175,7 @@ class audio_manager {
     sound_on() {
         try {
             this.playSounds = true;
-            this.playingSounds.forEach((sounds, key) => {
-                sounds.forEach(async (sound) => {
-                    try {
-                        await sound.play();
-                    } catch (error) {
-                        console.error(`sound_on(${key}) inner error: ${error.message}`);
-                    }
-                });
-            });
+            this.masterGain.gain.value = this.defaultVolume;
         } catch (error) {
             console.error(`sound_on: ${error.message}`);
         }
@@ -167,24 +187,25 @@ class audio_manager {
             return;
         }
         try {
-            if (this.playingSounds.has(key)) {
-                this.playingSounds.get(key).forEach(sound => {
-                    try {
-                        sound.volume = volume;
-                    } catch (error) {
-                        console.error(`set_volume(${key}) for playing sound: ${error.message}`);
-                    }
-                });
-            }
-            if (this.defaultSounds.has(key)) {
-                try {
-                    this.defaultSounds.get(key).volume = volume;
-                } catch (error) {
-                    console.error(`set_volume(${key}) for default sound: ${error.message}`);
-                }
+            const sourceData = this.audioSources.get(key);
+            if (sourceData && sourceData.gainNode) {
+                sourceData.gainNode.gain.value = volume;
             }
         } catch (error) {
             console.error(`set_volume(${key}): ${error.message}`);
+        }
+    }
+
+    set_master_volume(volume) {
+        if (volume == null || isNaN(volume)) {
+            console.error("Invalid volume value");
+            return;
+        }
+        try {
+            this.defaultVolume = volume;
+            this.masterGain.gain.value = volume;
+        } catch (error) {
+            console.error(`set_master_volume: ${error.message}`);
         }
     }
 }

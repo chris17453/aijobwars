@@ -3,12 +3,13 @@ class help extends modal{
         this.active=true;
         this.ok=false;
         this.cancel=false;
-        this.close=true;
-        this.title="Credits";
+        this.closeButton=true;
+        this.title="Help";
         let window_width=1024;
         let window_height=700;
-        let x=(graphics.viewport.given.width-window_width)/2;
-        let y=(graphics.viewport.given.height-window_height)/2;
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
         this.position = new rect(x, y, window_width,window_height,"left","top");
 
 

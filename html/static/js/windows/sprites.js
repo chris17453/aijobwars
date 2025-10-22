@@ -47,18 +47,20 @@ class sprites extends events{
         this.add("title","static/intro/AI-JOB-WARS-3-24-2024.png");
 
 
-        this.add("email",    "static/debris/email.png");
-        this.add("pdf",      "static/debris/pdf.png");
-        this.add("phone",    "static/debris/phone.png");
-        this.add("webex2",   "static/debris/webex2.png");
-        this.add("block",    "static/blocks/block.png");
-        this.add("exp_9",    "static/explosion/exp_9_128x128_35frames_strip35.png");
-        this.add("ship1",    "static/ships/ship1.png");
-        this.add("teams",    "static/ships/teams.png");
-        this.add("Arcane",   "static/projectiles/Arcane Bolt.png");
-        this.add("Firebomb", "static/projectiles/Firebomb.png");
-        this.add("Water",    "static/ships/Water Bolt.png");
-        this.add("booster",  "static/ships/booster.png");
+        this.add("static/debris/email.png",    "static/debris/email.png");
+        this.add("static/debris/pdf.png",      "static/debris/pdf.png");
+        this.add("static/debris/phone.png",    "static/debris/phone.png");
+        this.add("static/debris/webex2.png",   "static/debris/webex2.png");
+        this.add("static/blocks/block.png",    "static/blocks/block.png");
+        this.add("static/explosion/exp_9_128x128_35frames_strip35.png",    "static/explosion/exp_9_128x128_35frames_strip35.png");
+        this.add("static/ships/ship1.png",    "static/ships/ship1.png");
+        this.add("static/ships/teams.png",    "static/ships/teams.png");
+        this.add("static/projectiles/Arcane Bolt.png",   "static/projectiles/Arcane Bolt.png");
+        this.add("static/projectiles/Firebomb.png", "static/projectiles/Firebomb.png");
+        this.add("static/ships/Water Bolt.png",    "static/ships/Water Bolt.png");
+        this.add("static/ships/booster.png",  "static/ships/booster.png");
+        this.add("static/projectiles/P2.png", "static/projectiles/P2.png");
+        this.add("static/scene/bg_stars.png", "static/scene/bg_stars.png");
 
 
         this.on_load();
@@ -287,39 +289,60 @@ class sprites extends events{
             return;
         }
 
-        let source_outer = new rect(s.x, s.y, s.width, s.height);
-        let source_inner = new rect(s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2);
+        // Round destination rect
+        let dx = Math.round(dest.x);
+        let dy = Math.round(dest.y);
+        let dw = Math.round(dest.width);
+        let dh = Math.round(dest.height);
 
-        let dest_outer = new rect(dest.x, dest.y, dest.width, dest.height);
-        let dest_inner = new rect(dest.x + x_margin, dest.y + y_margin, dest.width - x_margin * 2, dest.height - y_margin * 2);
-        
-        // Assuming grid class and rect class are properly defined and instantiated
-        let source_grid = new grid(source_outer, source_inner, 9);
-        let dest_grid = new grid(dest_outer, dest_inner, 9);
+        // Top row starts at dy
+        let top_y = dy;
+        let top_h = y_margin;
 
-        // Draw each quadrant
-        for (let index = 0; index < 9; index++) {
-            let dx = dest_grid.quadrants[index].x;
-            let dy = dest_grid.quadrants[index].y;
-            let dWidth = dest_grid.quadrants[index].width;
-            let dHeight = dest_grid.quadrants[index].height;
+        // Middle row starts where top ends
+        let mid_y = top_y + top_h;
+        let mid_h = dh - y_margin - y_margin;
 
-            // Calculate source dimensions
-            let sx = source_grid.quadrants[index].x;
-            let sy = source_grid.quadrants[index].y;
-            let sWidth = source_grid.quadrants[index].width;
-            let sHeight = source_grid.quadrants[index].height;
+        // Bottom row starts where middle ends
+        let bot_y = mid_y + mid_h;
+        let bot_h = (dy + dh) - bot_y;
 
-            // Create pattern for tiling if not a corner quadrant
-            if ([0, 2, 6, 8].includes(index)) { // Corners
-                this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, sWidth, sHeight);
-            }
-            if ([1, 3, 4,  5, 7].includes(index)) { // Other quadrants are tileds
+        // Left column starts at dx
+        let left_x = dx;
+        let left_w = x_margin;
 
-                this.ctx.drawImage(s.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+        // Center column starts where left ends
+        let center_x = left_x + left_w;
+        let center_w = dw - x_margin - x_margin;
 
-            }
-        }
+        // Right column starts where center ends
+        let right_x = center_x + center_w;
+        let right_w = (dx + dw) - right_x;
+
+        // Draw the 9 quadrants - each quadrant starts exactly where the previous one ended
+        // Top row
+        this.ctx.drawImage(s.image, s.x, s.y, x_margin, y_margin,
+                          left_x, top_y, left_w, top_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y, s.width - x_margin * 2, y_margin,
+                          center_x, top_y, center_w, top_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y, x_margin, y_margin,
+                          right_x, top_y, right_w, top_h);
+
+        // Middle row
+        this.ctx.drawImage(s.image, s.x, s.y + y_margin, x_margin, s.height - y_margin * 2,
+                          left_x, mid_y, left_w, mid_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2,
+                          center_x, mid_y, center_w, mid_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + y_margin, x_margin, s.height - y_margin * 2,
+                          right_x, mid_y, right_w, mid_h);
+
+        // Bottom row
+        this.ctx.drawImage(s.image, s.x, s.y + s.height - y_margin, x_margin, y_margin,
+                          left_x, bot_y, left_w, bot_h);
+        this.ctx.drawImage(s.image, s.x + x_margin, s.y + s.height - y_margin, s.width - x_margin * 2, y_margin,
+                          center_x, bot_y, center_w, bot_h);
+        this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + s.height - y_margin, x_margin, y_margin,
+                          right_x, bot_y, right_w, bot_h);
     }
 
     slice_3(key, dest) {

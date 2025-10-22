@@ -60,10 +60,14 @@ class button extends events {
   render() {
     try {
       if (this.active !== true) return;
+
+      // Work in virtual coordinates - canvas transform handles scaling
       let relative_position = this.position.clone();
       let relative_inner = this.inner.clone();
+
       relative_position.add(this.anchor_position);
       relative_inner.add(relative_position);
+
       let img = this.up_image;
       if (this.is_down) {
         img = this.down_image;
@@ -128,12 +132,28 @@ class button extends events {
 
   is_inside(mouse_x, mouse_y) {
     try {
+      // Convert mouse coordinates from physical pixels to virtual coordinates
+      const viewport = this.graphics.viewport;
+      const scale = viewport.scale;
+
+      // Calculate the viewport centering offset (in physical pixels)
+      const renderedWidth = viewport.virtual.width * scale.x;
+      const renderedHeight = viewport.virtual.height * scale.y;
+      const offsetX = (viewport.given.width - renderedWidth) / 2;
+      const offsetY = (viewport.given.height - renderedHeight) / 2;
+
+      // Transform mouse coordinates: subtract offset, then divide by scale
+      const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+      const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+      // Check collision in virtual coordinate space
       let relative_position = this.position.clone();
       relative_position.add(this.anchor_position);
-      return mouse_x >= relative_position.x &&
-             mouse_x <= relative_position.x + relative_position.width &&
-             mouse_y >= relative_position.y &&
-             mouse_y <= relative_position.y + relative_position.height;
+
+      return virtual_mouse_x >= relative_position.x &&
+             virtual_mouse_x <= relative_position.x + relative_position.width &&
+             virtual_mouse_y >= relative_position.y &&
+             virtual_mouse_y <= relative_position.y + relative_position.height;
     } catch (error) {
       this.logger.error(`is_inside: ${error.message}`);
       return false;

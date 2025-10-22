@@ -11,14 +11,14 @@ class ui{
     }
 
     boss_mode_on(){
-        this.G.game.style.display = 'none';
-        this.G.boss_mode.style.display = 'block';
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('boss_mode').style.display = 'block';
         this.G.boss_mode_activated=true;
         this.pause_game_mode();
     }
     boss_mode_off(){
-        this.G.game.style.display = 'block';
-        this.G.boss_mode.style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('boss_mode').style.display = 'none';
         this.G.boss_mode_activated=false;
         this.unpause_game_mode();
     }
@@ -26,24 +26,45 @@ class ui{
     pause(){
         document.getElementById('game-overlay').style.display = 'block';
         document.getElementById('game-underlay').style.display = 'block';
-        document.getElementById('game-paused').style.display = 'block'; 
+        document.getElementById('game-paused').style.display = 'block';
         this.pause_game_mode();
+
+        // Pause background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.pause(this.G.level.track_key);
+        }
     }
     unpause(){
         document.getElementById('game-overlay').style.display = 'none';
         document.getElementById('game-underlay').style.display = 'none';
         document.getElementById('game-paused').style.display = 'none';
         this.unpause_game_mode();
+
+        // Resume background music
+        const audio_manager = this.G.window_manager.audio_manager;
+        if (this.G.level && this.G.level.track_key && audio_manager) {
+            audio_manager.resume(this.G.level.track_key);
+        }
     }
 
     toggle_sound(){
-        if(this.G.audio_manager.playing()){
-            this.G.level.track.pause();
-            this.G.audio_manager.sound_off();
+        const audio_manager = this.G.window_manager.audio_manager;
 
+        if(audio_manager.playSounds) {
+            // Turn sound OFF
+            audio_manager.sound_off();
+            // Stop background music
+            if(this.G.level.track_key) {
+                audio_manager.stop(this.G.level.track_key);
+            }
         } else {
-            this.G.level.track.play();
-            this.G.audio_manager.sound_on();
+            // Turn sound ON
+            audio_manager.sound_on();
+            // Resume background music with looping enabled
+            if(this.G.level.track_key) {
+                audio_manager.play(this.G.level.track_key, 0, true);
+            }
         }
     }
 

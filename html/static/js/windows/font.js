@@ -1,7 +1,8 @@
 class sprite_font {
-  constructor(ctx, sprites, image_key, logger) {
+  constructor(ctx, sprites, image_key, logger, viewport) {
     this.sprites = sprites;
     this.ctx = ctx;
+    this.viewport = viewport;
     this.logger = logger || console;
     this.characters =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:?!-_~#\"'&()[]|`\\/@" +
@@ -119,6 +120,7 @@ class sprite_font {
         this.logger.error("draw_single_text: Image not loaded");
         return;
       }
+
       let pos_x, padding = 0;
       let pos_y = position.y;
       if (centered) {
@@ -139,6 +141,8 @@ class sprite_font {
         if (char === "\n") return;
         const char_data = this.get_character(char);
         if (!char_data) continue;
+
+        // Draw at virtual coordinates - canvas transform handles scaling
         this.ctx.drawImage(
           this.sprite.image,
           char_data.left,

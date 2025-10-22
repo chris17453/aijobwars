@@ -64,7 +64,7 @@ class fire_control {
             return false;
         }
         if(this.is_firing==false) {
-            this.temprature-=1;
+            this.temprature-=2;  // Refill at 2x the decay rate
             this.rps=(this.max_rps*this.get_cooldown_percentage())/100;
             if(this.temprature<0) this.temprature=0;
         }

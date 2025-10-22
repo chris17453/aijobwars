@@ -10,7 +10,8 @@ class graphics extends events {
         this.sprites.on("complete", this.load_font.bind(this));
         this.sprites.preload();
         this.backround = null;
-        this.viewport = new viewport(1920, window.innerHeight);
+        // Fixed virtual resolution - everything is designed for 1920x1080
+        this.viewport = new viewport(1920, 1080);
         this.frame_background_color = '#222';
         this.background_color = '#000000';
       } catch (error) {
@@ -27,7 +28,7 @@ class graphics extends events {
   
     load_font() {
       try {
-        let font = new sprite_font(this.ctx, this.sprites, "grey_font", this.logger);
+        let font = new sprite_font(this.ctx, this.sprites, "grey_font", this.logger, this.viewport);
         this.font = font;
         this.emit('complete');
       } catch (error) {

@@ -43,18 +43,21 @@ class viewport {
     }
 
     calculate_scale() {
-        const scaleX = this.given.width / this.requested.width;
-        if (scaleX > 1) {
-            this.scale.x = 1;
-            this.scale.y = 1;
-            this.virtual.width = this.given.width;
-            this.virtual.height = this.given.height;
-        } else {
-            const virtX = this.requested.width / this.given.width;
-            this.scale.x = scaleX;
-            this.scale.y = scaleX;
-            this.virtual.width = parseInt(this.given.width * virtX);
-            this.virtual.height = parseInt(this.given.height * virtX);
-        }
+        // Virtual viewport is ALWAYS fixed at requested dimensions (e.g., 1920x1080)
+        // This is the coordinate space everything is designed for
+        this.virtual.width = this.requested.width;
+        this.virtual.height = this.requested.height;
+
+        // Calculate scale factors to fit the virtual viewport into physical screen
+        // We want to fit the entire virtual space into the physical screen while maintaining aspect ratio
+        const scaleX = this.given.width / this.virtual.width;
+        const scaleY = this.given.height / this.virtual.height;
+
+        // Use the smaller scale factor to ensure everything fits (letterbox if needed)
+        const uniformScale = Math.min(scaleX, scaleY);
+
+        // Don't scale beyond 1:1 (no upscaling past native resolution)
+        this.scale.x = Math.min(uniformScale, 1.0);
+        this.scale.y = Math.min(uniformScale, 1.0);
     }
 }

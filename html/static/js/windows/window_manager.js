@@ -81,11 +81,14 @@ class window_manager extends events{
         this.modals.splice(index, 1); // Remove the modal from the array
         // Additional cleanup if necessary
       }
+
+      // CRITICAL: Clear active_modal immediately to prevent render calls on deleted modal
+      this.active_modal = null;
+
       if(this.modals.length>0) {
         let last_modal= this.modals[this.modals.length - 1];
         last_modal.set_active(true);
         this.active_modal=last_modal;
-
       }
     }
     handle_keys(){
@@ -98,19 +101,51 @@ class window_manager extends events{
     }
 
     render() {
-
         if (this.active_modal) {
-          if (this.active_modal.bg_gradient) {
-            var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.frame.height);
-            for(let i=0;i<this.active_modal.bg_gradient.length;i++) 
-              gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
-            this.graphics.sprites.clear(gradient,this.graphics.viewport.frame);
-          }
-    
+          // Save the current canvas state
+          this.graphics.ctx.save();
+
+          // Apply viewport scaling and centering transformation
+          // This makes everything drawn in virtual coordinates automatically scale to physical pixels
+          const scale = this.graphics.viewport.scale;
+          const viewport = this.graphics.viewport;
+
+          // Calculate the actual rendered size after scaling
+          const renderedWidth = viewport.virtual.width * scale.x;
+          const renderedHeight = viewport.virtual.height * scale.y;
+
+          // Calculate offset to center the viewport in the canvas
+          const offsetX = (viewport.given.width - renderedWidth) / 2;
+          const offsetY = (viewport.given.height - renderedHeight) / 2;
+
+          // Apply translation to center, then scale
+          this.graphics.ctx.translate(offsetX, offsetY);
+          this.graphics.ctx.scale(scale.x, scale.y);
+
+          // Now everything is drawn in virtual coordinate space (1920x1080)
+          // and automatically scaled and centered to fit the canvas
+
+          // Render background first (if exists)
           if (this.active_modal.background){
-              this.graphics.sprites.render(this.active_modal.background,null,this.graphics.viewport.given,1,"contain");
+              const bgRect = new rect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
+              this.graphics.sprites.render(this.active_modal.background, null, bgRect, 1, "contain");
             }
+
+          // Then render gradient overlay (if exists)
+          if (this.active_modal.bg_gradient) {
+            var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.virtual.height);
+            for(let i=0;i<this.active_modal.bg_gradient.length;i++)
+              gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
+
+            // Draw gradient with proper transparency support
+            this.graphics.ctx.fillStyle = gradient;
+            this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
+          }
+
             this.active_modal.render();
+
+          // Restore the canvas state (removes the scale transformation)
+          this.graphics.ctx.restore();
         }
         //this.modals.forEach(window => window.render());
     }
