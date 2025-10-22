@@ -106,6 +106,30 @@ class game extends modal{
 
 
 
+    check_mine_proximity() {
+        if (!this.level.spaceship) return;
+
+        // Check all mines for proximity to player
+        for (let i = 0; i < this.level.npc.length; i++) {
+            const npc = this.level.npc[i];
+            if (npc.type !== "mine") continue;
+            if (!npc.armed) continue;
+
+            // Check if player is in proximity range
+            if (npc.check_proximity(this.level.spaceship)) {
+                console.log('[Game] Mine proximity triggered!');
+
+                // Damage player based on mine's explosion damage
+                const dx = this.level.spaceship.position.x - npc.position.x;
+                const dy = this.level.spaceship.position.y - npc.position.y;
+                this.level.spaceship.damage(npc.explosion_damage, dx, dy);
+
+                // Trigger mine explosion
+                npc.trigger_explosion();
+            }
+        }
+    }
+
     check_collisions() {
         let collisions = [];
         let window = {
@@ -337,6 +361,9 @@ class game extends modal{
                 npc.update_motion(deltaTime);
             }
         }
+
+        // Check mine proximity (before collision detection)
+        this.check_mine_proximity();
 
         // Check collisions after all motion updates
         this.check_collisions();

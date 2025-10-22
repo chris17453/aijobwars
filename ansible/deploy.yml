@@ -37,6 +37,7 @@
       - "{{ static_dir }}/js/objects/ship.js"
       - "{{ static_dir }}/js/objects/boss.js"
       - "{{ static_dir }}/js/objects/enemy.js"
+      - "{{ static_dir }}/js/objects/mine.js"
       - "{{ static_dir }}/js/objects/powerup.js"
       - "{{ static_dir }}/js/logic/fire_control.js"
       - "{{ static_dir }}/js/logic/level.js"

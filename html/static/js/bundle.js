@@ -4162,6 +4162,33 @@ class Ship extends game_object {
     }
 
     /**
+     * Reverse thrust - applies force in opposite direction of velocity to brake
+     */
+    reverse_thrust() {
+        // Calculate magnitude of current velocity
+        const velocityMagnitude = Math.sqrt(
+            this.velocity.x * this.velocity.x +
+            this.velocity.y * this.velocity.y
+        );
+
+        if (velocityMagnitude < 0.5) {
+            // Ship is almost stopped, just zero it out
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+            return;
+        }
+
+        // Calculate unit vector in opposite direction of velocity
+        const reverseX = -this.velocity.x / velocityMagnitude;
+        const reverseY = -this.velocity.y / velocityMagnitude;
+
+        // Apply strong braking force (300 is stronger than boost)
+        const brakeForce = 300;
+        this.velocity.x += reverseX * brakeForce / this.mass;
+        this.velocity.y += reverseY * brakeForce / this.mass;
+    }
+
+    /**
      * Get shield strength as percentage (0-100)
      */
     get_shield_percentage() {
@@ -4550,38 +4577,45 @@ class Boss extends game_object {
     constructor(window_manager, x, y, type) {
         switch (type) {
             case 'chatgpt':
-                super(window_manager, x, y, 192, 192,  // Large boss
+                super(window_manager, x, y, 400, 400,  // Large boss - 400x400 collision box
                     15,                   // mass - very heavy
                     0,                    // rotation
                     4);                   // rotation speed
 
                 this.set_image('static/ships/chatgpt.png');
                 this.set_type("boss");
-                this.set_max_life(1000); // High health for boss
-                this.set_center(96, 96);
+                this.set_max_life(50000); // 10x player ship health (player has 5000)
+                this.set_center(200, 200); // Center point for 400x400
 
-                // Complex movement pattern
-                let chatgpt_boss_action = [
-                    { type: "strafe_left", frames: 8, speed: 2 },
-                    { type: "accelerate", frames: 12, speed: 2 },
-                    { type: "strafe_right", frames: 16, speed: 2 },
-                    { type: "accelerate", frames: 12, speed: 2 },
-                    { type: "strafe_left", frames: 8, speed: 2 },
-                    { type: "skip", frames: 6 }
+                // Store actual image dimensions for rendering
+                this.image_source_width = 1024;
+                this.image_source_height = 1024;
+
+                // Boss enters from top then strafes horizontally
+                this.action_list = [
+                    { type: "accelerate", frames: 20, speed: 3 }, // Move down to center
+                    { type: "strafe_left", frames: 30, speed: 2 },
+                    { type: "strafe_right", frames: 60, speed: 2 },
+                    { type: "strafe_left", frames: 30, speed: 2 },
+                    { type: "skip", frames: 10 }
                 ];
 
-                this.action_list = chatgpt_boss_action;
                 this.bolt_type = "bolt3";
                 this.projectiles = [];
 
-                // 6 cannon positions for chatGPT boss
+                // Boss hover behavior - locks Y position while allowing X movement
+                this.hover_target_y = null; // Will be set when spawned
+                this.is_hovering = false;
+                this.hover_damping = 0.85; // Slow down when approaching target
+
+                // 6 cannon positions for chatGPT boss (scaled for 400x400)
                 this.cannons = [
-                    { x: -60, y: 40 },  // Left top
-                    { x: -60, y: 80 },  // Left bottom
-                    { x: 60, y: 40 },   // Right top
-                    { x: 60, y: 80 },   // Right bottom
-                    { x: -30, y: 60 },  // Center left
-                    { x: 30, y: 60 }    // Center right
+                    { x: -120, y: 80 },   // Left top
+                    { x: -120, y: 160 },  // Left bottom
+                    { x: 120, y: 80 },    // Right top
+                    { x: 120, y: 160 },   // Right bottom
+                    { x: -60, y: 120 },   // Center left
+                    { x: 60, y: 120 }     // Center right
                 ];
 
                 // Boss fires more frequently
@@ -4589,38 +4623,45 @@ class Boss extends game_object {
                 break;
 
             case 'resume':
-                super(window_manager, x, y, 192, 192,  // Large boss
+                super(window_manager, x, y, 400, 400,  // Large boss - 400x400 collision box
                     15,                   // mass - very heavy
                     0,                    // rotation
                     4);                   // rotation speed
 
                 this.set_image('static/ships/resume.png');
                 this.set_type("boss");
-                this.set_max_life(1000); // High health for boss
-                this.set_center(96, 96);
+                this.set_max_life(50000); // 10x player ship health (player has 5000)
+                this.set_center(200, 200); // Center point for 400x400
 
-                // Complex movement pattern
-                let resume_boss_action = [
-                    { type: "bank_left", frames: 6 },
-                    { type: "accelerate", frames: 10, speed: 2 },
-                    { type: "bank_right", frames: 12 },
-                    { type: "accelerate", frames: 10, speed: 2 },
-                    { type: "bank_left", frames: 6 },
-                    { type: "skip", frames: 6 }
+                // Store actual image dimensions for rendering
+                this.image_source_width = 1024;
+                this.image_source_height = 1024;
+
+                // Boss enters from top then strafes horizontally
+                this.action_list = [
+                    { type: "accelerate", frames: 20, speed: 3 }, // Move down to center
+                    { type: "strafe_right", frames: 30, speed: 2 },
+                    { type: "strafe_left", frames: 60, speed: 2 },
+                    { type: "strafe_right", frames: 30, speed: 2 },
+                    { type: "skip", frames: 10 }
                 ];
 
-                this.action_list = resume_boss_action;
                 this.bolt_type = "bolt3";
                 this.projectiles = [];
 
-                // 6 cannon positions for resume boss
+                // Boss hover behavior - locks Y position while allowing X movement
+                this.hover_target_y = null; // Will be set when spawned
+                this.is_hovering = false;
+                this.hover_damping = 0.85; // Slow down when approaching target
+
+                // 6 cannon positions for resume boss (scaled for 400x400)
                 this.cannons = [
-                    { x: -70, y: 30 },  // Left top
-                    { x: -70, y: 90 },  // Left bottom
-                    { x: 70, y: 30 },   // Right top
-                    { x: 70, y: 90 },   // Right bottom
-                    { x: 0, y: 45 },    // Center top
-                    { x: 0, y: 75 }     // Center bottom
+                    { x: -140, y: 60 },   // Left top
+                    { x: -140, y: 180 },  // Left bottom
+                    { x: 140, y: 60 },    // Right top
+                    { x: 140, y: 180 },   // Right bottom
+                    { x: 0, y: 90 },      // Center top
+                    { x: 0, y: 150 }      // Center bottom
                 ];
 
                 // Boss fires more frequently
@@ -4711,13 +4752,51 @@ class Boss extends game_object {
     }
 
     update_frame(deltaTime) {
+        // Handle hover behavior - stop Y movement at target, allow X strafing
+        if (this.hover_target_y !== null && !this.is_hovering) {
+            // Check if boss has reached target Y position
+            if (this.position.y >= this.hover_target_y) {
+                this.is_hovering = true;
+                this.velocity.y = 0;
+                this.position.y = this.hover_target_y; // Lock Y to exact position
+                console.log('[Boss] Reached hover position at', this.hover_target_y);
+            } else {
+                // Apply damping to Y velocity as we approach target
+                const distance = this.hover_target_y - this.position.y;
+                if (distance < 100) {
+                    this.velocity.y *= this.hover_damping;
+                }
+            }
+        }
+
+        // If hovering, keep Y position locked but allow X movement
+        if (this.is_hovering) {
+            this.velocity.y = 0;
+            this.position.y = this.hover_target_y;
+        }
+
         super.update_frame(deltaTime);
+
+        // Clamp boss to screen boundaries (prevent going off screen)
+        const viewport = this.graphics.viewport.virtual;
+        const margin = this.width / 2; // Half boss width for center-based positioning
+
+        // Clamp X position (left/right boundaries)
+        if (this.position.x < margin) {
+            this.position.x = margin;
+            this.velocity.x = 0; // Stop horizontal movement
+        }
+        if (this.position.x > viewport.width - margin) {
+            this.position.x = viewport.width - margin;
+            this.velocity.x = 0;
+        }
 
         if (this.laser_fire_control) {
             this.laser_fire_control.update_frame();
 
-            // Boss fires periodically
-            if (Math.random() < 0.05) { // 5% chance each frame
+            // Boss fires periodically (more frequently when hovering)
+            const fireChance = this.is_hovering ? 0.08 : 0.05;
+            if (Math.random() < fireChance) {
                 this.fire_lazer();
             }
         }
@@ -4736,7 +4815,24 @@ class Boss extends game_object {
 
     render(window) {
         super.orient(window);
-        super.render();
+
+        // Custom render for boss - scale full source image to fit object size
+        if (this.visible && this.image_source_width && this.image_source_height) {
+            // Use FULL source image dimensions
+            let src = new rect(0, 0, this.image_source_width, this.image_source_height);
+            // Scale to object size (400x400)
+            let dest = new rect(-this.center.x, -this.center.y, this.width, this.height);
+            this.graphics.sprites.render(this.img, src, dest, 1, 'none');
+
+            // Render explosions
+            for(let i = 0; i < this.explosions.length; i++){
+                this.explosions[i].render();
+            }
+        } else {
+            // Fallback to normal render for interview boss
+            super.render();
+        }
+
         super.de_orient();
 
         // Render boss projectiles
@@ -6361,6 +6457,17 @@ class game extends modal{
         this.score = 0;
         this.kills = 0;
 
+        // Boss spawn tracking
+        this.boss_spawned = false;
+        this.boss_spawn_threshold = 500; // Spawn boss when this close to level end
+        this.active_boss = null;
+
+        // Win condition
+        this.player_won = false;
+
+        // Test mode - set to true to start near end of level
+        this.test_mode = false;
+
         this.ui = new ui(this.ctx, this);
         this.level = new level(this.window_manager);
         this.level.load('static/levels/level.json');
@@ -6613,8 +6720,8 @@ class game extends modal{
             // Render score
             this.render_score();
 
-            // Draw game over overlay if player is dead
-            if (this.level.spaceship && this.level.spaceship.life <= 0) {
+            // Draw game over overlay if player is dead or won
+            if ((this.level.spaceship && this.level.spaceship.life <= 0) || this.player_won) {
                 this.draw_game_over_overlay();
             }
 
@@ -6624,11 +6731,21 @@ class game extends modal{
 
         // Clear any previous drawings
         //this.graphics.updateCanvasSizeAndDrawImage(this.level.position);
-        this.level.position.y -= this.level.speed;
 
-        //TODO next level stuffs
-        if (this.level.position.y == 0) {
-            this.level_start = false;
+        // Only scroll level if not at end
+        if (this.level.position.y > 0) {
+            this.level.position.y -= this.level.speed;
+        }
+
+        // Boss spawn logic - spawn boss when nearing end of level
+        if (!this.boss_spawned && this.level.position.y <= this.boss_spawn_threshold && this.level.position.y > 0) {
+            this.spawn_boss();
+            this.boss_spawned = true;
+        }
+
+        // Clamp level position at end but keep level_start true so controls still work
+        if (this.level.position.y <= 0) {
+            this.level.position.y = 0; // Clamp at 0
         }
 
 
@@ -6638,13 +6755,20 @@ class game extends modal{
             y2: this.level.position.y + this.graphics.viewport.virtual.height
         }
 
+        // Check if boss was destroyed before filtering
+        if (this.active_boss && this.active_boss.destroy_object) {
+            console.log('[Game] Boss destroyed - YOU WIN!');
+            this.you_win();
+            this.active_boss = null;
+        }
+
         this.level.npc = this.level.npc.filter(npc => !npc.destroy_object);
 
 
-        // Update NPCs in viewport
+        // Update NPCs in viewport (bosses always update regardless of position)
         for (let b = 0; b < this.level.npc.length; b++) {
             let npc = this.level.npc[b];
-            if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
+            if (npc.is_boss || (npc.position.y > window.y1 - 50 && npc.position.y < window.y2)) {
                 npc.update_motion(deltaTime);
             }
         }
@@ -6654,10 +6778,10 @@ class game extends modal{
 
 
 
-        // Render NPCs and their explosions
+        // Render NPCs and their explosions (bosses always update and render)
         for (let b = 0; b < this.level.npc.length; b++) {
             let npc = this.level.npc[b];
-            if (npc.position.y > window.y1 - 50 && npc.position.y < window.y2) {
+            if (npc.is_boss || (npc.position.y > window.y1 - 50 && npc.position.y < window.y2)) {
                 npc.update_frame(deltaTime);
 
                 if (npc.type == "ship" || npc.type == "boss") {
@@ -6771,10 +6895,18 @@ class game extends modal{
         // Stop the game
         this.pause_game = true;
         this.level_start = false;
+        this.player_won = false;
+    }
+
+    you_win() {
+        // Stop the game - player won!
+        this.pause_game = true;
+        this.level_start = false;
+        this.player_won = true;
     }
 
     draw_game_over_overlay() {
-        // Display game over message
+        // Display game over or victory message
         const ctx = this.graphics.ctx;
         if (!ctx || typeof ctx.save !== 'function') return;
 
@@ -6788,28 +6920,47 @@ class game extends modal{
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
 
-        // Game Over text
-        ctx.fillStyle = '#FF0000';
-        ctx.font = 'bold 72px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', centerX, centerY - 60);
+        if (this.player_won) {
+            // YOU WIN text
+            ctx.fillStyle = '#00FF00';
+            ctx.font = 'bold 72px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('YOU WIN!', centerX, centerY - 60);
+
+            // Victory message
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 36px monospace';
+            ctx.fillText('BOSS DEFEATED!', centerX, centerY);
+        } else {
+            // Game Over text
+            ctx.fillStyle = '#FF0000';
+            ctx.font = 'bold 72px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', centerX, centerY - 60);
+        }
 
         // Score
         ctx.fillStyle = '#00FF00';
         ctx.font = 'bold 36px monospace';
-        ctx.fillText(`Final Score: ${this.score}`, centerX, centerY + 20);
-        ctx.fillText(`Kills: ${this.kills}`, centerX, centerY + 70);
+        ctx.fillText(`Final Score: ${this.score}`, centerX, centerY + 50);
+        ctx.fillText(`Kills: ${this.kills}`, centerX, centerY + 100);
 
         // Instructions
         ctx.fillStyle = '#FFFFFF';
         ctx.font = '24px monospace';
-        ctx.fillText('Press ESC to return to menu', centerX, centerY + 130);
+        ctx.fillText('Press ESC to return to menu', centerX, centerY + 160);
 
         ctx.restore();
     }
 
     async start_level() {
         this.level_start = true;
+
+        // Test mode - start near end of level for boss testing
+        if (this.test_mode) {
+            this.level.position.y = this.boss_spawn_threshold + 200; // Start 200 pixels before boss spawn
+            console.log('[Game] Test mode: Starting near end of level at position', this.level.position.y);
+        }
 
         // Set the background from the level
         if (this.level.background) {
@@ -6825,6 +6976,27 @@ class game extends modal{
         if (this.level.track_key) {
             this.audio_manager.play(this.level.track_key, 0, true);
         }
+    }
+
+    spawn_boss() {
+        // Randomly choose boss type
+        const bossTypes = ['chatgpt', 'resume'];
+        const bossType = bossTypes[Math.floor(Math.random() * bossTypes.length)];
+
+        // Spawn boss at top of screen (above viewport)
+        const viewport = this.graphics.viewport.virtual;
+        const bossX = viewport.width / 2; // Center horizontally
+        const bossY = this.level.position.y - 300; // 300 pixels above top of screen
+
+        // Create boss
+        this.active_boss = new Boss(this.window_manager, bossX, bossY, bossType);
+
+        // Set hover target to middle/upper area of screen
+        this.active_boss.hover_target_y = this.level.position.y + (viewport.height * 0.25); // 25% down from top
+
+        this.level.npc.push(this.active_boss);
+
+        console.log('[Game] Boss spawned:', bossType, 'at position', bossX, bossY, 'hover target:', this.active_boss.hover_target_y);
     }
 
 
@@ -6849,6 +7021,9 @@ class game extends modal{
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
+
+            // CTRL for reverse thrust/brake - applies force opposite to velocity vector
+            if (kb.is_pressed('Control')) this.level.spaceship.reverse_thrust();
         }
 
         // These controls work even when paused
@@ -6858,11 +7033,30 @@ class game extends modal{
             if (kb.just_stopped('h') ||kb.just_stopped('H')) this.help();
             if (kb.just_stopped('m') || kb.just_stopped('M')) this.ui.toggle_sound();
         }
+
+        // Level speed controls (only when not paused)
+        if (this.level_start == true && !this.pause_game) {
+            // Numpad + to speed up (or = key for keyboards without numpad)
+            if (kb.just_stopped('=') || kb.just_stopped('NumpadAdd')) {
+                this.level.speed = Math.min(this.level.speed + 0.5, 10); // Max speed 10
+                console.log('[Game] Level speed increased to', this.level.speed);
+            }
+            // Numpad - to slow down (or _ key)
+            if (kb.just_stopped('_') || kb.just_stopped('NumpadSubtract')) {
+                this.level.speed = Math.max(this.level.speed - 0.5, 0); // Min speed 0
+                console.log('[Game] Level speed decreased to', this.level.speed);
+            }
+            // Numpad 0 to stop
+            if (kb.just_stopped('Numpad0') || kb.just_stopped('0')) {
+                this.level.speed = 0;
+                console.log('[Game] Level speed set to 0 (stopped)');
+            }
+        }
     }
 
     handle_escape() {
-        // If player is dead, close the game and return to menu
-        if (this.level.spaceship && this.level.spaceship.life <= 0) {
+        // If player is dead or won, close the game and return to menu
+        if ((this.level.spaceship && this.level.spaceship.life <= 0) || this.player_won) {
             this.close();
             return;
         }

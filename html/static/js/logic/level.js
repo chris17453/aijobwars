@@ -92,6 +92,7 @@ class level extends events{
                             case 'h': block = new Powerup(this.window_manager,x, y, "health"); break;
                             case 's': block = new Powerup(this.window_manager,x, y, "shield"); break;
                             case 'W': block = new Powerup(this.window_manager,x, y, "weapon"); break;
+                            case 'M': block = new Mine(this.window_manager,x, y, "linkedin"); break;
                             case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); block=this.spaceship; break;
                         }
                         this.npc.push(block);
