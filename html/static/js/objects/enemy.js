@@ -8,7 +8,7 @@ class Enemy extends game_object {
                     5,                    // mass (medium debris)
                     0,                    // rotation
                     12);                  // rotation speed
-                this.set_image('static/ships/chatgpt.png');
+                this.set_image('ship_chatgpt');
                 this.set_type("chatgpt");
                 this.set_max_life(80);
                 this.projectiles = [];
@@ -32,7 +32,7 @@ class Enemy extends game_object {
                     4,                    // mass (light debris)
                     0,                    // rotation
                     10);                  // rotation speed
-                this.set_image('static/ships/resume.png');
+                this.set_image('ship_resume');
                 this.set_type("resume");
                 this.set_max_life(60);
                 this.projectiles = [];
@@ -56,7 +56,7 @@ class Enemy extends game_object {
                     6,                    // mass (medium debris)
                     0,                    // rotation
                     8);                   // rotation speed
-                this.set_image('static/debris/phone.png'); // Placeholder
+                this.set_image('debris_phone'); // Placeholder
                 this.set_type("application");
                 this.set_max_life(100);
 
@@ -76,7 +76,7 @@ class Enemy extends game_object {
                     5,                    // mass (medium)
                     0,                    // rotation
                     10);                  // rotation speed
-                this.set_image('static/ships/linkedin.png');
+                this.set_image('ship_linkedin');
                 this.set_type("linkedin");
                 this.set_max_life(70);
                 this.projectiles = [];

@@ -69,6 +69,7 @@ html/static/js/objects/projectile.js
 html/static/js/objects/enemy.js
 html/static/js/objects/ship.js
 html/static/js/objects/boss.js
+html/static/js/objects/mine.js
 html/static/js/ui-components/ui_component.js
 html/static/js/ui-components/percentage_bar.js
 html/static/js/ui/prologue.js

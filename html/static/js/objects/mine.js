@@ -2,15 +2,15 @@ class Mine extends game_object {
     constructor(window_manager, x, y, type) {
         switch (type) {
             case 'linkedin':
-                super(window_manager, x, y, 48, 48,
+                super(window_manager, x, y, 128, 128,
                     8,                    // mass (heavy - hard to push)
                     0,                    // rotation
-                    15);                  // rotation speed (spins menacingly)
+                    3);                   // rotation speed (slow menacing spin)
 
-                this.set_image('static/ships/linkedin.png');
+                this.set_image('ship_linkedin');
                 this.set_type("mine");
                 this.set_max_life(50); // Fragile - explodes easily
-                this.set_center(24, 24);
+                this.set_center(64, 64);
 
                 // Mine behavior - slow drift
                 let mine_action = [
@@ -51,7 +51,7 @@ class Mine extends game_object {
         // Create multiple explosions for mine detonation
         for (let i = 0; i < 3; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 30;
+            const radius = Math.random() * 10;  // Reduced from 30 to 10 for tighter explosion
             const offsetX = Math.cos(angle) * radius;
             const offsetY = Math.sin(angle) * radius;
 
@@ -71,11 +71,5 @@ class Mine extends game_object {
 
     update_frame(deltaTime) {
         super.update_frame(deltaTime);
-
-        // Pulsing effect when armed
-        if (this.armed) {
-            // Make it pulse/glow to indicate danger
-            this.image_frame = Math.floor((Date.now() / 200) % 2);
-        }
     }
 }

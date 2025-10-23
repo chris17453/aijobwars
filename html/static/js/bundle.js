@@ -256,6 +256,107 @@ class grid {
         return quadrants;
     }
 }
+/**
+ * Asset Loader - Loads and manages asset packages via ASSETS.json manifest
+ * Allows easy swapping of asset packages for localization, themes, etc.
+ */
+class asset_loader extends events {
+    constructor() {
+        super();
+        this.manifest = null;
+        this.package_name = null;
+        this.package_version = null;
+        this.loaded = false;
+    }
+
+    /**
+     * Load the asset manifest from ASSETS.json
+     * @returns {Promise} Resolves when manifest is loaded
+     */
+    async load_manifest(manifest_path = 'static/ASSETS.json') {
+        try {
+            const response = await fetch(manifest_path);
+            if (!response.ok) {
+                throw new Error(`Failed to load manifest: ${response.status}`);
+            }
+
+            this.manifest = await response.json();
+            this.package_name = this.manifest.package_name;
+            this.package_version = this.manifest.package_version;
+            this.loaded = true;
+
+            console.log(`[AssetLoader] Loaded package: ${this.package_name} v${this.package_version}`);
+            this.emit('loaded', { package: this.package_name, version: this.package_version });
+
+            return this.manifest;
+        } catch (error) {
+            console.error('[AssetLoader] Failed to load manifest:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get a nested property from the assets object using dot notation
+     * @param {string} path - Dot-separated path (e.g., "ui.spritesheets.ui1", "ships.player")
+     * @returns {any} The value at that path, or null if not found
+     */
+    get(path) {
+        if (!this.loaded || !this.manifest) {
+            console.warn('[AssetLoader] Manifest not loaded yet');
+            return null;
+        }
+
+        const parts = path.split('.');
+        let current = this.manifest.assets;
+
+        for (const part of parts) {
+            if (current[part] === undefined) {
+                console.warn(`[AssetLoader] Path not found: ${path}`);
+                return null;
+            }
+            current = current[part];
+        }
+
+        return current;
+    }
+
+    /**
+     * Flatten all asset paths into a single array (useful for preloading)
+     * @returns {Array<string>}
+     */
+    get_all_assets() {
+        if (!this.loaded || !this.manifest) {
+            return [];
+        }
+
+        const all_assets = [];
+
+        const flatten = (obj) => {
+            if (typeof obj === 'string') {
+                all_assets.push(obj);
+            } else if (Array.isArray(obj)) {
+                obj.forEach(item => flatten(item));
+            } else if (typeof obj === 'object' && obj !== null) {
+                Object.values(obj).forEach(value => flatten(value));
+            }
+        };
+
+        flatten(this.manifest.assets);
+        return all_assets;
+    }
+
+    /**
+     * Get package information
+     * @returns {Object}
+     */
+    get_package_info() {
+        return {
+            name: this.package_name,
+            version: this.package_version,
+            description: this.manifest?.description || ''
+        };
+    }
+}
 class audio_manager {
     constructor(logger) {
         this.audioBuffers = new Map(); // Decoded audio buffers
@@ -468,75 +569,116 @@ class audio_manager {
     }
 }
 class sprites extends events{
-    constructor(ctx) {
+    constructor(ctx, asset_loader) {
         super();
         this.base_domain="https://aijobwars.com/";
         this.ctx = ctx;
         this.sprites = {}; //sprite objects.. many to 1 per image possible.
         this.images={};  //image objects
         this.loaded = false; // Flag to track if all images are loaded
+        this.asset_loader = asset_loader; // Asset loader for manifest-based loading
     }
 
-    preload(){
+    async preload(){
+        // Load manifest if not already loaded
+        if (!this.asset_loader.loaded) {
+            await this.asset_loader.load_manifest();
+        }
 
-        this.add("window", "static/UI/UI1.png", 67, 67, 565, 332);
-        this.add("window-title", "static/UI/UI1.png", 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
-        this.add("button-down-red", "static/UI/UI1.png", 683, 77, 206, 68);
-        this.add("button-up-red", "static/UI/UI1.png", 683, 161, 206, 68);
-        this.add("button-down-yellow", "static/UI/UI1.png", 928, 77, 206, 68);
-        this.add("button-up-yellow", "static/UI/UI1.png", 927, 161, 206, 68);
-        this.add("button-down-cyan", "static/UI/UI1.png", 683, 281, 206, 68);
-        this.add("button-up-cyan", "static/UI/UI1.png", 683, 365, 206, 68);
-        this.add("button-down-gray", "static/UI/UI1.png", 928, 281, 206, 68);
-        this.add("button-up-gray", "static/UI/UI1.png", 927, 365, 206, 68);
-        this.add("percentage-full", "static/UI/UI1.png", 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-        this.add("percentage-empty", "static/UI/UI1.png", 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
-        this.add("window-thinn", "static/UI/UI4.png", 1721-10, 154-10, 348 + 10 * 2, 466 + 10 * 2);
+        console.log('[Sprites] Loading from ASSETS.json manifest...');
+        this.load_assets();
+    }
 
-        this.add("window-close-up", "static/UI/UI4.png", 1806, 678, 42,42);
-        this.add("window-close-down", "static/UI/UI4.png", 1857, 677, 42,42);
-        this.add("window-right-corner", "static/UI/UI4.png", 1908, 661, 80,73);
+    load_assets(){
+        const al = this.asset_loader;
 
-        this.add("scroll-down", "static/UI/UI4.png", 1641, 585, 32,32);
-        this.add("scroll-up", "static/UI/UI4.png", 1641, 144, 32,32);
-        this.add("scroll-drag", "static/UI/UI4.png", 1641, 194, 30,54);
-        this.add("scroll-bg", "static/UI/UI4.png", 1641, 267, 32,300);
-        
-        this.add("bar", "static/UI/UI4.png", 766, 760, 357,47);
-        this.add("bar-red-fluid", "static/UI/UI4.png", 780, 901, 312,33);
-        this.add("bar-green-fluid", "static/UI/UI4.png", 1097, 901, 312,32);
-        this.add("bar-blue-fluid", "static/UI/UI4.png", 781, 939, 312,33);
-        this.add("bar-orange-fluid", "static/UI/UI4.png", 1098, 939, 312,33);
-        this.add("portal", "static/UI/UI4.png", 569, 763, 158,158);
-        
-        this.add("menu","static/UI/menu.webp");
-        this.add("blue_font","static/fonts/obitron-blue.png");
-        this.add("grey_font","static/fonts/obitron-grey.png");
-        this.add("red_font","static/fonts/obitron-red.png");
-        this.add("title","static/intro/AI-JOB-WARS-3-24-2024.png");
+        // UI Spritesheets - get paths from manifest
+        const ui1 = al.get('ui.spritesheets.ui1');
+        const ui4 = al.get('ui.spritesheets.ui4');
 
+        // UI Elements from UI1.png spritesheet
+        this.add("window", ui1, 67, 67, 565, 332);
+        this.add("window-title", ui1, 162 - 10, 411 - 10, 372 + 10 * 2, 68 + 10 * 2);
+        this.add("button-down-red", ui1, 683, 77, 206, 68);
+        this.add("button-up-red", ui1, 683, 161, 206, 68);
+        this.add("button-down-yellow", ui1, 928, 77, 206, 68);
+        this.add("button-up-yellow", ui1, 927, 161, 206, 68);
+        this.add("button-down-cyan", ui1, 683, 281, 206, 68);
+        this.add("button-up-cyan", ui1, 683, 365, 206, 68);
+        this.add("button-down-gray", ui1, 928, 281, 206, 68);
+        this.add("button-up-gray", ui1, 927, 365, 206, 68);
+        this.add("percentage-full", ui1, 182 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
+        this.add("percentage-empty", ui1, 929 - 12, 707 - 12, 30 + 12 * 2, 45 + 12 * 2);
 
-        this.add("static/debris/email.png",    "static/debris/email.png");
-        this.add("static/debris/pdf.png",      "static/debris/pdf.png");
-        this.add("static/debris/phone.png",    "static/debris/phone.png");
-        this.add("static/debris/webex2.png",   "static/debris/webex2.png");
-        this.add("static/blocks/block.png",    "static/blocks/block.png");
-        this.add("static/explosion/exp_9_128x128_35frames_strip35.png",    "static/explosion/exp_9_128x128_35frames_strip35.png");
-        this.add("static/ships/ship1.png",    "static/ships/ship1.png");
-        this.add("static/ships/teams.png",    "static/ships/teams.png");
-        this.add("static/ships/linkedin.png", "static/ships/linkedin.png");
-        this.add("static/ships/chatgpt.png",  "static/ships/chatgpt.png");
-        this.add("static/ships/resume.png",   "static/ships/resume.png");
-        this.add("static/projectiles/Arcane Bolt.png",   "static/projectiles/Arcane Bolt.png");
-        this.add("static/projectiles/Firebomb.png", "static/projectiles/Firebomb.png");
-        this.add("static/ships/Water Bolt.png",    "static/ships/Water Bolt.png");
-        this.add("static/ships/booster.png",  "static/ships/booster.png");
-        this.add("static/projectiles/P2.png", "static/projectiles/P2.png");
-        this.add("static/scene/bg_stars.png", "static/scene/bg_stars.png");
+        // UI Elements from UI4.png spritesheet
+        this.add("window-thinn", ui4, 1721-10, 154-10, 348 + 10 * 2, 466 + 10 * 2);
+        this.add("window-close-up", ui4, 1806, 678, 42, 42);
+        this.add("window-close-down", ui4, 1857, 677, 42, 42);
+        this.add("window-right-corner", ui4, 1908, 661, 80, 73);
+        this.add("scroll-down", ui4, 1641, 585, 32, 32);
+        this.add("scroll-up", ui4, 1641, 144, 32, 32);
+        this.add("scroll-drag", ui4, 1641, 194, 30, 54);
+        this.add("scroll-bg", ui4, 1641, 267, 32, 300);
+        this.add("bar", ui4, 766, 760, 357, 47);
+        this.add("bar-red-fluid", ui4, 780, 901, 312, 33);
+        this.add("bar-green-fluid", ui4, 1097, 901, 312, 32);
+        this.add("bar-blue-fluid", ui4, 781, 939, 312, 33);
+        this.add("bar-orange-fluid", ui4, 1098, 939, 312, 33);
+        this.add("portal", ui4, 569, 763, 158, 158);
 
+        // Backgrounds
+        this.add("menu_landscape", al.get('ui.backgrounds.menu_landscape'));
+        this.add("credits_landscape", al.get('ui.backgrounds.credits_landscape'));
+        this.add("highscore_landscape", al.get('ui.backgrounds.highscore_landscape'));
+        this.add("prologue_landscape", al.get('ui.backgrounds.prologue_landscape'));
+        this.add("menu_portrait", al.get('ui.backgrounds.menu_portrait'));
+        this.add("credits_portrait", al.get('ui.backgrounds.credits_portrait'));
+        this.add("highscore_portrait", al.get('ui.backgrounds.highscore_portrait'));
+        this.add("prologue_portrait", al.get('ui.backgrounds.prologue_portrait'));
+
+        // Fonts
+        this.add("blue_font", al.get('fonts.blue'));
+        this.add("grey_font", al.get('fonts.grey'));
+        this.add("red_font", al.get('fonts.red'));
+
+        // Title
+        this.add("title", al.get('title.logo'));
+
+        // Debris
+        this.add("debris_email", al.get('debris.email'));
+        this.add("debris_pdf", al.get('debris.pdf'));
+        this.add("debris_phone", al.get('debris.phone'));
+        this.add("debris_webex", al.get('debris.webex'));
+
+        // Blocks
+        this.add("block", al.get('blocks.block'));
+
+        // Explosions
+        this.add("explosion_sprite", al.get('explosions.sprite'));
+
+        // Ships
+        this.add("ship_player", al.get('ships.player'));
+        this.add("ship_teams", al.get('ships.teams'));
+        this.add("ship_linkedin", al.get('ships.linkedin'));
+        this.add("ship_chatgpt", al.get('ships.chatgpt'));
+        this.add("ship_resume", al.get('ships.resume'));
+        this.add("ship_booster", al.get('ships.booster'));
+        this.add("ship_water_bolt", al.get('ships.water_bolt'));
+
+        // Projectiles
+        this.add("projectile_arcane_bolt", al.get('projectiles.arcane_bolt'));
+        this.add("projectile_firebomb", al.get('projectiles.firebomb'));
+        this.add("projectile_p1", al.get('projectiles.p1'));
+        this.add("projectile_p2", al.get('projectiles.p2'));
+        this.add("projectile_p3", al.get('projectiles.p3'));
+        this.add("projectile_p4", al.get('projectiles.p4'));
+
+        // Scene backgrounds
+        this.add("bg_stars", al.get('scenes.bg_stars'));
+        this.add("bg_stars_landscape", al.get('scenes.bg_stars'));
+        this.add("bg_stars_portrait", al.get('scenes.bg_stars'));
 
         this.on_load();
-
     }
 
     add(key, imagePath = null, x = 0, y = 0, width = null, height = null) {
@@ -1020,6 +1162,72 @@ class sprites extends events{
     }
   }
 
+  /**
+   * Wrap text to fit within a maximum width
+   * Returns text with newlines inserted at appropriate word boundaries
+   */
+  wrap_text(text, max_width, monospace = false) {
+    try {
+      // Split into existing lines first (preserve intentional line breaks)
+      const existing_lines = text.split('\n');
+      const wrapped_lines = [];
+
+      for (let line of existing_lines) {
+        // Split line into words
+        const words = line.split(' ');
+        let current_line = '';
+        let current_width = 0;
+
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+
+          // Measure word width
+          let word_width = 0;
+          for (let j = 0; j < word.length; j++) {
+            const char = word[j];
+            const char_data = this.get_character(char);
+            if (!char_data) continue;
+            if (monospace) {
+              word_width += this.mono_char_width;
+            } else {
+              word_width += char_data.width + this.spacing_width;
+            }
+          }
+
+          // Add space width if not first word
+          const space_width = this.mono_char_width;
+          const total_width = current_width + (current_line ? space_width : 0) + word_width;
+
+          if (total_width > max_width && current_line) {
+            // Word would overflow, start new line
+            wrapped_lines.push(current_line);
+            current_line = word;
+            current_width = word_width;
+          } else {
+            // Add word to current line
+            if (current_line) {
+              current_line += ' ' + word;
+              current_width += space_width + word_width;
+            } else {
+              current_line = word;
+              current_width = word_width;
+            }
+          }
+        }
+
+        // Add remaining text
+        if (current_line) {
+          wrapped_lines.push(current_line);
+        }
+      }
+
+      return wrapped_lines.join('\n');
+    } catch (error) {
+      this.logger.error(`wrap_text: ${error.message}`);
+      return text; // Return original text if wrapping fails
+    }
+  }
+
   draw_text(position, text, centered = false, monospace = false) {
     try {
       let lines = text.split("\n");
@@ -1087,33 +1295,88 @@ class sprites extends events{
     }
   }
 }
-class button extends events {
-  constructor(parent, graphics, label, position, anchor_position, callback, up_image, down_image, logger) {
-    super();
-    this.logger = logger || console;
+class button extends ui_component {
+  /**
+   * Button component with proper layout system
+   *
+   * Usage (new style with layout config):
+   *   new button(parent, graphics, label, {
+   *     anchor_x: "left", anchor_y: "top",
+   *     margin_left: 20, margin_top: 10,
+   *     width: 200, height: 60,
+   *     width_mode: "fill"  // or "fixed" or "dynamic"
+   *   }, callback, "button-up-cyan", "button-down-cyan");
+   *
+   * Usage (legacy style - backward compatible):
+   *   new button(parent, graphics, label, position_rect, anchor_position_rect, callback, "button-up-cyan", "button-down-cyan");
+   */
+  constructor(parent, graphics, label, position_or_config, anchor_position_or_callback, callback_or_up_image, up_image_or_down_image, down_image_or_logger, logger) {
+    // Detect legacy vs new style constructor
+    let layout_config = {};
+    let callback, up_image, down_image;
+    let legacy_anchor_position = null;
+    let legacy_position = null;
+    let is_legacy = (position_or_config && typeof position_or_config === 'object' && 'x' in position_or_config && 'width' in position_or_config);
+
+    if (is_legacy) {
+      // Legacy style: (parent, graphics, label, position, anchor_position, callback, up_image, down_image, logger)
+      let position = position_or_config;
+      let anchor_position = anchor_position_or_callback;
+      callback = callback_or_up_image;
+      up_image = up_image_or_down_image;
+      down_image = down_image_or_logger;
+
+      // Convert legacy position/anchor to layout config
+      layout_config = {
+        mode: "absolute",
+        width: position.width,
+        height: position.height,
+        width_mode: "fixed",
+        height_mode: "fixed",
+        offset_x: position.x,
+        offset_y: position.y,
+        anchor_x: position._x_mode || "left",
+        anchor_y: position._y_mode || "top"
+      };
+
+      // Store for assignment after super()
+      legacy_anchor_position = anchor_position;
+      legacy_position = position;
+    } else {
+      // New style: (parent, graphics, label, layout_config, callback, up_image, down_image, logger)
+      layout_config = position_or_config || {};
+      callback = anchor_position_or_callback;
+      up_image = callback_or_up_image;
+      down_image = up_image_or_down_image;
+    }
+
+    super(parent, graphics, layout_config, logger);
+
+    // NOW we can access 'this' - assign legacy properties if needed
+    if (is_legacy) {
+      this._legacy_anchor_position = legacy_anchor_position;
+      this._legacy_position = legacy_position;
+      // For legacy mode, directly set position to the legacy position (don't use layout system)
+      this.position = legacy_position.clone();
+    }
+
     try {
-      this.parent = parent;
-      this.graphics = graphics;
-      this.ctx = graphics.ctx;
       this.sprites = graphics.sprites;
+
       // Sanitize image paths
       this.up_image = this.sanitize_path(up_image);
       this.down_image = this.sanitize_path(down_image);
+
       this.label = label;
       this.is_down = false;
       this.is_hover = false;
       this.monospaced = false;
       this.centered = false;
-      this.active = true;
+      this.callback = callback;
 
-      let x_pad = 20;
-      let y_pad = 20;
-      let bounds = this.graphics.font.get_bounds(label, this.monospaced);
-      if (position.width == null) position.width = bounds.width + x_pad * 2;
-      if (position.height == null) position.height = bounds.height + y_pad * 2;
-      this.inner = new rect((position.width - bounds.width) / 2, (position.height - bounds.height) / 2, bounds.width, bounds.height);
-      this.position = position;
-      this.anchor_position = anchor_position;
+      // Calculate inner rect for text (will be updated in on_layout_calculated)
+      this.inner = new rect(0, 0, 0, 0);
+      this.calculate_inner_rect();
 
       // Store bound event handlers to enable proper removal later
       this._bound_mouse_down = this.handle_mouse_down.bind(this);
@@ -1123,26 +1386,73 @@ class button extends events {
       graphics.canvas.addEventListener('mousedown', this._bound_mouse_down);
       graphics.canvas.addEventListener('mouseup', this._bound_mouse_up);
       graphics.canvas.addEventListener('mousemove', this._bound_mouse_move);
-      this.callback = callback;
     } catch (error) {
       this.logger.error(`button constructor: ${error.message}`);
       throw error;
     }
   }
 
-  sanitize_path(path) {
-    if (typeof path !== 'string') {
-      throw new Error("Invalid path type");
+  /**
+   * Calculate inner rectangle for centered text
+   */
+  calculate_inner_rect() {
+    try {
+      let x_pad = 20;
+      let y_pad = 20;
+
+      if (this.graphics && this.graphics.font) {
+        let bounds = this.graphics.font.get_bounds(this.label, this.monospaced);
+
+        // If using dynamic width mode, update layout width based on text
+        if (this.layout.width_mode === "dynamic") {
+          this.layout.width = bounds.width + x_pad * 2;
+        }
+        if (this.layout.height_mode === "dynamic") {
+          this.layout.height = bounds.height + y_pad * 2;
+        }
+
+        // Center text within button
+        this.inner.x = (this.position.width - bounds.width) / 2;
+        this.inner.y = (this.position.height - bounds.height) / 2;
+        this.inner.width = bounds.width;
+        this.inner.height = bounds.height;
+      }
+    } catch (error) {
+      this.logger.error(`calculate_inner_rect: ${error.message}`);
     }
-    // Basic sanitization: remove potentially dangerous characters
-    return path.replace(/[<>"'`;]/g, '');
   }
 
-  resize(anchor_position) {
+  /**
+   * Hook called after layout is calculated
+   */
+  on_layout_calculated() {
+    this.calculate_inner_rect();
+  }
+
+  /**
+   * Legacy resize support - converts old anchor_position to new layout system
+   */
+  resize(anchor_position_or_parent_rect) {
     try {
-      this.anchor_position = anchor_position;
+      // Check if this is legacy style (rect with x/y that looks like anchor position)
+      if (this._legacy_position && anchor_position_or_parent_rect) {
+        // Legacy mode: update the anchor position and recalculate
+        this._legacy_anchor_position = anchor_position_or_parent_rect;
+
+        // For legacy buttons, position is already absolute in virtual space
+        // Just update our position rect to match
+        if (this._legacy_position) {
+          this.position = this._legacy_position.clone();
+        }
+
+        this.calculate_inner_rect();
+        this.emit('resize', { component: this, position: this.position });
+      } else {
+        // New style: use parent's layout system
+        super.resize(anchor_position_or_parent_rect);
+      }
     } catch (error) {
-      this.logger.error(`resize: ${error.message}`);
+      this.logger.error(`button resize: ${error.message}`);
     }
   }
 
@@ -1150,27 +1460,71 @@ class button extends events {
     try {
       if (this.active !== true) return;
 
-      // Work in virtual coordinates - canvas transform handles scaling
-      let relative_position = this.position.clone();
-      let relative_inner = this.inner.clone();
+      // Determine absolute position
+      let render_position;
+      let render_inner;
 
-      relative_position.add(this.anchor_position);
-      relative_inner.add(relative_position);
+      if (this._legacy_anchor_position) {
+        // Legacy mode: add anchor position
+        render_position = this.position.clone();
+        render_inner = this.inner.clone();
+        render_position.add(this._legacy_anchor_position);
+        render_inner.add(render_position);
+      } else {
+        // New mode: position is already absolute
+        render_position = this.position.clone();
+        render_inner = this.inner.clone();
+        render_inner.add(render_position);
+      }
 
+      // Apply hover effect
       let img = this.up_image;
       if (this.is_down) {
         img = this.down_image;
       } else if (this.is_hover) {
-        relative_position.x += 2;
-        relative_position.y += 2;
-        relative_inner.x += 2;
-        relative_inner.y += 2;
+        render_position.x += 2;
+        render_position.y += 2;
+        render_inner.x += 2;
+        render_inner.y += 2;
       }
 
-      this.sprites.slice_9(img, relative_position, 10, 10);
-      this.graphics.font.draw_text(relative_inner, this.label, this.centered, this.monospaced);
+      this.sprites.slice_9(img, render_position, 10, 10);
+      this.graphics.font.draw_text(render_inner, this.label, this.centered, this.monospaced);
     } catch (error) {
-      this.logger.error(`render: ${error.message}`);
+      this.logger.error(`button render: ${error.message}`);
+    }
+  }
+
+  /**
+   * Override is_inside to handle legacy anchor position
+   */
+  is_inside(mouse_x, mouse_y) {
+    try {
+      if (!this.active || !this.position) return false;
+
+      // Transform mouse coordinates from physical to virtual space
+      const viewport = this.graphics.viewport;
+      const scale = viewport.scale;
+      const renderedWidth = viewport.virtual.width * scale.x;
+      const renderedHeight = viewport.virtual.height * scale.y;
+      const offsetX = (viewport.given.width - renderedWidth) / 2;
+      const offsetY = (viewport.given.height - renderedHeight) / 2;
+      const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+      const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+      // Calculate absolute position
+      let check_position = this.position.clone();
+      if (this._legacy_anchor_position) {
+        check_position.add(this._legacy_anchor_position);
+      }
+
+      return virtual_mouse_x >= check_position.x &&
+             virtual_mouse_x <= check_position.x + check_position.width &&
+             virtual_mouse_y >= check_position.y &&
+             virtual_mouse_y <= check_position.y + check_position.height;
+    } catch (error) {
+      this.logger.error(`is_inside: ${error.message}`);
+      return false;
     }
   }
 
@@ -1219,53 +1573,14 @@ class button extends events {
     }
   }
 
-  is_inside(mouse_x, mouse_y) {
-    try {
-      // Convert mouse coordinates from physical pixels to virtual coordinates
-      const viewport = this.graphics.viewport;
-      const scale = viewport.scale;
-
-      // Calculate the viewport centering offset (in physical pixels)
-      const renderedWidth = viewport.virtual.width * scale.x;
-      const renderedHeight = viewport.virtual.height * scale.y;
-      const offsetX = (viewport.given.width - renderedWidth) / 2;
-      const offsetY = (viewport.given.height - renderedHeight) / 2;
-
-      // Transform mouse coordinates: subtract offset, then divide by scale
-      const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
-      const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
-
-      // Check collision in virtual coordinate space
-      let relative_position = this.position.clone();
-      relative_position.add(this.anchor_position);
-
-      return virtual_mouse_x >= relative_position.x &&
-             virtual_mouse_x <= relative_position.x + relative_position.width &&
-             virtual_mouse_y >= relative_position.y &&
-             virtual_mouse_y <= relative_position.y + relative_position.height;
-    } catch (error) {
-      this.logger.error(`is_inside: ${error.message}`);
-      return false;
-    }
-  }
-
-  set_active(active) {
-    try {
-      this.active = active;
-    } catch (error) {
-      this.logger.error(`set_active: ${error.message}`);
-    }
-  }
-
   delete() {
     try {
-      this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
-      this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
-      this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+      if (this.graphics && this.graphics.canvas) {
+        this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
+        this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
+        this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+      }
 
-      delete this.parent;
-      delete this.graphics;
-      delete this.ctx;
       delete this.sprites;
       delete this.up_image;
       delete this.down_image;
@@ -1274,32 +1589,87 @@ class button extends events {
       delete this.is_hover;
       delete this.monospaced;
       delete this.centered;
-      delete this.active;
       delete this.inner;
-      delete this.position;
-      delete this.anchor_position;
       delete this.callback;
       delete this._bound_mouse_down;
       delete this._bound_mouse_up;
       delete this._bound_mouse_move;
+      delete this._legacy_position;
+      delete this._legacy_anchor_position;
+
+      // Call parent cleanup
+      super.delete();
     } catch (error) {
-      this.logger.error(`delete: ${error.message}`);
+      this.logger.error(`button delete: ${error.message}`);
     }
   }
 }
-class seekbar extends events {
-    constructor(parent, graphics, position, anchor_position, get_progress_callback, seek_callback, logger) {
-        super();
-        this.logger = logger || console;
+class seekbar extends ui_component {
+    /**
+     * Seekbar component with proper layout system
+     *
+     * Usage (new style with layout config):
+     *   new seekbar(parent, graphics, {
+     *     anchor_x: "left", anchor_y: "bottom",
+     *     margin_left: 10, margin_right: 10, margin_bottom: 30,
+     *     height: 20,
+     *     width_mode: "fill"  // Fill parent width minus margins
+     *   }, get_progress_callback, seek_callback);
+     *
+     * Usage (legacy style - backward compatible):
+     *   new seekbar(parent, graphics, position_rect, anchor_position_rect, get_progress_callback, seek_callback);
+     */
+    constructor(parent, graphics, position_or_config, anchor_position_or_get_progress, get_progress_or_seek, seek_callback_or_logger, logger) {
+        // Detect legacy vs new style constructor
+        let layout_config = {};
+        let get_progress_callback, seek_callback;
+        let legacy_anchor_position = null;
+        let legacy_position = null;
+        let is_legacy = (position_or_config && typeof position_or_config === 'object' && 'x' in position_or_config && 'width' in position_or_config);
+
+        if (is_legacy) {
+            // Legacy style: (parent, graphics, position, anchor_position, get_progress_callback, seek_callback, logger)
+            let position = position_or_config;
+            let anchor_position = anchor_position_or_get_progress;
+            get_progress_callback = get_progress_or_seek;
+            seek_callback = seek_callback_or_logger;
+
+            // Convert legacy position/anchor to layout config
+            layout_config = {
+                mode: "absolute",
+                width: position.width,
+                height: position.height,
+                width_mode: "fixed",
+                height_mode: "fixed",
+                offset_x: position.x,
+                offset_y: position.y,
+                anchor_x: position._x_mode || "left",
+                anchor_y: position._y_mode || "top"
+            };
+
+            // Store for assignment after super()
+            legacy_anchor_position = anchor_position;
+            legacy_position = position;
+        } else {
+            // New style: (parent, graphics, layout_config, get_progress_callback, seek_callback, logger)
+            layout_config = position_or_config || {};
+            get_progress_callback = anchor_position_or_get_progress;
+            seek_callback = get_progress_or_seek;
+        }
+
+        super(parent, graphics, layout_config, logger);
+
+        // NOW we can access 'this' - assign legacy properties if needed
+        if (is_legacy) {
+            this._legacy_anchor_position = legacy_anchor_position;
+            this._legacy_position = legacy_position;
+            // For legacy mode, directly set position to the legacy position (don't use layout system)
+            this.position = legacy_position.clone();
+        }
+
         try {
-            this.parent = parent;
-            this.graphics = graphics;
-            this.ctx = graphics.ctx;
-            this.position = position;
-            this.anchor_position = anchor_position;
             this.get_progress_callback = get_progress_callback; // Function that returns {current, total, paused}
             this.seek_callback = seek_callback; // Function called when user seeks
-            this.active = true;
             this.is_dragging = false;
 
             // Store bound event handlers
@@ -1316,18 +1686,34 @@ class seekbar extends events {
         }
     }
 
-    resize(anchor_position) {
+    /**
+     * Legacy resize support
+     */
+    resize(anchor_position_or_parent_rect) {
         try {
-            this.anchor_position = anchor_position;
+            if (this._legacy_position && anchor_position_or_parent_rect) {
+                // Legacy mode: update the anchor position
+                this._legacy_anchor_position = anchor_position_or_parent_rect;
+
+                // Update position rect
+                if (this._legacy_position) {
+                    this.position = this._legacy_position.clone();
+                }
+
+                this.emit('resize', { component: this, position: this.position });
+            } else {
+                // New style: use parent's layout system
+                super.resize(anchor_position_or_parent_rect);
+            }
         } catch (error) {
-            this.logger.error(`resize: ${error.message}`);
+            this.logger.error(`seekbar resize: ${error.message}`);
         }
     }
 
     render() {
         try {
             if (this.active !== true) return;
-            if (!this.ctx || !this.graphics || !this.position || !this.anchor_position) return;
+            if (!this.ctx || !this.graphics || !this.position) return;
 
             const progress_data = this.get_progress_callback();
             if (!progress_data) return;
@@ -1338,13 +1724,23 @@ class seekbar extends events {
             if (typeof current !== 'number' || typeof total !== 'number') return;
 
             // Calculate absolute position
-            let relative_position = this.position.clone();
-            relative_position.add(this.anchor_position);
+            let seekbar_x, seekbar_y, seekbar_width, seekbar_height;
 
-            const seekbar_x = relative_position.x;
-            const seekbar_y = relative_position.y;
-            const seekbar_width = this.position.width;
-            const seekbar_height = this.position.height;
+            if (this._legacy_anchor_position) {
+                // Legacy mode: add anchor position
+                let relative_position = this.position.clone();
+                relative_position.add(this._legacy_anchor_position);
+                seekbar_x = relative_position.x;
+                seekbar_y = relative_position.y;
+                seekbar_width = this.position.width;
+                seekbar_height = this.position.height;
+            } else {
+                // New mode: position is already absolute
+                seekbar_x = this.position.x;
+                seekbar_y = this.position.y;
+                seekbar_width = this.position.width;
+                seekbar_height = this.position.height;
+            }
 
             // Calculate progress
             const progress = total > 0 ? Math.min(1, current / total) : 0;
@@ -1379,7 +1775,7 @@ class seekbar extends events {
 
             this.ctx.restore();
         } catch (error) {
-            this.logger.error(`render: ${error.message}`);
+            this.logger.error(`seekbar render: ${error.message}`);
         }
     }
 
@@ -1387,6 +1783,42 @@ class seekbar extends events {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Override is_inside to handle legacy anchor position
+     */
+    is_inside(mouse_x, mouse_y) {
+        try {
+            if (this.active !== true || !this.position) return false;
+
+            // Transform mouse coordinates to virtual space
+            const viewport = this.graphics.viewport;
+            const scale = viewport.scale;
+            const renderedWidth = viewport.virtual.width * scale.x;
+            const renderedHeight = viewport.virtual.height * scale.y;
+            const offsetX = (viewport.given.width - renderedWidth) / 2;
+            const offsetY = (viewport.given.height - renderedHeight) / 2;
+            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+            // Calculate absolute position
+            let check_position = this.position.clone();
+            if (this._legacy_anchor_position) {
+                check_position.add(this._legacy_anchor_position);
+            }
+
+            // Expand clickable area slightly above and below the bar
+            const clickable_padding = 5;
+
+            return virtual_mouse_x >= check_position.x &&
+                   virtual_mouse_x <= check_position.x + this.position.width &&
+                   virtual_mouse_y >= check_position.y - clickable_padding &&
+                   virtual_mouse_y <= check_position.y + this.position.height + clickable_padding;
+        } catch (error) {
+            this.logger.error(`is_inside: ${error.message}`);
+            return false;
+        }
     }
 
     handle_mouse_down(event) {
@@ -1439,11 +1871,17 @@ class seekbar extends events {
             const offsetY = (viewport.given.height - renderedHeight) / 2;
             const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
 
-            let relative_position = this.position.clone();
-            relative_position.add(this.anchor_position);
-
-            const seekbar_x = relative_position.x;
-            const seekbar_width = this.position.width;
+            // Calculate absolute position
+            let seekbar_x, seekbar_width;
+            if (this._legacy_anchor_position) {
+                let relative_position = this.position.clone();
+                relative_position.add(this._legacy_anchor_position);
+                seekbar_x = relative_position.x;
+                seekbar_width = this.position.width;
+            } else {
+                seekbar_x = this.position.x;
+                seekbar_width = this.position.width;
+            }
 
             // Calculate new time based on click position (in virtual coordinates)
             const click_ratio = Math.max(0, Math.min(1, (virtual_mouse_x - seekbar_x) / seekbar_width));
@@ -1459,44 +1897,6 @@ class seekbar extends events {
         }
     }
 
-    is_inside(mouse_x, mouse_y) {
-        try {
-            if (this.active !== true || !this.position || !this.anchor_position) return false;
-
-            // Transform mouse coordinates to virtual space
-            const viewport = this.graphics.viewport;
-            const scale = viewport.scale;
-            const renderedWidth = viewport.virtual.width * scale.x;
-            const renderedHeight = viewport.virtual.height * scale.y;
-            const offsetX = (viewport.given.width - renderedWidth) / 2;
-            const offsetY = (viewport.given.height - renderedHeight) / 2;
-            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
-            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
-
-            let relative_position = this.position.clone();
-            relative_position.add(this.anchor_position);
-
-            // Expand clickable area slightly above and below the bar
-            const clickable_padding = 5;
-
-            return virtual_mouse_x >= relative_position.x &&
-                   virtual_mouse_x <= relative_position.x + this.position.width &&
-                   virtual_mouse_y >= relative_position.y - clickable_padding &&
-                   virtual_mouse_y <= relative_position.y + this.position.height + clickable_padding;
-        } catch (error) {
-            this.logger.error(`is_inside: ${error.message}`);
-            return false;
-        }
-    }
-
-    set_active(active) {
-        try {
-            this.active = active;
-        } catch (error) {
-            this.logger.error(`set_active: ${error.message}`);
-        }
-    }
-
     delete() {
         try {
             // Set active to false first to prevent any ongoing operations
@@ -1508,20 +1908,20 @@ class seekbar extends events {
                 this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
             }
 
-            delete this.parent;
-            delete this.graphics;
-            delete this.ctx;
-            delete this.position;
-            delete this.anchor_position;
             delete this.get_progress_callback;
             delete this.seek_callback;
             delete this.is_dragging;
             delete this._bound_mouse_down;
             delete this._bound_mouse_up;
             delete this._bound_mouse_move;
+            delete this._legacy_position;
+            delete this._legacy_anchor_position;
+
+            // Call parent cleanup
+            super.delete();
         } catch (error) {
             if (this.logger) {
-                this.logger.error(`delete: ${error.message}`);
+                this.logger.error(`seekbar delete: ${error.message}`);
             }
         }
     }
@@ -1607,11 +2007,71 @@ class modal {
     }
   }
 
+  /**
+   * Calculate dialog dimensions based on orientation
+   * @param {number} landscape_width - Width to use in landscape mode
+   * @param {number} landscape_height - Height to use in landscape mode
+   * @param {number} portrait_margin - Margin from screen edges in portrait mode (default: 20px)
+   * @returns {object} - {width, height, x, y} dimensions and position
+   */
+  calculate_dialog_dimensions(landscape_width, landscape_height, portrait_margin = 20) {
+    try {
+      if (!this.graphics || !this.graphics.viewport) {
+        // Fallback if graphics not initialized yet
+        return {
+          width: landscape_width,
+          height: landscape_height,
+          x: (1920 - landscape_width) / 2,
+          y: (1080 - landscape_height) / 2
+        };
+      }
+
+      const vw = this.graphics.viewport.virtual.width;
+      const vh = this.graphics.viewport.virtual.height;
+      const isPortrait = this.graphics.viewport.isPortrait();
+
+      if (isPortrait) {
+        // Portrait mode: fit as close to screen as possible with small margins
+        const width = vw - (portrait_margin * 2);
+        const height = vh - (portrait_margin * 2);
+        const x = portrait_margin;
+        const y = portrait_margin;
+
+        return { width, height, x, y };
+      } else {
+        // Landscape mode: use provided dimensions, centered
+        const x = (vw - landscape_width) / 2;
+        const y = (vh - landscape_height) / 2;
+
+        return {
+          width: landscape_width,
+          height: landscape_height,
+          x, y
+        };
+      }
+    } catch (error) {
+      this.logger.error(`calculate_dialog_dimensions: ${error.message}`);
+      // Fallback to landscape dimensions
+      return {
+        width: landscape_width,
+        height: landscape_height,
+        x: (1920 - landscape_width) / 2,
+        y: (1080 - landscape_height) / 2
+      };
+    }
+  }
+
   set_background(background) {
     try {
-      // If background is a string, sanitize it
+      // If background is a string, sanitize it and add orientation suffix
       if (typeof background === "string") {
         background = this.sanitize_path(background);
+
+        // Append _portrait or _landscape based on viewport orientation
+        if (this.graphics && this.graphics.viewport) {
+          const suffix = this.graphics.viewport.isPortrait() ? "_portrait" : "_landscape";
+          background = background + suffix;
+        }
       }
       this.background = background;
     } catch (error) {
@@ -1708,6 +2168,32 @@ class modal {
     }
   }
 
+  /**
+   * Update dialog dimensions when orientation changes (without recreating buttons)
+   */
+  update_dimensions_for_orientation() {
+    try {
+      // This is a basic implementation - subclasses can override
+      // Get the stored landscape dimensions if available, otherwise use current
+      const landscape_width = this.landscape_width || this.position.width;
+      const landscape_height = this.landscape_height || this.position.height;
+
+      // Recalculate dimensions based on new orientation
+      const dims = this.calculate_dialog_dimensions(landscape_width, landscape_height);
+
+      // Update position dimensions
+      this.position.x = dims.x;
+      this.position.y = dims.y;
+      this.position.width = dims.width;
+      this.position.height = dims.height;
+
+      // Trigger resize to update all internal positioning
+      this.resize();
+    } catch (error) {
+      this.logger.error(`update_dimensions_for_orientation: ${error.message}`);
+    }
+  }
+
   resize() {
     try {
       // Work entirely in virtual coordinates - canvas transform handles scaling
@@ -1754,7 +2240,14 @@ class modal {
       }
 
       // Close button is anchored to modal position (not internal_rect)
+      // Recalculate close button position based on current dialog width (anchored top-right)
       if (this.closeButton && typeof this.closeButton.resize === 'function') {
+        // Update the button's position to match new dialog width
+        if (this.closeButton._legacy_position) {
+          this.closeButton._legacy_position.x = this.position.width - 50;
+          this.closeButton._legacy_position.y = -20;
+          this.closeButton.position = this.closeButton._legacy_position.clone();
+        }
         this.closeButton.resize(this.render_position);
       }
 
@@ -1937,8 +2430,10 @@ class modal {
       }
 
       if (this.skin && this.sprites && this.graphics.font) {
-        this.sprites.slice_3("window-title", this.render_title_position);
-        this.graphics.font.draw_text(this.render_title_position, this.title, true, false);
+        // Clone to prevent mutation from accumulating across frames
+        const title_rect = this.render_title_position.clone();
+        this.sprites.slice_3("window-title", title_rect);
+        this.graphics.font.draw_text(title_rect, this.title, true, false);
       }
       if (this.closeButton != null && typeof this.closeButton.render === "function") {
         this.closeButton.render();
@@ -2026,22 +2521,27 @@ class viewport {
     }
 
     calculate() {
-        // display area size
-        this.frame = { x:0,y:0,width: window.innerWidth, height: window.innerHeight };
+        // display area size (force integers to match canvas dimensions)
+        this.frame = {
+            x: 0,
+            y: 0,
+            width: Math.floor(window.innerWidth),
+            height: Math.floor(window.innerHeight)
+        };
 
-        // what we got
+        // what we got (ensure integers)
         if (this.requested.width < this.frame.width) {
-            this.given.width = this.requested.width;
-            this.given.height = this.requested.height;
-            this.given.width = this.frame.width;
-            this.given.height = this.frame.height;
+            this.given.width = Math.floor(this.requested.width);
+            this.given.height = Math.floor(this.requested.height);
+            this.given.width = Math.floor(this.frame.width);
+            this.given.height = Math.floor(this.frame.height);
         } else {
-            this.given.width = this.frame.width;
-            this.given.height = this.frame.height;
+            this.given.width = Math.floor(this.frame.width);
+            this.given.height = Math.floor(this.frame.height);
         }
-        // viewport offset
-        this.given.x = (this.frame.width - this.given.width) / 2;
-        this.given.y = (this.frame.height - this.given.height) / 2;
+        // viewport offset (ensure integers)
+        this.given.x = Math.floor((this.frame.width - this.given.width) / 2);
+        this.given.y = Math.floor((this.frame.height - this.given.height) / 2);
 
         this.calculate_scale();
         this.world.height=this.virtual.height;
@@ -2050,22 +2550,18 @@ class viewport {
     }
 
     calculate_scale() {
-        // Virtual viewport is ALWAYS fixed at requested dimensions (e.g., 1920x1080)
-        // This is the coordinate space everything is designed for
-        this.virtual.width = this.requested.width;
-        this.virtual.height = this.requested.height;
+        // Virtual viewport matches the actual canvas dimensions
+        this.virtual.width = this.given.width;
+        this.virtual.height = this.given.height;
 
-        // Calculate scale factors to fit the virtual viewport into physical screen
-        // We want to fit the entire virtual space into the physical screen while maintaining aspect ratio
-        const scaleX = this.given.width / this.virtual.width;
-        const scaleY = this.given.height / this.virtual.height;
+        // Scale is 1:1 since virtual matches canvas
+        this.scale.x = 1;
+        this.scale.y = 1;
+    }
 
-        // Use the smaller scale factor to ensure everything fits (letterbox if needed)
-        // Allow both upscaling and downscaling to fit any screen size
-        const uniformScale = Math.min(scaleX, scaleY);
-
-        this.scale.x = uniformScale;
-        this.scale.y = uniformScale;
+    isPortrait() {
+        // Portrait mode when height is greater than width
+        return this.frame.height > this.frame.width;
     }
 }
 class window_manager extends events{
@@ -2081,6 +2577,9 @@ class window_manager extends events{
       this.boss_mode_activated = false;
 
       this.kb = new key_states();
+
+      // Set initial canvas size
+      this.graphics.recalc_canvas();
 
       // DEBUG: Frame stepping mode - disabled by default (F12 to toggle, F11 to step)
       this.debug_frame_step = false;
@@ -2138,6 +2637,64 @@ class window_manager extends events{
           }
       });
 
+      // Track orientation for detecting changes
+      this.last_orientation = null;
+      this.last_canvas_dimensions = null;
+
+      // Window resize listener - resize ALL modals on every resize
+      window.addEventListener('resize', () => {
+          if (!this.graphics || !this.graphics.viewport) return;
+
+          // Recalculate canvas and viewport on resize
+          this.graphics.recalc_canvas();
+
+          // Check if dimensions actually changed
+          const dimensions_key = `${this.graphics.canvas.width}x${this.graphics.canvas.height}`;
+          const dimensions_changed = this.last_canvas_dimensions !== dimensions_key;
+
+          // ONLY update modals if dimensions actually changed since last resize
+          if (!dimensions_changed) {
+              return;
+          }
+
+          this.last_canvas_dimensions = dimensions_key;
+
+          // Check if orientation changed
+          const current_orientation = this.graphics.viewport.isPortrait() ? 'portrait' : 'landscape';
+          const orientationChanged = this.last_orientation !== null && this.last_orientation !== current_orientation;
+
+          if (orientationChanged) {
+              console.log(`[Orientation] Changed from ${this.last_orientation} to ${current_orientation}`);
+          }
+
+          // Update ALL modals on EVERY resize (not just orientation changes)
+          this.modals.forEach(modal => {
+              // Reload backgrounds if orientation changed
+              if (orientationChanged && modal.background) {
+                  // Extract the base name (remove _portrait or _landscape suffix)
+                  let baseName = modal.background;
+                  if (baseName.endsWith('_portrait') || baseName.endsWith('_landscape')) {
+                      baseName = baseName.replace(/_portrait$|_landscape$/, '');
+                  }
+
+                  // Re-apply the background (which will auto-add the correct suffix)
+                  modal.set_background(baseName);
+              }
+
+              // ALWAYS update dimensions on resize
+              if (modal.update_dimensions_for_orientation && typeof modal.update_dimensions_for_orientation === 'function') {
+                  modal.update_dimensions_for_orientation();
+              } else {
+                  // Fallback: just call resize if no custom update method
+                  if (modal.resize && typeof modal.resize === 'function') {
+                      modal.resize();
+                  }
+              }
+          });
+
+          this.last_orientation = current_orientation;
+      });
+
       setInterval(() => {
           // Skip rendering if in frame step mode and F11 wasn't pressed
           if (this.debug_frame_step && !this.debug_render_next_frame) {
@@ -2145,10 +2702,10 @@ class window_manager extends events{
           }
           this.debug_render_next_frame = false; // Reset after rendering one frame
 
-          this.graphics.recalc_canvas();
+          // DO NOT call recalc_canvas every frame - it triggers resize events!
+          // Canvas dimensions are set in the window resize listener
           if (this.has_windows() > 0) {
               this.handle_keys();
-              this.resize();
               this.render();
           }
         },1000 / 24);
@@ -2179,11 +2736,16 @@ class window_manager extends events{
       modal_instance.on('close', () => {
         this.close_modal(modal_instance);
       });
-      
-      this.modals.forEach(modal=> modal.set_active(false));
+
+      // Deactivate all modals EXCEPT those marked as always_active (like title_screen)
+      this.modals.forEach(modal=> {
+        if (!modal.always_active) {
+          modal.set_active(false);
+        }
+      });
       this.modals.push(modal_instance);
       //console.log("Window Manager: Active instance");
-      
+
       this.active_modal=modal_instance
       return modal_instance;
     }
@@ -2254,7 +2816,7 @@ class window_manager extends events{
     }
 
     render() {
-        if (this.active_modal) {
+        if (this.modals.length > 0) {
           // DEBUG: Track save/restore balance
           const initialSaveCount = this.graphics.ctx._saveCount || 0;
 
@@ -2291,14 +2853,15 @@ class window_manager extends events{
           // Now everything is drawn in virtual coordinate space (1920x1080)
           // and automatically scaled and centered to fit the canvas
 
-          // Render background first (if exists)
-          if (this.active_modal.background){
+          // Render background from active modal (if exists)
+          if (this.active_modal && this.active_modal.background){
               const bgRect = new rect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
-              this.graphics.sprites.render(this.active_modal.background, null, bgRect, 1, "contain");
+              // Use "cover" mode to fill entire viewport (crop edges if needed)
+              this.graphics.sprites.render(this.active_modal.background, null, bgRect, 1, "cover");
             }
 
-          // Then render gradient overlay (if exists)
-          if (this.active_modal.bg_gradient) {
+          // Then render gradient overlay from active modal (if exists)
+          if (this.active_modal && this.active_modal.bg_gradient) {
             var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.virtual.height);
             for(let i=0;i<this.active_modal.bg_gradient.length;i++)
               gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
@@ -2308,7 +2871,12 @@ class window_manager extends events{
             this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
           }
 
-          this.active_modal.render();
+          // Render ALL active modals (title screen, then menu, etc.)
+          this.modals.forEach((modal, index) => {
+            if (modal.active) {
+              modal.render();
+            }
+          });
 
           // Restore the canvas state (removes the scale transformation)
           this.graphics.ctx.restore();
@@ -2317,10 +2885,9 @@ class window_manager extends events{
           // DEBUG: Verify save/restore balance
           const finalSaveCount = this.graphics.ctx._saveCount || 0;
           if (finalSaveCount !== initialSaveCount) {
-            console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}, Modal: ${this.active_modal.constructor.name}`);
+            console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}`);
           }
         }
-        //this.modals.forEach(window => window.render());
     }
   }
 
@@ -2332,7 +2899,8 @@ class window_manager extends events{
         this.canvas = canvas;
         this.ctx = ctx;
         this.font = null;
-        this.sprites = new sprites(ctx);
+        this.asset_loader = new asset_loader();
+        this.sprites = new sprites(ctx, this.asset_loader);
         this.sprites.on("complete", this.load_font.bind(this));
         this.sprites.preload();
         this.backround = null;
@@ -2375,11 +2943,13 @@ class window_manager extends events{
     recalc_canvas() {
       try {
         this.viewport.calculate();
-        // reset canvas dimensions
-        this.canvas.windowWidth = this.viewport.frame.width;
-        this.canvas.windowHeight = this.viewport.frame.height;
-        this.canvas.width = this.viewport.frame.width;
-        this.canvas.height = this.viewport.frame.height;
+        // Only update canvas dimensions if they actually changed (to avoid triggering resize events)
+        if (this.canvas.width !== this.viewport.frame.width || this.canvas.height !== this.viewport.frame.height) {
+          this.canvas.windowWidth = this.viewport.frame.width;
+          this.canvas.windowHeight = this.viewport.frame.height;
+          this.canvas.width = this.viewport.frame.width;
+          this.canvas.height = this.viewport.frame.height;
+        }
       } catch (error) {
         this.logger.error(`recalc_canvas: ${error.message}`);
       }
@@ -2570,8 +3140,7 @@ class window_manager extends events{
 
         // Store button data for resize recalculation
         this.menu_buttons = [];
-        this.title_image = null;
-        this.glow_phase = 0;  // For pulsing glow animation
+        this.title_component = null;  // Reference to title_screen
     }
 
     layout(){
@@ -2589,13 +3158,31 @@ class window_manager extends events{
         let vw = this.graphics.viewport.virtual.width;
         let vh = this.graphics.viewport.virtual.height;
 
-        // Menu scales with viewport - fixed size, left-anchored at 60px
-        let window_width = 400;
-        let window_height = 600;
-        let x = 60;  // Left-anchored at 60 pixels
-        let y = (vh - window_height) / 2;  // Center vertically
+        // Calculate menu position based on orientation
+        const isPortrait = this.graphics.viewport.isPortrait();
 
-        this.position = new rect(x, y, window_width, window_height, "left", "top");
+        // Get title bottom position (where menu should start)
+        const titleBottom = this.title_component ? this.title_component.getBottomY() : 210;
+        const menuTopPadding = 20;
+        const menuTop = titleBottom + menuTopPadding;
+
+        if (isPortrait) {
+            // Portrait: Extend to bottom of screen with small margin
+            const marginX = 20;
+            const marginBottom = 20;
+            const window_width = vw - (marginX * 2);
+            const menuHeight = vh - menuTop - marginBottom;
+            const x = marginX;
+            this.position = new rect(x, menuTop, window_width, menuHeight, "left", "top");
+        } else {
+            // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
+            let window_width = 400;
+            let x = 60;  // Left-anchored at 60 pixels
+            const menuBottom = vh * 0.90;
+            const menuHeight = menuBottom - menuTop;
+            this.position = new rect(x, menuTop, window_width, menuHeight, "left", "top");
+        }
+
         this.resize();
         this.add_buttons();
 
@@ -2616,123 +3203,7 @@ class window_manager extends events{
         this.create_menu_buttons();
     }
 
-    render() {
-        // Copy parent render logic but insert glow before title image
-        if (this.active === false) return;
-        if (!this.graphics || !this.graphics.ctx) return;
-        if (!this.sprites) return;
-        if (!this.render_position || !this.internal_rect || !this.render_internal_rect) return;
-
-        const ctx = this.graphics.ctx;
-        if (!ctx || typeof ctx.save !== 'function') return;
-
-        if (this.skin) {
-            this.sprites.slice_9("window", this.render_position);
-        }
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(
-            this.render_internal_rect.x,
-            this.render_internal_rect.y,
-            this.render_internal_rect.width,
-            this.render_internal_rect.height
-        );
-        ctx.clip();
-
-        if (this.external_render_callback != null) {
-            this.external_render_callback(this.render_internal_rect);
-        }
-
-        // Render buttons
-        if (this.buttons) {
-            this.buttons.forEach((button) => button.render());
-        }
-
-        // Render ui_components
-        if (this.ui_components) {
-            this.ui_components.forEach((component) => component.render());
-        }
-
-        // Render text
-        if (this.text) {
-            this.graphics.font.draw_text(this.render_internal_rect, this.text, true, true);
-        }
-
-        ctx.restore();
-
-        // Render images with glow effect (title is here)
-        if (this.images) {
-            for (let i = 0; i < this.images.length; i++) {
-                let image = this.images[i];
-
-                // Apply glow effect to title image
-                if (image === this.title_image) {
-                    this.render_title_with_glow(image);
-                } else {
-                    let image_pos = image.position.clone();
-                    this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-                }
-            }
-        }
-
-        if (this.skin && this.sprites && this.graphics.font) {
-            this.sprites.slice_3("window-title", this.render_title_position);
-            this.graphics.font.draw_text(this.render_title_position, this.title, true, false);
-        }
-        if (this.closeButton != null && typeof this.closeButton.render === "function") {
-            this.closeButton.render();
-        }
-    }
-
-    render_title_with_glow(image) {
-        if (!this.graphics || !this.graphics.ctx) return;
-
-        const ctx = this.graphics.ctx;
-
-        // Update glow animation phase
-        this.glow_phase += 0.05;
-
-        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
-        const pulse = 25 + Math.sin(this.glow_phase) * 15;
-
-        ctx.save();
-
-        // Draw the title multiple times with increasing glow for stronger effect
-        // Layer 1: Strongest glow (underneath)
-        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
-        ctx.shadowBlur = pulse * 2;
-        let image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Layer 2: Medium glow
-        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
-        ctx.shadowBlur = pulse * 1.5;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Layer 3: Soft glow
-        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
-        ctx.shadowBlur = pulse;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Final layer: No shadow (crisp title on top)
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        ctx.restore();
-
-        // Extra cleanup to ensure no shadow state leaks
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-    }
+    // Use default modal render - no custom title/tagline rendering needed
 
     show_help() {
         let modal = new help();
@@ -2743,13 +3214,15 @@ class window_manager extends events{
         // Clear existing menu buttons
         this.menu_buttons = [];
 
-        // Calculate positions based on internal_rect
-        let x = 20;
-        let y = 30;
-        let button_spacing = 80;
-        let button_width = this.internal_rect.width - x * 2;
+        const isPortrait = this.graphics.viewport.isPortrait();
 
-        let vw = this.graphics.viewport.virtual.width;
+        // Button sizing - standard height in both modes
+        const button_margin_x = 20;  // Margin from dialog edges
+        const button_width = this.internal_rect.width - (button_margin_x * 2);
+        const button_height = 60;  // Standard height
+        const button_spacing = 80;
+
+        let y = 30;
 
         // Store button definitions
         this.menu_buttons = [
@@ -2757,53 +3230,80 @@ class window_manager extends events{
             { label: "Prologue", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
             { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
             { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
-            { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - 110, style: "red" }
+            { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - (button_height + 20), style: "red" }
         ];
 
         // Create actual button instances
         for (let btn_def of this.menu_buttons) {
-            let button_position = new rect(x, btn_def.y_offset, button_width, null, "left", "top");
+            let button_position = new rect(button_margin_x, btn_def.y_offset, button_width, button_height, "left", "top");
             let up_img = btn_def.style === "cyan" ? "button-up-cyan" : "button-up-red";
             let down_img = btn_def.style === "cyan" ? "button-down-cyan" : "button-down-red";
             btn_def.button = this.add_button(btn_def.label, button_position, btn_def.callback, up_img, down_img);
             btn_def.position = button_position;
         }
+    }
 
-        // Add title image - scale with viewport
-        let title_width = Math.min(1024, vw * 0.6);
-        let title_height = title_width * (236 / 1024);  // Maintain aspect ratio
-        let title_x = vw / 2 - title_width / 2;
-        let button_position6 = new rect(title_x, 10, title_width, title_height, "left", "top");
-        this.title_image = this.add_image(button_position6, "title");
+    update_dimensions_for_orientation() {
+        // Just call resize() - it handles everything including button recreation
+        this.resize();
+    }
+
+    recreate_buttons() {
+        // Delete old buttons
+        if (this.buttons) {
+            this.buttons.forEach((button) => {
+                if (button.delete) button.delete();
+            });
+        }
+        this.buttons = [];
+
+        // Recreate with new sizing
+        this.create_menu_buttons();
     }
 
     resize() {
-        // Recalculate menu position based on new viewport - left-anchored
+        // Recalculate menu position based on new viewport and orientation
         if (this.graphics && this.graphics.viewport) {
             let vw = this.graphics.viewport.virtual.width;
             let vh = this.graphics.viewport.virtual.height;
+            const isPortrait = this.graphics.viewport.isPortrait();
 
-            // Keep menu size fixed, left-anchored at 60px, vertically centered
-            let window_width = 400;
-            let window_height = 600;
-            let x = 60;  // Left-anchored at 60 pixels
-            let y = (vh - window_height) / 2;  // Center vertically
+            // Get title bottom position (where menu should start)
+            const titleBottom = this.title_component ? this.title_component.getBottomY() : 210;
+            const menuTopPadding = 20;
+            const menuTop = titleBottom + menuTopPadding;
 
-            this.position.x = x;
-            this.position.y = y;
-            this.position.width = window_width;
-            this.position.height = window_height;
+            if (isPortrait) {
+                // Portrait: Extend to bottom of screen with small margin
+                const marginX = 20;
+                const marginBottom = 20;
+                const window_width = vw - (marginX * 2);
+                const menuHeight = vh - menuTop - marginBottom;
+                const x = marginX;
+
+                this.position.x = x;
+                this.position.y = menuTop;
+                this.position.width = window_width;
+                this.position.height = menuHeight;
+            } else {
+                // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
+                let window_width = 400;
+                let x = 60;
+                const menuBottom = vh * 0.90;
+                const menuHeight = menuBottom - menuTop;
+
+                this.position.x = x;
+                this.position.y = menuTop;
+                this.position.width = window_width;
+                this.position.height = menuHeight;
+            }
         }
 
-        // Call parent resize to update internal_rect and button positions
+        // Call parent resize to update internal_rect FIRST
         super.resize();
 
-        // Update title image position to stay centered in viewport
-        if (this.title_image && this.graphics && this.graphics.viewport) {
-            let vw = this.graphics.viewport.virtual.width;
-            let title_x = vw / 2 - 512;  // Half of 1024
-            this.title_image.position.x = title_x;
-        }
+        // Recreate buttons to match new dialog width
+        this.recreate_buttons();
     }
 
 
@@ -3227,6 +3727,11 @@ class window_manager extends events{
         this.collision_mask = null; // Pixel-perfect collision mask
         this.mask_bounds = null; // Tight bounding box from mask
 
+        // Health bar display
+        this.show_health_bar = false;
+        this.health_bar_time = 0;
+        this.health_bar_duration = 3000; // Show for 3 seconds after damage
+
         this.id=game_object.uuid_generator.next().value;
     }
 
@@ -3259,6 +3764,11 @@ class window_manager extends events{
         if (this.destroy_object) return;
 
         this.life -= damage;
+
+        // Show health bar when damaged
+        this.show_health_bar = true;
+        this.health_bar_time = Date.now();
+
         if (this.life <= 0) {
             this.life = 0;
             this.destroy();
@@ -3331,21 +3841,28 @@ class window_manager extends events{
 
     get_collision_mask() {
         // Wait for sprite to load, then get or create cached mask
-        setTimeout(() => {
+        const tryGetMask = () => {
             try {
                 const position = new rect(0, 0, this.width, this.height);
 
                 // Get cached mask from sprite (or generate if first time)
                 const maskData = this.graphics.sprites.get_or_create_collision_mask(this.img, position);
-                if (!maskData) return;
+                if (!maskData) {
+                    // Retry after another delay if sprite not ready
+                    setTimeout(tryGetMask, 100);
+                    return;
+                }
 
                 // Reference the cached mask (not a copy)
                 this.collision_mask = maskData.collision_mask;
                 this.mask_bounds = maskData.mask_bounds;
+                console.log(`[${this.type}] Collision mask loaded:`, this.img, 'bounds:', this.mask_bounds);
             } catch (error) {
                 console.error(`[${this.type}] Failed to get collision mask:`, error);
             }
-        }, 100); // Small delay to ensure sprite is loaded
+        };
+
+        setTimeout(tryGetMask, 100); // Small delay to ensure sprite is loaded
     }
 
     image_rotate(rotation) {
@@ -3427,11 +3944,19 @@ class window_manager extends events{
             this.image_frame %= this.image_frames;
         }
 
-        
-        for (let b = 0; b < this.explosions.length; b++) {
-            this.explosions[b].update_frame(deltaTime)
+        // Update health bar visibility
+        if (this.show_health_bar) {
+            const elapsed = Date.now() - this.health_bar_time;
+            if (elapsed > this.health_bar_duration) {
+                this.show_health_bar = false;
+            }
+        }
+
+        // Update explosions - iterate backwards to safely remove completed ones
+        for (let b = this.explosions.length - 1; b >= 0; b--) {
+            this.explosions[b].update_frame(deltaTime);
             if (this.explosions[b].loop_complete()) {
-                this.explosions.splice(b, 1); // Remove the projectile from the array
+                this.explosions.splice(b, 1);
             }
         }
 
@@ -3508,9 +4033,48 @@ class window_manager extends events{
         let dest = new rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
         this.graphics.sprites.render(this.img, src, dest, 1, 'none');
 
+        // Render health bar if recently damaged
+        if (this.show_health_bar && this.max_life > 0) {
+            this.render_health_bar();
+        }
+
         for(let i = 0; i < this.explosions.length; i++){
             this.explosions[i].render();
         }
+    }
+
+    render_health_bar() {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+        const barWidth = this.width * 0.8; // 80% of object width
+        const barHeight = 6;
+        const barX = -barWidth / 2;
+        const barY = -this.center.y - 15; // Above the object
+
+        const healthPercent = this.life / this.max_life;
+
+        // Background (black)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Health (green to red gradient based on health)
+        let barColor;
+        if (healthPercent > 0.6) {
+            barColor = '#00FF00'; // Green
+        } else if (healthPercent > 0.3) {
+            barColor = '#FFFF00'; // Yellow
+        } else {
+            barColor = '#FF0000'; // Red
+        }
+
+        ctx.fillStyle = barColor;
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // Border (white)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
     }
     renderWithOverlay(overlayColor) {
         // Render the object normally
@@ -3627,8 +4191,14 @@ class window_manager extends events{
         return new Promise(resolve => setTimeout(resolve, frames * millisecondsPerFrame));
     }
 
-    explosion(){
-        let exp = new Explosion(this.window_manager, 0,0,this.play_sounds,this.volume);
+    explosion(offsetX = 0, offsetY = 0){
+        // Limit concurrent explosions to prevent visual stacking
+        if (this.explosions.length >= 5) {
+            // Remove oldest explosion to make room
+            this.explosions.shift();
+        }
+
+        let exp = new Explosion(this.window_manager, offsetX, offsetY, this.play_sounds, this.volume);
         this.explosions.push(exp);
     }
 
@@ -3641,7 +4211,7 @@ class Explosion extends game_object {
                     0,                    // mass
                     0,                      // rotation
                     10);      
-        this.set_image('static/explosion/exp_9_128x128_35frames_strip35.png',128,35);
+        this.set_image('explosion_sprite',128,35);
         this.set_center(64,64);
         this.set_type("explosion");
         this.set_loop(false);
@@ -3673,7 +4243,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     10);                     // ropration speed
-                this.set_image('static/debris/email.png');
+                this.set_image('debris_email');
                 this.set_type("email");
                 this.set_max_life(50);
                 let email_action = [
@@ -3691,7 +4261,7 @@ class Derbis extends game_object {
                     1,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/pdf.png');
+                this.set_image('debris_pdf');
                 this.set_type("pdf");
                 this.set_max_life(30);
                 let pdf_action = [
@@ -3709,7 +4279,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/phone.png');
+                this.set_image('debris_phone');
                 this.set_type("call");
                 this.set_max_life(40);
                 let call_action = [
@@ -3725,7 +4295,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/webex2.png');
+                this.set_image('debris_webex');
                 this.set_type("webex");
                 this.set_max_life(40);
                 this.action_list = default_action;
@@ -3735,7 +4305,7 @@ class Derbis extends game_object {
                     10000,                    // mass
                     0,                      // rotation
                     0);                     // ropration speed
-                this.set_image('static/blocks/block.png');
+                this.set_image('block');
                 this.set_type("block");
                 break;
 
@@ -3744,7 +4314,7 @@ class Derbis extends game_object {
                     3,                    // mass
                     0,                      // rotation
                     6);                     // ropration speed
-                this.set_image('static/ships/linkedin.png');
+                this.set_image('ship_linkedin');
                 this.set_type("linkedin");
                 this.set_max_life(60);
                 let linkedin_action = [
@@ -3761,7 +4331,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     8);                     // ropration speed
-                this.set_image('static/debris/webex2.png'); // Using webex as placeholder
+                this.set_image('debris_webex'); // Using webex as placeholder
                 this.set_type("zoom");
                 this.set_max_life(45);
                 let zoom_action = [
@@ -3778,7 +4348,7 @@ class Derbis extends game_object {
                     3,                    // mass
                     0,                      // rotation
                     5);                     // ropration speed
-                this.set_image('static/debris/email.png'); // Using email as placeholder
+                this.set_image('debris_email'); // Using email as placeholder
                 this.set_type("facebook");
                 this.set_max_life(55);
                 let facebook_action = [
@@ -3794,7 +4364,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     7);                     // ropration speed
-                this.set_image('static/debris/pdf.png'); // Using pdf as placeholder
+                this.set_image('debris_pdf'); // Using pdf as placeholder
                 this.set_type("reddit");
                 this.set_max_life(40);
                 let reddit_action = [
@@ -3827,7 +4397,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P3.png', 16, 4, 270);
+                this.set_image('projectile_p3', 16, 4, 270);
                 this.set_velocity_loss_off();
                 this.set_center(8, 8);
                 this.expire(5);
@@ -3842,7 +4412,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P1.png', 16, 4, 270);
+                this.set_image('projectile_p1', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -3858,7 +4428,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P2.png', 16, 4, 270);
+                this.set_image('projectile_p2', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -3874,15 +4444,13 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P3.png', 16, 4, 270);
+                this.set_image('projectile_p3', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
-                actions = [
-                    { type: "accelerate", frames: 1, speed: 50 }
-                ];
-                this.action_list=actions;
+                // No action list - lasers move at constant velocity
+                this.action_list = null;
 
                 break;
             case 'bolt4':
@@ -3891,7 +4459,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P4.png', 16, 4, 270);
+                this.set_image('projectile_p4', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -3909,7 +4477,7 @@ class Projectile extends game_object {
                     rotation,                      // rotation
                     4,
                 );                     // ropration speed
-                this.set_image('static/ships/Water Bolt.png', 16, 5, 270);
+                this.set_image('ship_water_bolt', 16, 5, 270);
                 this.set_velocity_loss_off();
                 this.center.x = 8;
                 this.center.y = 8;
@@ -3923,7 +4491,7 @@ class Projectile extends game_object {
                     rotation,                      // rotation
                     4,
                 );                     // ropration speed
-                this.set_image('static/ships/booster.png', 32, 4, 0);
+                this.set_image('ship_booster', 32, 4, 0);
                 this.set_velocity_loss_off();
                 this.center.x = 16;
                 this.center.y = 2;
@@ -3940,11 +4508,11 @@ class HeatSeekingMissile extends game_object {
     constructor(window_manager, x=0, y=0, rotation=0) {
         super(window_manager, x, y, 32, 32, 100, rotation, 8);
         this.target = null; // Will be set to nearest enemy
-        this.maxSpeed = 300; // Maximum speed of the missile
-        this.turningRate = 5; // Rate at which the missile can turn
-        this.accelerationRate = 50; // Rate at which the missile accelerates
+        this.maxSpeed = 800; // Maximum speed of the missile
+        this.turningRate = 8; // Rate at which the missile can turn
+        this.accelerationRate = 300; // Rate at which the missile accelerates
 
-        this.set_image('static/projectiles/P4.png', 16, 4, 270);
+        this.set_image('projectile_p4', 16, 4, 270);
         this.set_center(16, 16);
         this.set_velocity_loss_off();
         this.set_type("missile");
@@ -4044,7 +4612,82 @@ class HeatSeekingMissile extends game_object {
             this.velocity.y *= scaleFactor;
         }
     }
+}class Mine extends game_object {
+    constructor(window_manager, x, y, type) {
+        switch (type) {
+            case 'linkedin':
+                super(window_manager, x, y, 128, 128,
+                    8,                    // mass (heavy - hard to push)
+                    0,                    // rotation
+                    3);                   // rotation speed (slow menacing spin)
+
+                this.set_image('ship_linkedin');
+                this.set_type("mine");
+                this.set_max_life(50); // Fragile - explodes easily
+                this.set_center(64, 64);
+
+                // Mine behavior - slow drift
+                let mine_action = [
+                    { type: "bank_left", frames: 20 },
+                    { type: "bank_right", frames: 40 },
+                    { type: "bank_left", frames: 20 },
+                    { type: "skip", frames: 5 }
+                ];
+                this.action_list = mine_action;
+                this.action_position.frame = parseInt(Math.random() * mine_action.length);
+
+                // Proximity detection
+                this.proximity_range = 150; // Explodes when player within 150 pixels
+                this.armed = true;
+                this.explosion_damage = 500; // Heavy damage when triggered
+                break;
+        }
+
+        this.rotation = Math.random() * 360; // Random starting rotation
+    }
+
+    check_proximity(target) {
+        if (!this.armed || !target) return false;
+
+        // Calculate distance to target
+        const dx = this.position.x - target.position.x;
+        const dy = this.position.y - target.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        return distance < this.proximity_range;
+    }
+
+    trigger_explosion() {
+        if (!this.armed) return;
+
+        this.armed = false;
+
+        // Create multiple explosions for mine detonation
+        for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 10;  // Reduced from 30 to 10 for tighter explosion
+            const offsetX = Math.cos(angle) * radius;
+            const offsetY = Math.sin(angle) * radius;
+
+            let exp = new Explosion(this.window_manager,
+                this.position.x + offsetX,
+                this.position.y + offsetY);
+            exp.set_sub();
+            this.explosions.push(exp);
+        }
+
+        // Destroy the mine
+        this.life = 0;
+        this.destroy_object = true;
+
+        console.log('[Mine] Detonated!');
+    }
+
+    update_frame(deltaTime) {
+        super.update_frame(deltaTime);
+    }
 }
+
 
 class Ship extends game_object {
 
@@ -4052,10 +4695,10 @@ class Ship extends game_object {
         super(window_manager, x, y, 128, 153,
             10,                   // mass (balanced for responsive movement and collision physics)
             0,                    // rotation
-            8);                   // rotation speed
+            1.5);                 // rotation speed - very fine aiming control
         
         this.boost_fire_control = new fire_control(1);
-        this.laser_fire_control = new fire_control(5);
+        this.laser_fire_control = new fire_control(2);  // Reduced from 5 to 2 - less heat per shot
         this.missile_fire_control = new fire_control(10);
         this.shield_fire_control = new fire_control(3, 2000, 2000); // Shield uses fire_control for auto decay/ramp
         this.thrusters = [];
@@ -4082,7 +4725,7 @@ class Ship extends game_object {
                 this.set_sound("lazer", 'static/audio/projectiles/sfx_wpn_laser6.wav')
                 this.set_sound("missile", 'static/audio/projectiles/sfx_weapon_singleshot13.wav')
             
-                this.set_image('static/ships/ship1.png');
+                this.set_image('ship_player');
                 this.set_center(64, 64);
                 this.booster = new Projectile(window_manager, +0, 100, 0, "booster");
                 this.thrusters.push(this.booster);
@@ -4101,7 +4744,7 @@ class Ship extends game_object {
                 //this.set_sound("accel", 'static/audio/ship/static.mp3')
                 //this.set_sound("decel", 'static/audio/ship/static.mp3')
                 //this.set_sound("lazer", 'static/audio/ship/static.mp3')
-                this.set_image('static/ships/teams.png',64,1,270);
+                this.set_image('ship_teams',64,1,270);
 
                 //this.set_image('static/projectiles/Arcane Bolt.png', 16, 5, 270);
                 this.set_rotation(270);
@@ -4141,7 +4784,7 @@ class Ship extends game_object {
         // Boost applies continuous acceleration while held, not fire-rate limited
         if (!this.boost_fire_control.overheated) {
             this.booster.set_visible(true);
-            this.accelerate(200);  // Higher acceleration for boost
+            this.accelerate(600);  // Higher acceleration for boost
 
             // Heat up the boost system
             this.boost_fire_control.temprature += 0.5;  // Gradual heat buildup
@@ -4248,14 +4891,20 @@ class Ship extends game_object {
         if (this.laser_fire_control.can_fire()) {
             let lazer1 = this.get_relative_position(-60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
-            projectile.set_velocity(this.velocity);
-            projectile.accelerate(50);
+
+            // Set constant laser velocity - lasers don't accelerate
+            const laserSpeed = 1500;  // Very fast constant speed
+            const radians = this.rotation * Math.PI / 180;
+            projectile.velocity.x = Math.sin(radians) * laserSpeed;
+            projectile.velocity.y = -Math.cos(radians) * laserSpeed;
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, this.bolt_type);
-            projectile.set_velocity(this.velocity);
-            projectile.accelerate(50);
+
+            // Set constant laser velocity - lasers don't accelerate
+            projectile.velocity.x = Math.sin(radians) * laserSpeed;
+            projectile.velocity.y = -Math.cos(radians) * laserSpeed;
             this.projectiles.push(projectile);
             this.play("lazer");
 
@@ -4277,9 +4926,11 @@ class Ship extends game_object {
                 this.rotation
             );
 
-            // Set initial velocity to match ship
-            missile.set_velocity(this.velocity);
-            missile.accelerate(30);
+            // Give missile strong initial velocity in firing direction
+            const missileInitialSpeed = 600;  // Fast initial speed
+            const radians = this.rotation * Math.PI / 180;
+            missile.velocity.x = Math.sin(radians) * missileInitialSpeed;
+            missile.velocity.y = -Math.cos(radians) * missileInitialSpeed;
 
             // Find and set target
             if (npcs && npcs.length > 0) {
@@ -4582,7 +5233,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     4);                   // rotation speed
 
-                this.set_image('static/ships/chatgpt.png');
+                this.set_image('ship_chatgpt');
                 this.set_type("boss");
                 this.set_max_life(50000); // 10x player ship health (player has 5000)
                 this.set_center(200, 200); // Center point for 400x400
@@ -4628,7 +5279,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     4);                   // rotation speed
 
-                this.set_image('static/ships/resume.png');
+                this.set_image('ship_resume');
                 this.set_type("boss");
                 this.set_max_life(50000); // 10x player ship health (player has 5000)
                 this.set_center(200, 200); // Center point for 400x400
@@ -4674,7 +5325,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     6);                   // rotation speed
 
-                this.set_image('static/ships/teams.png', 64, 1, 270); // Using teams ship as placeholder
+                this.set_image('ship_teams', 64, 1, 270); // Using teams ship as placeholder
                 this.set_type("boss");
                 this.set_max_life(500); // Much higher health
                 this.set_center(64, 64);
@@ -4779,16 +5430,31 @@ class Boss extends game_object {
 
         // Clamp boss to screen boundaries (prevent going off screen)
         const viewport = this.graphics.viewport.virtual;
-        const margin = this.width / 2; // Half boss width for center-based positioning
+        const marginX = this.width / 2; // Half boss width for center-based positioning
+        const marginY = this.height / 2; // Half boss height for center-based positioning
+
+        // Get current viewport Y boundaries in world coordinates
+        const viewportTop = this.graphics.viewport.world.y;
+        const viewportBottom = viewportTop + viewport.height;
 
         // Clamp X position (left/right boundaries)
-        if (this.position.x < margin) {
-            this.position.x = margin;
+        if (this.position.x < marginX) {
+            this.position.x = marginX;
             this.velocity.x = 0; // Stop horizontal movement
         }
-        if (this.position.x > viewport.width - margin) {
-            this.position.x = viewport.width - margin;
+        if (this.position.x > viewport.width - marginX) {
+            this.position.x = viewport.width - marginX;
             this.velocity.x = 0;
+        }
+
+        // Clamp Y position (top/bottom boundaries) - boss stays within viewport
+        if (this.position.y < viewportTop + marginY) {
+            this.position.y = viewportTop + marginY;
+            this.velocity.y = 0;
+        }
+        if (this.position.y > viewportBottom - marginY) {
+            this.position.y = viewportBottom - marginY;
+            this.velocity.y = 0;
         }
 
         if (this.laser_fire_control) {
@@ -4824,6 +5490,11 @@ class Boss extends game_object {
             let dest = new rect(-this.center.x, -this.center.y, this.width, this.height);
             this.graphics.sprites.render(this.img, src, dest, 1, 'none');
 
+            // Render health bar if recently damaged
+            if (this.show_health_bar && this.max_life > 0) {
+                this.render_health_bar();
+            }
+
             // Render explosions
             for(let i = 0; i < this.explosions.length; i++){
                 this.explosions[i].render();
@@ -4853,7 +5524,7 @@ class Enemy extends game_object {
                     5,                    // mass (medium debris)
                     0,                    // rotation
                     12);                  // rotation speed
-                this.set_image('static/ships/chatgpt.png');
+                this.set_image('ship_chatgpt');
                 this.set_type("chatgpt");
                 this.set_max_life(80);
                 this.projectiles = [];
@@ -4877,7 +5548,7 @@ class Enemy extends game_object {
                     4,                    // mass (light debris)
                     0,                    // rotation
                     10);                  // rotation speed
-                this.set_image('static/ships/resume.png');
+                this.set_image('ship_resume');
                 this.set_type("resume");
                 this.set_max_life(60);
                 this.projectiles = [];
@@ -4901,7 +5572,7 @@ class Enemy extends game_object {
                     6,                    // mass (medium debris)
                     0,                    // rotation
                     8);                   // rotation speed
-                this.set_image('static/debris/phone.png'); // Placeholder
+                this.set_image('debris_phone'); // Placeholder
                 this.set_type("application");
                 this.set_max_life(100);
 
@@ -4921,7 +5592,7 @@ class Enemy extends game_object {
                     5,                    // mass (medium)
                     0,                    // rotation
                     10);                  // rotation speed
-                this.set_image('static/ships/linkedin.png');
+                this.set_image('ship_linkedin');
                 this.set_type("linkedin");
                 this.set_max_life(70);
                 this.projectiles = [];
@@ -5096,9 +5767,9 @@ class fire_control {
         this.overheated_cooldown_start=0;
    
         //internal
-        this.max_rps=10;
-        this.rps_min=1;
-        this.rps=10;
+        this.max_rps=20;  // Increased from 10 to 20 - fire twice as fast
+        this.rps_min=5;   // Increased minimum from 1 to 5
+        this.rps=20;
         this.temprature=0;
         
         this.temp_cycle=temp_cycle;
@@ -5147,7 +5818,7 @@ class fire_control {
             return false;
         }
         if(this.is_firing==false) {
-            this.temprature-=2;  // Refill at 2x the decay rate
+            this.temprature-=5;  // Increased from 2 to 5 - faster cooldown
             this.rps=(this.max_rps*this.get_cooldown_percentage())/100;
             if(this.temprature<0) this.temprature=0;
         }
@@ -5270,6 +5941,7 @@ class level extends events{
                             case 'h': block = new Powerup(this.window_manager,x, y, "health"); break;
                             case 's': block = new Powerup(this.window_manager,x, y, "shield"); break;
                             case 'W': block = new Powerup(this.window_manager,x, y, "weapon"); break;
+                            case 'M': block = new Mine(this.window_manager,x, y, "linkedin"); break;
                             case 'P': this.spaceship = new Ship(this.window_manager,x,y, "user"); block=this.spaceship; break;
                         }
                         this.npc.push(block);
@@ -5454,6 +6126,7 @@ class level extends events{
 }class prologue extends cinematic_player {
 
     layout() {
+        this.set_background("prologue");
         this.ok = false;
         this.cancel = false;
         this.closeButton = true;
@@ -5461,39 +6134,47 @@ class level extends events{
         this.text = "";
         this.active = true;
 
-        let window_width = 800;
-        let window_height = 600;
-        // Use virtual viewport dimensions for positioning (logical pixels, not physical)
-        let x = (this.graphics.viewport.virtual.width - window_width) / 2;
-        let y = (this.graphics.viewport.virtual.height - window_height) / 2;
+        // Store landscape dimensions for orientation changes
+        this.landscape_width = 800;
+        this.landscape_height = 600;
 
-        this.position = new rect(x, y, window_width, window_height, "left", "top");
+        // Calculate dialog dimensions based on orientation
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();
         this.add_buttons();
 
-        this.setup_player("static/storyboard/intro/intro_scene.json");
+        // Load intro scene from ASSETS.json
+        const intro_scene_path = this.graphics.asset_loader.get('cinematics.intro.data');
+        this.setup_player(intro_scene_path);
     }
 }
 class high_scores extends modal{
     layout(){
+        this.set_background("highscore");
         this.active=true;
         this.ok=false;
         this.cancel=false;
         this.closeButton=true;
         this.title="High Scores";
         this.text="";
-        let window_width=800;
-        let window_height=600;
-        // Use virtual viewport dimensions for positioning (logical pixels)
-        let x=(this.graphics.viewport.virtual.width-window_width)/2;
-        let y=(this.graphics.viewport.virtual.height-window_height)/2;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
+
+        // Store landscape dimensions for orientation changes
+        this.landscape_width = 800;
+        this.landscape_height = 600;
+
+        // Calculate dialog dimensions based on orientation
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();
         this.add_buttons();
         this.high_scores=null;
         this.scroll_offset=0;
         this.line_height=40;
-        this.load_high_scores("static/json/highscores.json");
+
+        // Load highscores from ASSETS.json
+        const highscores_path = this.graphics.asset_loader.get('game_data.highscores');
+        this.load_high_scores(highscores_path);
         this.render_callback(this.render_scores.bind(this));
 
         // Listen to modal's keyboard events
@@ -5667,6 +6348,7 @@ class high_scores extends modal{
 }class credits extends cinematic_player {
 
     layout() {
+        this.set_background("credits");
         this.active = true;
         this.ok = false;
         this.cancel = false;
@@ -5674,43 +6356,230 @@ class high_scores extends modal{
         this.title = "Credits";
         this.text = "";
 
-        let window_width = 800;
-        let window_height = 800;
-        // Use virtual viewport dimensions for positioning (logical pixels)
-        let x = (this.graphics.viewport.virtual.width - window_width) / 2;
-        let y = (this.graphics.viewport.virtual.height - window_height) / 2;
+        // Store landscape dimensions for orientation changes
+        this.landscape_width = 800;
+        this.landscape_height = 800;
 
-        this.position = new rect(x, y, window_width, window_height, "left", "top");
+        // Calculate dialog dimensions based on orientation
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();
         this.add_buttons();
 
-        this.setup_player("static/storyboard/credits/credits.json");
+        // Load credits scene from ASSETS.json
+        const credits_scene_path = this.graphics.asset_loader.get('cinematics.credits.data');
+        this.setup_player(credits_scene_path);
     }
 }
-/**
- * Base class for all UI components
- * Handles parent-child relationships and coordinate transformations
- * All UI elements should extend this to ensure consistent behavior
- */
+// Base class for all UI components with standardized layout system
 class ui_component extends events {
-    constructor(parent, graphics, position) {
+    constructor(parent, graphics, layout_config = {}, logger) {
         super();
+        this.logger = logger || console;
         this.parent = parent;
         this.graphics = graphics;
-        this.position = position;  // Relative position within parent
-        this.anchor_position = null;  // Calculated absolute position of parent
-        this.children = [];
-        this.visible = true;
+        this.ctx = graphics.ctx;
         this.active = true;
+
+        // Layout configuration with sensible defaults
+        this.layout = {
+            // Positioning mode: "absolute", "relative", "anchored"
+            mode: layout_config.mode || "relative",
+
+            // Anchoring: which edges to anchor to parent
+            // Can be: "top", "bottom", "left", "right", "center", or combinations like "top-left"
+            anchor: {
+                x: layout_config.anchor_x || "left",  // "left", "right", "center"
+                y: layout_config.anchor_y || "top"     // "top", "bottom", "center"
+            },
+
+            // Margins: space outside the component (from parent edges)
+            margin: {
+                top: layout_config.margin_top || 0,
+                right: layout_config.margin_right || 0,
+                bottom: layout_config.margin_bottom || 0,
+                left: layout_config.margin_left || 0
+            },
+
+            // Padding: space inside the component (for content)
+            padding: {
+                top: layout_config.padding_top || 0,
+                right: layout_config.padding_right || 0,
+                bottom: layout_config.padding_bottom || 0,
+                left: layout_config.padding_left || 0
+            },
+
+            // Size mode: "fixed", "dynamic", "fill"
+            width_mode: layout_config.width_mode || "fixed",   // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
+            height_mode: layout_config.height_mode || "fixed", // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
+
+            // Size values (used when mode is "fixed")
+            width: layout_config.width || 100,
+            height: layout_config.height || 40,
+
+            // Offset from anchor point (relative positioning)
+            offset_x: layout_config.offset_x || 0,
+            offset_y: layout_config.offset_y || 0
+        };
+
+        // Computed position (absolute coordinates in virtual space)
+        this.position = new rect(0, 0, this.layout.width, this.layout.height);
+
+        // Parent's position (for relative positioning)
+        this.parent_rect = null;
+
+        // Content area (position minus padding)
+        this.content_rect = new rect(0, 0, 0, 0);
+
+        // Children components for event bubbling
+        this.children = [];
+    }
+
+    /**
+     * Calculate absolute position based on parent and layout configuration
+     * This is called when parent resizes or layout properties change
+     */
+    calculate_layout(parent_rect) {
+        try {
+            if (!parent_rect) {
+                this.logger.error("calculate_layout: parent_rect is required");
+                return;
+            }
+
+            this.parent_rect = parent_rect;
+
+            // 1. Calculate width based on width_mode
+            let width = 0;
+            switch (this.layout.width_mode) {
+                case "fixed":
+                    width = this.layout.width;
+                    break;
+                case "fill":
+                    width = parent_rect.width - this.layout.margin.left - this.layout.margin.right;
+                    break;
+                case "dynamic":
+                    // Dynamic sizing will be handled by subclasses (e.g., button measures text)
+                    width = this.layout.width; // Use specified width for now
+                    break;
+            }
+
+            // 2. Calculate height based on height_mode
+            let height = 0;
+            switch (this.layout.height_mode) {
+                case "fixed":
+                    height = this.layout.height;
+                    break;
+                case "fill":
+                    height = parent_rect.height - this.layout.margin.top - this.layout.margin.bottom;
+                    break;
+                case "dynamic":
+                    // Dynamic sizing will be handled by subclasses
+                    height = this.layout.height; // Use specified height for now
+                    break;
+            }
+
+            // 3. Calculate X position based on anchor_x
+            let x = parent_rect.x;
+            switch (this.layout.anchor.x) {
+                case "left":
+                    x = parent_rect.x + this.layout.margin.left + this.layout.offset_x;
+                    break;
+                case "right":
+                    x = parent_rect.x + parent_rect.width - width - this.layout.margin.right - this.layout.offset_x;
+                    break;
+                case "center":
+                    x = parent_rect.x + (parent_rect.width - width) / 2 + this.layout.offset_x;
+                    break;
+            }
+
+            // 4. Calculate Y position based on anchor_y
+            let y = parent_rect.y;
+            switch (this.layout.anchor.y) {
+                case "top":
+                    y = parent_rect.y + this.layout.margin.top + this.layout.offset_y;
+                    break;
+                case "bottom":
+                    y = parent_rect.y + parent_rect.height - height - this.layout.margin.bottom - this.layout.offset_y;
+                    break;
+                case "center":
+                    y = parent_rect.y + (parent_rect.height - height) / 2 + this.layout.offset_y;
+                    break;
+            }
+
+            // 5. Update position rect
+            this.position.x = Math.round(x);
+            this.position.y = Math.round(y);
+            this.position.width = Math.round(width);
+            this.position.height = Math.round(height);
+
+            // 6. Calculate content rect (position minus padding)
+            this.content_rect.x = this.position.x + this.layout.padding.left;
+            this.content_rect.y = this.position.y + this.layout.padding.top;
+            this.content_rect.width = this.position.width - this.layout.padding.left - this.layout.padding.right;
+            this.content_rect.height = this.position.height - this.layout.padding.top - this.layout.padding.bottom;
+
+            // 7. Call resize hook for subclasses
+            this.on_layout_calculated();
+
+            // 8. Bubble resize to children
+            this.resize_children();
+
+        } catch (error) {
+            this.logger.error(`calculate_layout: ${error.message}`);
+        }
+    }
+
+    /**
+     * Hook for subclasses to override - called after layout is calculated
+     */
+    on_layout_calculated() {
+        // Subclasses can override this
+    }
+
+    /**
+     * Resize this component (triggered by parent)
+     * This is the external API that parent components call
+     */
+    resize(parent_rect) {
+        try {
+            this.calculate_layout(parent_rect);
+            this.emit('resize', { component: this, position: this.position });
+        } catch (error) {
+            this.logger.error(`resize: ${error.message}`);
+        }
+    }
+
+    /**
+     * Bubble resize event to all children
+     */
+    resize_children() {
+        try {
+            // Pass our content_rect as the parent_rect for children
+            // (so children are positioned relative to our content area, not including padding)
+            this.children.forEach(child => {
+                if (child && child.resize && typeof child.resize === 'function') {
+                    child.resize(this.content_rect);
+                }
+            });
+        } catch (error) {
+            this.logger.error(`resize_children: ${error.message}`);
+        }
     }
 
     /**
      * Add a child component
      */
     add_child(child) {
-        if (!this.children.includes(child)) {
-            this.children.push(child);
-            child.parent = this;
+        try {
+            if (child) {
+                this.children.push(child);
+                // Initial layout for the child
+                if (this.content_rect) {
+                    child.calculate_layout(this.content_rect);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`add_child: ${error.message}`);
         }
     }
 
@@ -5718,119 +6587,141 @@ class ui_component extends events {
      * Remove a child component
      */
     remove_child(child) {
-        const index = this.children.indexOf(child);
-        if (index !== -1) {
-            this.children.splice(index, 1);
-            child.parent = null;
-        }
-    }
-
-    /**
-     * Get absolute position by adding relative position to anchor position
-     * This is the core coordinate transform that makes everything work
-     */
-    get_absolute_position() {
-        let absolute_position = this.position.clone();
-        if (this.anchor_position) {
-            absolute_position.add(this.anchor_position);
-        }
-        return absolute_position;
-    }
-
-    /**
-     * Update anchor position (called by parent when it moves/resizes)
-     */
-    resize(anchor_position) {
-        this.anchor_position = anchor_position;
-
-        // Update all children with our absolute position as their anchor
-        const our_absolute = this.get_absolute_position();
-        for (let child of this.children) {
-            if (child.resize) {
-                child.resize(our_absolute);
+        try {
+            const index = this.children.indexOf(child);
+            if (index > -1) {
+                this.children.splice(index, 1);
             }
+        } catch (error) {
+            this.logger.error(`remove_child: ${error.message}`);
         }
     }
 
     /**
-     * Update this component and all children
-     * Override this in subclasses to add custom update logic
+     * Check if a point (in physical pixels) is inside this component
      */
-    update(deltaTime) {
-        if (!this.active) return;
+    is_inside(mouse_x, mouse_y) {
+        try {
+            if (!this.active || !this.position) return false;
 
-        // Update all children
-        for (let child of this.children) {
-            if (child.update) {
-                child.update(deltaTime);
+            // Transform mouse coordinates from physical to virtual space
+            const viewport = this.graphics.viewport;
+            const scale = viewport.scale;
+            const renderedWidth = viewport.virtual.width * scale.x;
+            const renderedHeight = viewport.virtual.height * scale.y;
+            const offsetX = (viewport.given.width - renderedWidth) / 2;
+            const offsetY = (viewport.given.height - renderedHeight) / 2;
+            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+
+            // Check collision in virtual coordinate space
+            return virtual_mouse_x >= this.position.x &&
+                   virtual_mouse_x <= this.position.x + this.position.width &&
+                   virtual_mouse_y >= this.position.y &&
+                   virtual_mouse_y <= this.position.y + this.position.height;
+        } catch (error) {
+            this.logger.error(`is_inside: ${error.message}`);
+            return false;
+        }
+    }
+
+    /**
+     * Update layout properties and recalculate
+     */
+    update_layout(new_config) {
+        try {
+            // Merge new config into existing layout
+            Object.assign(this.layout, new_config);
+
+            // Recalculate if we have a parent rect
+            if (this.parent_rect) {
+                this.calculate_layout(this.parent_rect);
             }
+        } catch (error) {
+            this.logger.error(`update_layout: ${error.message}`);
         }
-    }
-
-    /**
-     * Render this component and all children
-     * Override render_self() in subclasses for custom rendering
-     */
-    render() {
-        if (!this.visible || !this.active) return;
-
-        // Render this component first
-        this.render_self();
-
-        // Then render all children
-        for (let child of this.children) {
-            if (child.render) {
-                child.render();
-            }
-        }
-    }
-
-    /**
-     * Override this to render the component itself
-     * Default: do nothing
-     */
-    render_self() {
-        // Override in subclass
-    }
-
-    /**
-     * Set visibility
-     */
-    set_visible(visible) {
-        this.visible = visible;
     }
 
     /**
      * Set active state
      */
     set_active(active) {
-        this.active = active;
-        for (let child of this.children) {
-            if (child.set_active) {
-                child.set_active(active);
-            }
+        try {
+            this.active = active;
+            // Propagate to children
+            this.children.forEach(child => {
+                if (child && child.set_active && typeof child.set_active === 'function') {
+                    child.set_active(active);
+                }
+            });
+        } catch (error) {
+            this.logger.error(`set_active: ${error.message}`);
         }
+    }
+
+    /**
+     * Render - subclasses should override
+     */
+    render() {
+        // Subclasses override this
     }
 
     /**
      * Cleanup
      */
     delete() {
-        // Destroy all children
-        for (let child of this.children) {
-            if (child.delete) {
-                child.delete();
-            }
+        try {
+            this.active = false;
+
+            // Delete all children
+            this.children.forEach(child => {
+                if (child && child.delete && typeof child.delete === 'function') {
+                    child.delete();
+                }
+            });
+            this.children = [];
+
+            // Clear references
+            delete this.parent;
+            delete this.graphics;
+            delete this.ctx;
+            delete this.layout;
+            delete this.position;
+            delete this.parent_rect;
+            delete this.content_rect;
+        } catch (error) {
+            this.logger.error(`delete: ${error.message}`);
         }
-        this.children = [];
-        this.parent = null;
+    }
+
+    /**
+     * Helper: Sanitize paths for security
+     */
+    sanitize_path(path) {
+        if (typeof path !== 'string') {
+            throw new Error("Invalid path type");
+        }
+        return path.replace(/[<>"'`;]/g, '');
     }
 }
 
 
 class percentage_bar extends ui_component {
     constructor(parent, graphics, position, overlay, underlay) {
-        super(parent, graphics, position);
+        // Convert old rect-based position to layout_config
+        let layout_config = {
+            mode: "relative",
+            anchor_x: "left",
+            anchor_y: "top",
+            width_mode: "fixed",
+            height_mode: "fixed",
+            width: position.width,
+            height: position.height,
+            offset_x: position.x,
+            offset_y: position.y
+        };
+
+        super(parent, graphics, layout_config);
         this.underlay = underlay;
         this.overlay = overlay;
         this.percentage = 0;
@@ -5839,9 +6730,11 @@ class percentage_bar extends ui_component {
     /**
      * Render the percentage bar
      */
-    render_self() {
-        // Get current absolute position
-        const absolute_position = this.get_absolute_position();
+    render() {
+        if (!this.active) return;
+
+        // Use the position calculated by ui_component
+        const absolute_position = this.position;
 
         // Render underlay (fluid/progress)
         let percentage_width = parseInt((absolute_position.width * this.percentage) / 100);
@@ -5862,16 +6755,6 @@ class percentage_bar extends ui_component {
      */
     set_percentage(percentage) {
         this.percentage = percentage;
-    }
-
-    /**
-     * Backward compatibility - render with percentage parameter
-     */
-    render(percentage = null) {
-        if (percentage !== null) {
-            this.set_percentage(percentage);
-        }
-        super.render();
     }
 }
 
@@ -5927,18 +6810,25 @@ class cinematic_player extends modal {
             this.handle_cinematic_keys(data.kb);
         });
 
-        // Create seekbar
-        let seekbar_position = new rect(10, this.internal_rect.height - 30, this.internal_rect.width - 20, 20, "left", "top");
+        // Create seekbar - position will be recalculated on resize
+        // Start with relative dimensions (will be properly positioned in resize)
+        let seekbar_position = new rect(10, 0, 100, 20, "left", "top");
         this.seekbar = this.create_seekbar(
             seekbar_position,
             () => this.player ? this.player.get_progress() : null,
             (time) => { if (this.player) this.player.seek_to(time, true); }
         );
 
+        // Add seekbar to ui_components so it gets resized automatically
+        this.ui_components.push(this.seekbar);
+
         // Listen for seek end to resume audio
         this.seekbar.on('seek_end', () => {
             if (this.player) this.player.end_seek();
         });
+
+        // Initial positioning
+        this.position_seekbar();
 
         // Add click handler for pause/play
         this._bound_click_handler = this.handle_click.bind(this);
@@ -5952,6 +6842,39 @@ class cinematic_player extends modal {
         anchor_position.add(this.internal_rect);
 
         return new seekbar(this, this.graphics, position, anchor_position, get_progress_callback, seek_callback);
+    }
+
+    /**
+     * Position seekbar at bottom of dialog, anchored to left and right edges
+     * Called on initial setup and whenever the dialog resizes
+     */
+    position_seekbar() {
+        if (!this.seekbar || !this.internal_rect) return;
+
+        // Anchor seekbar to left and right edges with 10px margin, 30px from bottom
+        const margin_x = 10;
+        const margin_bottom = 30;
+        const seekbar_height = 20;
+
+        // Update the seekbar's position rect
+        if (this.seekbar._legacy_position) {
+            // Update legacy position directly
+            this.seekbar._legacy_position.x = margin_x;
+            this.seekbar._legacy_position.y = this.internal_rect.height - margin_bottom;
+            this.seekbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
+            this.seekbar._legacy_position.height = seekbar_height;
+
+            // Update the actual position rect
+            this.seekbar.position = this.seekbar._legacy_position.clone();
+        }
+    }
+
+    /**
+     * Override resize to reposition seekbar when dialog resizes
+     */
+    resize() {
+        super.resize();
+        this.position_seekbar();
     }
 
     handle_click(event) {
@@ -6292,7 +7215,8 @@ class scene {
             let object=objects[i];
             if(object.type=='images') {
                 let current_img = object.data.path;
-                this.graphics.sprites.render(current_img, null, position, 1, "fill");
+                // Use "cover" mode to always fill viewport (crop edges if needed)
+                this.graphics.sprites.render(current_img, null, position, 1, "cover");
             }
 
         }
@@ -6361,25 +7285,24 @@ class scene {
         for(let i=0;i<objects.length;i++ ) {
             let object=objects[i];
             if(object.type=='text') {
+                // Wrap text to fit within dialog width with padding
+                const text_padding = 40; // 20px padding on each side
+                const max_text_width = position.width - text_padding;
+                const wrapped_text = this.graphics.font.wrap_text(object.data.text, max_text_width, false);
 
                 let text_position=new rect(position.x+position.width/2,position.y+position.height/4,null,null,"center","center");
-                let bounds=this.graphics.font.get_bounds(object.data.text,false);
-                var line_count = (object.data.text.match(/\n/g) || []).length+1;
+                let bounds=this.graphics.font.get_bounds(wrapped_text,false);
+                var line_count = (wrapped_text.match(/\n/g) || []).length+1;
 
                 bounds.width=position.width;
                 bounds.height=this.graphics.font.mono_char_height*line_count+30;
                 bounds.x=position.x+0;
                 bounds.y=text_position.y-bounds.height/2;
-                let current_position=this.elapsed-object.timestamp;
-                let percentage=current_position/(object.data.duration*1000);
-                let brightness=0;
-                if(percentage<=0.5) brightness=.3+1.6*percentage;
-                else  brightness=1.7-1.6*(percentage);
-                this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, "+brightness+")");
+                this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, 0.8)");
 
-                this.graphics.font.draw_text(text_position, object.data.text,true,false);
+                this.graphics.font.draw_text(text_position, wrapped_text,true,false);
 
-                
+
             }
         }
 
@@ -6470,7 +7393,10 @@ class game extends modal{
 
         this.ui = new ui(this.ctx, this);
         this.level = new level(this.window_manager);
-        this.level.load('static/levels/level.json');
+
+        // Load level from ASSETS.json
+        const level_path = this.graphics.asset_loader.get('levels.level_data');
+        this.level.load(level_path);
         this.level.on("loaded",this.start_level.bind(this));
 
         // Create HUD bars as children of this modal
@@ -6540,6 +7466,30 @@ class game extends modal{
 
 
 
+
+    check_mine_proximity() {
+        if (!this.level.spaceship) return;
+
+        // Check all mines for proximity to player
+        for (let i = 0; i < this.level.npc.length; i++) {
+            const npc = this.level.npc[i];
+            if (npc.type !== "mine") continue;
+            if (!npc.armed) continue;
+
+            // Check if player is in proximity range
+            if (npc.check_proximity(this.level.spaceship)) {
+                console.log('[Game] Mine proximity triggered!');
+
+                // Damage player based on mine's explosion damage
+                const dx = this.level.spaceship.position.x - npc.position.x;
+                const dy = this.level.spaceship.position.y - npc.position.y;
+                this.level.spaceship.damage(npc.explosion_damage, dx, dy);
+
+                // Trigger mine explosion
+                npc.trigger_explosion();
+            }
+        }
+    }
 
     check_collisions() {
         let collisions = [];
@@ -6622,13 +7572,13 @@ class game extends modal{
                         // Apply physics-based collision response (bounce)
                         obj1.impact2(obj2);
 
-                        // Calculate impact position relative to ship center for shield effect
+                        // Calculate impact position relative to each object's center
                         const impactX = obj2.position.x - obj1.position.x;
                         const impactY = obj2.position.y - obj1.position.y;
                         obj1.damage(50, impactX, impactY);  // Reduced collision damage - ~40 collisions to kill with shields
                         obj2.damage(50);
-                        obj1.explosion();
-                        obj2.explosion();
+                        obj1.explosion(impactX, impactY);  // Explosion at impact point on ship
+                        obj2.explosion(-impactX, -impactY);  // Explosion at impact point on NPC
                     }
                     break;
 
@@ -6639,9 +7589,11 @@ class game extends modal{
                     }
                     // Player projectile hit NPC
                     console.log('[Game] Player projectile HIT:', obj2.type, 'Life:', obj2.life, '→', obj2.life - 25);
+                    const projImpactX = obj1.position.x - obj2.position.x;
+                    const projImpactY = obj1.position.y - obj2.position.y;
                     obj1.destroy();
                     obj2.damage(25);
-                    obj2.explosion();
+                    obj2.explosion(projImpactX, projImpactY);  // Explosion at projectile impact point
 
                     // Award score and check for kill
                     this.score += 10;
@@ -6664,11 +7616,11 @@ class game extends modal{
                     // (removed impact2 bounce)
 
                     // Calculate impact position relative to ship center
-                    const impactX = obj1.position.x - obj2.position.x;
-                    const impactY = obj1.position.y - obj2.position.y;
+                    const enemyImpactX = obj1.position.x - obj2.position.x;
+                    const enemyImpactY = obj1.position.y - obj2.position.y;
                     obj1.destroy();
-                    obj2.damage(250, impactX, impactY);  // Increased damage - should take ~20 hits to kill
-                    obj2.explosion();
+                    obj2.damage(250, enemyImpactX, enemyImpactY);  // Increased damage - should take ~20 hits to kill
+                    obj2.explosion(enemyImpactX, enemyImpactY);  // Explosion at enemy projectile impact point
                     break;
             }
         }
@@ -6772,6 +7724,9 @@ class game extends modal{
                 npc.update_motion(deltaTime);
             }
         }
+
+        // Check mine proximity (before collision detection)
+        this.check_mine_proximity();
 
         // Check collisions after all motion updates
         this.check_collisions();
@@ -7008,16 +7963,16 @@ class game extends modal{
             // In your game loop, check keysPressed object to determine actions
             if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
             if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
-            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(100);
-            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(100);
+            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(400);
+            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(400);
             if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
             if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
             if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
-            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(100);
-            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(100);
+            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(400);
+            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(400);
             if (kb.is_pressed('w') || kb.is_pressed('W'))
-            this.level.spaceship.accelerate(100);
-            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(100);
+            this.level.spaceship.accelerate(400);
+            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(400);
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();
@@ -7089,8 +8044,507 @@ class game extends modal{
         // Call parent delete
         super.delete();
     }
-}function dialog() {
-    document.getElementById('next_btn').addEventListener('click', function () {
+}// Excel Boss Mode - Much more realistic and functional!
+let currentSheet = 'Budget';
+let selectedCell = null;
+
+// Generate column and row headers on page load
+function generateHeaders() {
+    // Generate column headers (A-Z)
+    const colHeaders = document.getElementById('col-headers');
+    if (colHeaders) {
+        colHeaders.innerHTML = '';
+        for (let i = 0; i < 26; i++) {
+            const header = document.createElement('div');
+            header.className = 'excel-col-header';
+            header.textContent = String.fromCharCode(65 + i);
+            colHeaders.appendChild(header);
+        }
+    }
+
+    // Generate row headers (1-50)
+    const rowHeaders = document.getElementById('row-headers');
+    if (rowHeaders) {
+        // Keep the corner div
+        const corner = rowHeaders.querySelector('.excel-corner');
+        rowHeaders.innerHTML = '';
+        if (corner) {
+            rowHeaders.appendChild(corner);
+        } else {
+            const newCorner = document.createElement('div');
+            newCorner.className = 'excel-corner';
+            rowHeaders.appendChild(newCorner);
+        }
+
+        for (let i = 1; i <= 50; i++) {
+            const header = document.createElement('div');
+            header.className = 'excel-row-header';
+            header.textContent = i;
+            rowHeaders.appendChild(header);
+        }
+    }
+}
+
+// Ribbon tab functionality
+function handleRibbonTab(tabName) {
+    // Update active tab styling
+    document.querySelectorAll('.excel-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.textContent === tabName) {
+            tab.classList.add('active');
+        }
+    });
+
+    // You could add different ribbon content for each tab
+    // For now just show which tab is active in status bar
+    const statusLeft = document.querySelector('.status-left');
+    if (statusLeft) {
+        statusLeft.textContent = tabName + ' tab selected';
+    }
+}
+
+const sheetData = {
+    'Budget': [
+        ['FY 2024 Budget Analysis', '', '', '', '', '', '', '', 'Status:', 'In Review', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Department', 'Q1 Budget', 'Q1 Actual', 'Q1 Variance', 'Q2 Budget', 'Q2 Actual', 'Q2 Variance', 'YTD Budget', 'YTD Actual', 'YTD Variance', 'Remaining', 'Annual Budget', '', '', ''],
+        ['Engineering', '$450,000', '$438,250', '-$11,750', '$450,000', '$462,100', '$12,100', '$900,000', '$900,350', '$350', '$1,800,000', '$3,600,000', '', '', ''],
+        ['Sales', '$320,000', '$335,600', '$15,600', '$320,000', '$318,900', '-$1,100', '$640,000', '$654,500', '$14,500', '$1,280,000', '$2,560,000', '', '', ''],
+        ['Marketing', '$180,000', '$172,800', '-$7,200', '$180,000', '$185,300', '$5,300', '$360,000', '$358,100', '-$1,900', '$720,000', '$1,440,000', '', '', ''],
+        ['Operations', '$280,000', '$291,450', '$11,450', '$280,000', '$276,800', '-$3,200', '$560,000', '$568,250', '$8,250', '$1,120,000', '$2,240,000', '', '', ''],
+        ['HR', '$125,000', '$118,900', '-$6,100', '$125,000', '$128,750', '$3,750', '$250,000', '$247,650', '-$2,350', '$500,000', '$1,000,000', '', '', ''],
+        ['IT', '$220,000', '$215,600', '-$4,400', '$220,000', '$223,400', '$3,400', '$440,000', '$439,000', '-$1,000', '$880,000', '$1,760,000', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['TOTAL', '$1,575,000', '$1,572,600', '-$2,400', '$1,575,000', '$1,595,250', '$20,250', '$3,150,000', '$3,167,850', '$17,850', '$6,300,000', '$12,600,000', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Notes:', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['- Engineering over budget in Q2 due to contractor fees', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['- Sales under budget in Q2 - hiring delayed', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['- Marketing variance due to conference spending', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Next Review: 2024-07-15', '', '', '', '', 'Approved By:', 'CFO', '', '', '', '', '', '', '', ''],
+    ],
+    'Revenue': [
+        ['2024 Revenue Dashboard', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Product Line', 'Jan', 'Feb', 'Mar', 'Q1 Total', 'Apr', 'May', 'Jun', 'Q2 Total', 'YTD Total', 'Target', 'Variance', '% of Target', '', ''],
+        ['Cloud Services', '$285,400', '$298,750', '$312,900', '$897,050', '$325,600', '$338,200', '$352,100', '$1,015,900', '$1,912,950', '$1,800,000', '$112,950', '106.3%', '', ''],
+        ['Professional Services', '$142,800', '$138,600', '$155,300', '$436,700', '$148,900', '$162,400', '$158,800', '$470,100', '$906,800', '$950,000', '-$43,200', '95.5%', '', ''],
+        ['Licenses', '$96,500', '$102,300', '$98,700', '$297,500', '$105,800', '$99,200', '$108,400', '$313,400', '$610,900', '$580,000', '$30,900', '105.3%', '', ''],
+        ['Support & Maintenance', '$188,200', '$195,400', '$201,800', '$585,400', '$208,500', '$212,300', '$218,900', '$639,700', '$1,225,100', '$1,200,000', '$25,100', '102.1%', '', ''],
+        ['Training', '$45,300', '$48,900', '$52,600', '$146,800', '$55,200', '$58,800', '$61,500', '$175,500', '$322,300', '$350,000', '-$27,700', '92.1%', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['TOTAL REVENUE', '$758,200', '$783,950', '$821,300', '$2,363,450', '$844,000', '$870,900', '$899,700', '$2,614,600', '$4,978,050', '$4,880,000', '$98,050', '102.0%', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Growth Metrics', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['MoM Growth', '3.4%', '4.7%', '3.3%', '', '2.8%', '3.2%', '3.3%', '', '', '', '', '', '', ''],
+        ['YoY Growth', '18.5%', '19.2%', '21.3%', '', '22.8%', '24.1%', '23.7%', '', '', '', '', '', '', ''],
+    ],
+    'Headcount': [
+        ['Employee Headcount Report', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['As of: June 30, 2024', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Department', 'Jan 1', 'Hires', 'Terminations', 'Mar 31', 'Hires', 'Terminations', 'Jun 30', 'Budget', 'Variance', 'Open Req', '', '', '', ''],
+        ['Engineering', '145', '12', '-3', '154', '8', '-2', '160', '165', '-5', '8', '', '', '', ''],
+        ['Product', '32', '3', '-1', '34', '2', '0', '36', '38', '-2', '3', '', '', '', ''],
+        ['Sales', '85', '8', '-5', '88', '6', '-4', '90', '95', '-5', '12', '', '', '', ''],
+        ['Marketing', '28', '2', '-1', '29', '3', '-1', '31', '32', '-1', '2', '', '', '', ''],
+        ['Customer Success', '45', '5', '-2', '48', '4', '-3', '49', '52', '-3', '5', '', '', '', ''],
+        ['Operations', '38', '2', '-1', '39', '3', '-2', '40', '42', '-2', '3', '', '', '', ''],
+        ['Finance', '18', '1', '0', '19', '1', '0', '20', '20', '0', '1', '', '', '', ''],
+        ['HR', '12', '1', '0', '13', '0', '-1', '12', '12', '0', '0', '', '', '', ''],
+        ['IT', '22', '2', '0', '24', '1', '0', '25', '26', '-1', '2', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['TOTAL', '425', '36', '-13', '448', '28', '-13', '463', '482', '-19', '36', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['Turnover Rate', '3.1%', '', '', '2.9%', '', '', '2.8%', '', '', '', '', '', '', ''],
+        ['Time to Fill (days)', '42', '', '', '38', '', '', '35', '', '', '', '', '', '', ''],
+    ]
+};
+
+function generateExcelGrid(sheetName) {
+    const grid = document.getElementById('excel-grid');
+    if (!grid) return;
+
+    grid.innerHTML = ''; // Clear existing cells
+    const data = sheetData[sheetName] || sheetData['Budget'];
+
+    for (let row = 0; row < 50; row++) {
+        for (let col = 0; col < 26; col++) {
+            const cell = document.createElement('div');
+            cell.className = 'excel-cell';
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+
+            if (data[row] && data[row][col]) {
+                cell.textContent = data[row][col];
+
+                // Style header rows
+                if (row === 0) {
+                    cell.style.fontWeight = 'bold';
+                    cell.style.fontSize = '13px';
+                    cell.style.backgroundColor = '#e8f4f8';
+                }
+                // Style column headers (row 2 for most sheets)
+                if (row === 2 && data[row][col]) {
+                    cell.style.fontWeight = 'bold';
+                    cell.style.backgroundColor = '#d9e9f0';
+                    cell.style.borderBottom = '2px solid #217346';
+                }
+                // Style total rows
+                if (cell.textContent.toUpperCase().includes('TOTAL')) {
+                    cell.style.fontWeight = 'bold';
+                    cell.style.backgroundColor = '#f0f0f0';
+                    cell.style.borderTop = '2px solid #000';
+                }
+                // Style currency
+                if (cell.textContent.includes('$')) {
+                    cell.style.textAlign = 'right';
+                }
+                // Style percentages
+                if (cell.textContent.includes('%')) {
+                    cell.style.textAlign = 'right';
+                }
+                // Style formulas
+                if (cell.textContent.startsWith('=')) {
+                    cell.style.fontStyle = 'italic';
+                    cell.style.color = '#0066cc';
+                }
+            }
+
+            // Make cells clickable - use event delegation instead
+            cell.addEventListener('click', function(e) {
+                e.stopPropagation();
+                selectCell(this);
+            });
+
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function selectCell(cell) {
+    if (selectedCell) {
+        selectedCell.classList.remove('selected');
+    }
+    selectedCell = cell;
+    cell.classList.add('selected');
+
+    // Update formula bar
+    const colLetter = String.fromCharCode(65 + parseInt(cell.dataset.col));
+    const rowNumber = parseInt(cell.dataset.row) + 1;
+    document.querySelector('.formula-cell-ref').textContent = colLetter + rowNumber;
+    document.querySelector('.formula-input').textContent = cell.textContent || '';
+}
+
+function switchTab(tabName) {
+    currentSheet = tabName;
+
+    // Update tab styling
+    document.querySelectorAll('.excel-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // Update sheet tabs
+    document.querySelectorAll('.sheet-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.textContent === tabName) {
+            tab.classList.add('active');
+        }
+    });
+
+    // Regenerate grid
+    generateExcelGrid(tabName);
+}
+
+// Initialize boss mode when document is ready
+function initBossMode() {
+    generateHeaders();
+    generateExcelGrid('Budget');
+}
+// Title and tagline component - anchored to top of screen
+class title_screen extends modal {
+    constructor() {
+        super();
+        this.glow_phase = 0;  // For pulsing glow animation
+    }
+
+    layout() {
+        // No background, no buttons, no skin - just title and tagline
+        this.skin = false;
+        this.ok = false;
+        this.cancel = false;
+        this.closeButton = false;
+        this.no_close = true;  // Can't close this
+        this.always_active = true;  // Always stays active, even when other modals are added
+        this.active = true;
+
+        const vw = this.graphics.viewport.virtual.width;
+        const vh = this.graphics.viewport.virtual.height;
+
+        // Position at top of screen
+        const topMargin = 10;
+        const height = 200;  // Enough for title and tagline
+
+        this.position = new rect(0, topMargin, vw, height, "left", "top");
+        this.resize();
+
+        // Add title image
+        let title_width = Math.min(1024, vw * 0.6);
+        let title_height = title_width * (236 / 1024);  // Maintain aspect ratio
+        let title_x = vw / 2 - title_width / 2;
+        let title_y = 10;
+
+        this.title_image = this.add_image(new rect(title_x, title_y, title_width, title_height, "left", "top"), "title");
+    }
+
+    update_dimensions_for_orientation() {
+        // Just recalculate layout - no parent resize needed for title screen
+        this.recalculate_layout();
+    }
+
+    resize() {
+        // Just recalculate layout - no parent resize needed for title screen
+        this.recalculate_layout();
+    }
+
+    recalculate_layout() {
+        if (!this.graphics || !this.graphics.viewport) return;
+        if (!this.title_image || !this.title_image.position) return;
+
+        const vw = this.graphics.viewport.virtual.width;
+        const vh = this.graphics.viewport.virtual.height;
+        const topMargin = 10;
+        const height = 200;
+
+        // Update modal position to span full width
+        this.position.x = 0;
+        this.position.y = topMargin;
+        this.position.width = vw;
+        this.position.height = height;
+
+        // Recalculate title image position - ALWAYS centered with margins
+        const margin = 40; // Margin from screen edges
+        const maxWidth = vw - (margin * 2);
+        let title_width = Math.min(1024, vw * 0.6, maxWidth);
+        let title_height = title_width * (236 / 1024);
+        let title_x = vw / 2 - title_width / 2;
+
+        // Set absolute positions (not cumulative)
+        this.title_image.position.x = title_x;
+        this.title_image.position.y = 10;
+        this.title_image.position.width = title_width;
+        this.title_image.position.height = title_height;
+    }
+
+    render() {
+        if (!this.active) return;
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.title_image) return;
+
+        const ctx = this.graphics.ctx;
+        if (!ctx || typeof ctx.save !== 'function') return;
+
+        // Render title with glow
+        this.render_title_with_glow(this.title_image);
+
+        // Render tagline below title (only in landscape mode)
+        const isPortrait = this.graphics.viewport.isPortrait();
+        if (!isPortrait) {
+            this.render_tagline();
+        }
+    }
+
+    render_title_with_glow(image) {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+
+        // Update glow animation phase
+        this.glow_phase += 0.05;
+
+        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
+        const pulse = 25 + Math.sin(this.glow_phase) * 15;
+
+        ctx.save();
+
+        // Draw the title multiple times with increasing glow for stronger effect
+        // Layer 1: Strongest glow (underneath)
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+        ctx.shadowBlur = pulse * 2;
+        let image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 2: Medium glow
+        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
+        ctx.shadowBlur = pulse * 1.5;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 3: Soft glow
+        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
+        ctx.shadowBlur = pulse;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Final layer: No shadow (crisp title on top)
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        ctx.restore();
+
+        // Extra cleanup to ensure no shadow state leaks
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    render_tagline() {
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.title_image) return;
+
+        const ctx = this.graphics.ctx;
+        const vw = this.graphics.viewport.virtual.width;
+        const isPortrait = this.graphics.viewport.isPortrait();
+
+        // Calculate position below title
+        const title_bottom = this.title_image.position.y + this.title_image.position.height;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        const mainText = 'The Battle for Humanity\'s Jobs Has Begun.';
+        const subText1 = 'Command your ship. Defend the last human workforce.';
+        const subText2 = 'Destroy the machine overlords before they automate everything.';
+
+        // In landscape: position tagline to the right of the menu area
+        // In portrait: center the box below title
+        let boxX, boxY, textCenterX, boxWidth, boxHeight;
+        let mainFontSize, subFontSize;
+
+        if (isPortrait) {
+            // Portrait: use full width with margins
+            const margin = 20;
+            const availableWidth = vw - (margin * 2);
+
+            // Start with default sizes and scale down if needed
+            mainFontSize = 32;
+            subFontSize = 18;
+
+            // Measure and adjust
+            ctx.font = `bold ${mainFontSize}px monospace`;
+            let maxWidth = ctx.measureText(mainText).width;
+            ctx.font = `${subFontSize}px monospace`;
+            maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
+
+            // Scale down fonts if text is too wide
+            if (maxWidth > availableWidth - 40) {
+                const scale = (availableWidth - 40) / maxWidth;
+                mainFontSize = Math.floor(mainFontSize * scale);
+                subFontSize = Math.floor(subFontSize * scale);
+            }
+
+            boxWidth = availableWidth;
+            boxHeight = 125;
+            boxX = margin;
+            textCenterX = vw / 2;
+            boxY = title_bottom + 20;
+        } else {
+            // Landscape: fit in space to the right of menu
+            const menuRightEdge = 60 + 400;  // menu x + menu width
+            const marginFromMenu = 40;
+            const marginFromScreenEdge = 20;
+            const availableWidth = vw - menuRightEdge - marginFromMenu - marginFromScreenEdge;
+
+            // Start with default sizes and scale down if needed
+            mainFontSize = 32;
+            subFontSize = 18;
+
+            // Measure text with current font sizes
+            ctx.font = `bold ${mainFontSize}px monospace`;
+            let maxWidth = ctx.measureText(mainText).width;
+            ctx.font = `${subFontSize}px monospace`;
+            maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
+
+            const boxPadding = 20;
+            const neededWidth = maxWidth + boxPadding * 2;
+
+            // Scale down fonts if text doesn't fit
+            if (neededWidth > availableWidth) {
+                const scale = availableWidth / neededWidth;
+                mainFontSize = Math.max(16, Math.floor(mainFontSize * scale));
+                subFontSize = Math.max(12, Math.floor(subFontSize * scale));
+
+                // Recalculate width with new font sizes
+                ctx.font = `bold ${mainFontSize}px monospace`;
+                maxWidth = ctx.measureText(mainText).width;
+                ctx.font = `${subFontSize}px monospace`;
+                maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
+            }
+
+            boxWidth = Math.min(maxWidth + boxPadding * 2, availableWidth);
+            boxHeight = 125;
+            boxX = menuRightEdge + marginFromMenu;
+            textCenterX = boxX + boxWidth / 2;
+            boxY = title_bottom + 20;
+        }
+
+        // Draw semi-transparent background box for all text
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Optional: Add border for more definition
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Draw main text with glow
+        ctx.font = `bold ${mainFontSize}px monospace`;
+        ctx.fillStyle = '#FF6B00';
+        ctx.shadowColor = 'rgba(255, 107, 0, 0.8)';
+        ctx.shadowBlur = 15;
+        ctx.fillText(mainText, textCenterX, boxY + 35);
+
+        // Clear shadow for subtext
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Subtext lines - smaller, cyan colored
+        ctx.fillStyle = '#00FFFF';
+        ctx.font = `${subFontSize}px monospace`;
+        ctx.fillText(subText1, textCenterX, boxY + 65);
+        ctx.fillText(subText2, textCenterX, boxY + 90);
+
+        ctx.restore();
+    }
+
+    // Calculate the bottom position of this component (for menu positioning)
+    getBottomY() {
+        if (!this.title_image) return 210;  // Default
+
+        const title_bottom = this.title_image.position.y + this.title_image.position.height;
+        const isPortrait = this.graphics && this.graphics.viewport ? this.graphics.viewport.isPortrait() : false;
+
+        if (isPortrait) {
+            // In portrait, no tagline shown, so just add small padding
+            return title_bottom + 20;
+        } else {
+            // In landscape, tagline is to the side, so menu can start just below title
+            return title_bottom + 20;
+        }
+    }
+}
+function dialog() {
+    const nextBtn = document.getElementById('next_btn');
+    if (!nextBtn) return;
+
+    nextBtn.addEventListener('click', function () {
       // Handle OK button click event
       document.getElementById('intro').style.display = 'none';
       document.getElementById('game').style.display = 'block';
@@ -7099,7 +8553,10 @@ class game extends modal{
     });
 
     // To show the overlay
-    document.getElementById('underlay').style.display = 'flex';
+    const underlay = document.getElementById('underlay');
+    if (underlay) {
+      underlay.style.display = 'flex';
+    }
   }
   document.addEventListener('DOMContentLoaded', function () {
     dialog();

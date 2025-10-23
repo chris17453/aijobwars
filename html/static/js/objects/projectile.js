@@ -12,7 +12,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P3.png', 16, 4, 270);
+                this.set_image('projectile_p3', 16, 4, 270);
                 this.set_velocity_loss_off();
                 this.set_center(8, 8);
                 this.expire(5);
@@ -27,7 +27,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P1.png', 16, 4, 270);
+                this.set_image('projectile_p1', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -43,7 +43,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P2.png', 16, 4, 270);
+                this.set_image('projectile_p2', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -59,7 +59,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P3.png', 16, 4, 270);
+                this.set_image('projectile_p3', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -74,7 +74,7 @@ class Projectile extends game_object {
                     rotation,             // rotation
                     4,
                 );                        // rotation speed
-                this.set_image('static/projectiles/P4.png', 16, 4, 270);
+                this.set_image('projectile_p4', 16, 4, 270);
                 this.center.x = 8;
                 this.set_velocity_loss_off();
                 this.expire(5);
@@ -92,7 +92,7 @@ class Projectile extends game_object {
                     rotation,                      // rotation
                     4,
                 );                     // ropration speed
-                this.set_image('static/ships/Water Bolt.png', 16, 5, 270);
+                this.set_image('ship_water_bolt', 16, 5, 270);
                 this.set_velocity_loss_off();
                 this.center.x = 8;
                 this.center.y = 8;
@@ -106,7 +106,7 @@ class Projectile extends game_object {
                     rotation,                      // rotation
                     4,
                 );                     // ropration speed
-                this.set_image('static/ships/booster.png', 32, 4, 0);
+                this.set_image('ship_booster', 32, 4, 0);
                 this.set_velocity_loss_off();
                 this.center.x = 16;
                 this.center.y = 2;

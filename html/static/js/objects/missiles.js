@@ -6,7 +6,7 @@ class HeatSeekingMissile extends game_object {
         this.turningRate = 8; // Rate at which the missile can turn
         this.accelerationRate = 300; // Rate at which the missile accelerates
 
-        this.set_image('static/projectiles/P4.png', 16, 4, 270);
+        this.set_image('projectile_p4', 16, 4, 270);
         this.set_center(16, 16);
         this.set_velocity_loss_off();
         this.set_type("missile");

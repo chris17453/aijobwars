@@ -27,12 +27,7 @@ canvas {
     border: 0px;
 }
 
-@font-face {
-    font-family: 'profontwindowsregular';
-    src: url('../fonts/ProFontWindows-webfont.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-}
+
 
 #chatWindow {
     height: 200px;
@@ -53,15 +48,6 @@ canvas {
     box-sizing: border-box;
     max-height: calc(100vh - 20px);
     */
-}
-
-.img-thumbnail {
-    background-image: url('../avatars/avatar1.png');
-    width: 128px;
-    height: 128px;
-    background-size: contain;
-    /* Shrink the background image to fit the container */
-
 }
 
 
@@ -219,20 +205,11 @@ footer {
     font-size:medium;
 }
 
-#intro{
-    display:block;
-    height:100%;
-    background: url(../intro/bg2.png);
-    background-size: cover;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-position: center;
-
 }
 #game{
     display:none;
     height:100%;
-    background: repeating-linear-gradient(0deg, rgba(162, 255, 230, 0) 0px, rgba(170, 255, 230, 0) 2px, rgba(170, 255, 230, 0.1) 2px, rgba(170, 255, 230, 0.1) 4px), linear-gradient(to bottom, rgba(170, 255, 230, 0.05) 0%, rgba(170, 255, 230, 0.1) 100%);
+    background: repeating-linear-gradient(0deg, rgba(162, 255, 230, 0) 0px, rgba(170, 255, 230, 0) 2px, rgba(20, 131, 98, 0.1) 2px, rgba(170, 255, 230, 0.1) 4px), linear-gradient(to bottom, rgba(170, 255, 230, 0.05) 0%, rgba(170, 255, 230, 0.1) 100%);
 
 }
 #credits{

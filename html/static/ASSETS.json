@@ -1,0 +1,130 @@
+{
+  "package_version": "1.0.0",
+  "package_name": "default",
+  "description": "AI Job Wars default asset package",
+  "assets": {
+    "ui": {
+      "spritesheets": {
+        "ui1": "static/asset_packages/default/ui/spritesheets/UI1.png",
+        "ui4": "static/asset_packages/default/ui/spritesheets/UI4.png"
+      },
+      "backgrounds": {
+        "menu_landscape": "static/asset_packages/default/ui/spritesheets/landscape/menu.webp",
+        "credits_landscape": "static/asset_packages/default/ui/spritesheets/landscape/credits.webp",
+        "highscore_landscape": "static/asset_packages/default/ui/spritesheets/landscape/highscore.webp",
+        "prologue_landscape": "static/asset_packages/default/ui/spritesheets/landscape/prologue.webp",
+        "menu_portrait": "static/asset_packages/default/ui/spritesheets/portrait/menu.png",
+        "credits_portrait": "static/asset_packages/default/ui/spritesheets/portrait/credits.png",
+        "highscore_portrait": "static/asset_packages/default/ui/spritesheets/portrait/highscore.png",
+        "prologue_portrait": "static/asset_packages/default/ui/spritesheets/portrait/prologue.png"
+      }
+    },
+    "fonts": {
+      "blue": "static/asset_packages/default/fonts/obitron-blue.png",
+      "grey": "static/asset_packages/default/fonts/obitron-grey.png",
+      "red": "static/asset_packages/default/fonts/obitron-red.png"
+    },
+    "ships": {
+      "player": "static/asset_packages/default/ships/ship1.png",
+      "teams": "static/asset_packages/default/ships/teams.png",
+      "linkedin": "static/asset_packages/default/ships/linkedin.png",
+      "chatgpt": "static/asset_packages/default/ships/chatgpt.png",
+      "resume": "static/asset_packages/default/ships/resume.png",
+      "booster": "static/asset_packages/default/ships/booster.png",
+      "water_bolt": "static/asset_packages/default/ships/Water Bolt.png"
+    },
+    "projectiles": {
+      "arcane_bolt": "static/asset_packages/default/projectiles/Arcane Bolt.png",
+      "firebomb": "static/asset_packages/default/projectiles/Firebomb.png",
+      "p1": "static/asset_packages/default/projectiles/P1.png",
+      "p2": "static/asset_packages/default/projectiles/P2.png",
+      "p3": "static/asset_packages/default/projectiles/P3.png",
+      "p4": "static/asset_packages/default/projectiles/P4.png"
+    },
+    "debris": {
+      "email": "static/asset_packages/default/debris/email.png",
+      "pdf": "static/asset_packages/default/debris/pdf.png",
+      "phone": "static/asset_packages/default/debris/phone.png",
+      "webex": "static/asset_packages/default/debris/webex2.png"
+    },
+    "explosions": {
+      "sprite": "static/asset_packages/default/explosions/exp_9_128x128_35frames_strip35.png",
+      "audio": "static/asset_packages/default/explosions/sfx_exp_shortest_soft9.wav"
+    },
+    "blocks": {
+      "block": "static/asset_packages/default/blocks/block.png"
+    },
+    "scenes": {
+      "bg_stars": "static/asset_packages/default/scenes/bg_stars.png"
+    },
+    "title": {
+      "logo": "static/asset_packages/default/title/AI-JOB-WARS-3-24-2024.png"
+    },
+    "cinematics": {
+      "intro": {
+        "images": {
+          "frame1": "static/asset_packages/default/storyboard/intro/images/1.webp",
+          "frame2": "static/asset_packages/default/storyboard/intro/images/2.webp",
+          "frame3": "static/asset_packages/default/storyboard/intro/images/3.webp",
+          "frame4": "static/asset_packages/default/storyboard/intro/images/4.webp",
+          "frame5": "static/asset_packages/default/storyboard/intro/images/5.webp",
+          "frame6": "static/asset_packages/default/storyboard/intro/images/6.webp",
+          "frame7": "static/asset_packages/default/storyboard/intro/images/7.webp"
+        },
+        "audio": {
+          "track1": "static/asset_packages/default/storyboard/intro/tracks/track-1.mp3",
+          "track2": "static/asset_packages/default/storyboard/intro/tracks/track-2.mp3",
+          "track3": "static/asset_packages/default/storyboard/intro/tracks/track-3.mp3",
+          "track4": "static/asset_packages/default/storyboard/intro/tracks/track-4.mp3",
+          "track4_2": "static/asset_packages/default/storyboard/intro/tracks/track-4-2.mp3",
+          "track5": "static/asset_packages/default/storyboard/intro/tracks/track-5.mp3",
+          "track5_2": "static/asset_packages/default/storyboard/intro/tracks/track-5-2.mp3",
+          "track6": "static/asset_packages/default/storyboard/intro/tracks/track-6.mp3",
+          "track6_2": "static/asset_packages/default/storyboard/intro/tracks/track-6-2.mp3",
+          "track7": "static/asset_packages/default/storyboard/intro/tracks/track-7.mp3",
+          "track7_2": "static/asset_packages/default/storyboard/intro/tracks/track-7-2.mp3"
+        },
+        "data": "static/asset_packages/default/storyboard/intro/intro_scene.json"
+      },
+      "credits": {
+        "images": {
+          "frame1": "static/asset_packages/default/storyboard/credits/images/1.webp",
+          "frame2": "static/asset_packages/default/storyboard/credits/images/2.webp",
+          "frame3": "static/asset_packages/default/storyboard/credits/images/3.webp",
+          "frame4": "static/asset_packages/default/storyboard/credits/images/4.webp",
+          "frame5": "static/asset_packages/default/storyboard/credits/images/5.webp",
+          "frame6": "static/asset_packages/default/storyboard/credits/images/6.webp",
+          "frame7": "static/asset_packages/default/storyboard/credits/images/7.webp",
+          "frame8": "static/asset_packages/default/storyboard/credits/images/8.webp",
+          "frame9": "static/asset_packages/default/storyboard/credits/images/9.webp",
+          "frame10": "static/asset_packages/default/storyboard/credits/images/10.webp",
+          "frame11": "static/asset_packages/default/storyboard/credits/images/11.webp",
+          "frame12": "static/asset_packages/default/storyboard/credits/images/12.webp",
+          "frame13": "static/asset_packages/default/storyboard/credits/images/13.webp",
+          "frame14": "static/asset_packages/default/storyboard/credits/images/14.webp",
+          "frame15": "static/asset_packages/default/storyboard/credits/images/15.webp",
+          "frame16": "static/asset_packages/default/storyboard/credits/images/16.webp",
+          "frame17": "static/asset_packages/default/storyboard/credits/images/17.webp",
+          "frame18": "static/asset_packages/default/storyboard/credits/images/18.webp",
+          "frame19": "static/asset_packages/default/storyboard/credits/images/19.webp",
+          "frame20": "static/asset_packages/default/storyboard/credits/images/20.webp"
+        },
+        "audio": {
+          "music": "static/asset_packages/default/storyboard/credits/tracks/Code of Dreams-2.mp3"
+        },
+        "data": "static/asset_packages/default/storyboard/credits/credits.json"
+      }
+    },
+    "audio": {
+      "ship_static": "static/asset_packages/default/audio/ship/static.mp3",
+      "laser": "static/asset_packages/default/audio/projectiles/sfx_wpn_laser6.wav",
+      "missile": "static/asset_packages/default/audio/projectiles/sfx_weapon_singleshot13.wav"
+    },
+    "levels": {
+      "level_data": "static/asset_packages/default/levels/level.json"
+    },
+    "game_data": {
+      "highscores": "static/asset_packages/default/data/highscores.json"
+    }
+  }
+}

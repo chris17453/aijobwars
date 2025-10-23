@@ -20,7 +20,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     10);                     // ropration speed
-                this.set_image('static/debris/email.png');
+                this.set_image('debris_email');
                 this.set_type("email");
                 this.set_max_life(50);
                 let email_action = [
@@ -38,7 +38,7 @@ class Derbis extends game_object {
                     1,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/pdf.png');
+                this.set_image('debris_pdf');
                 this.set_type("pdf");
                 this.set_max_life(30);
                 let pdf_action = [
@@ -56,7 +56,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/phone.png');
+                this.set_image('debris_phone');
                 this.set_type("call");
                 this.set_max_life(40);
                 let call_action = [
@@ -72,7 +72,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     4);                     // ropration speed
-                this.set_image('static/debris/webex2.png');
+                this.set_image('debris_webex');
                 this.set_type("webex");
                 this.set_max_life(40);
                 this.action_list = default_action;
@@ -82,7 +82,7 @@ class Derbis extends game_object {
                     10000,                    // mass
                     0,                      // rotation
                     0);                     // ropration speed
-                this.set_image('static/blocks/block.png');
+                this.set_image('block');
                 this.set_type("block");
                 break;
 
@@ -91,7 +91,7 @@ class Derbis extends game_object {
                     3,                    // mass
                     0,                      // rotation
                     6);                     // ropration speed
-                this.set_image('static/ships/linkedin.png');
+                this.set_image('ship_linkedin');
                 this.set_type("linkedin");
                 this.set_max_life(60);
                 let linkedin_action = [
@@ -108,7 +108,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     8);                     // ropration speed
-                this.set_image('static/debris/webex2.png'); // Using webex as placeholder
+                this.set_image('debris_webex'); // Using webex as placeholder
                 this.set_type("zoom");
                 this.set_max_life(45);
                 let zoom_action = [
@@ -125,7 +125,7 @@ class Derbis extends game_object {
                     3,                    // mass
                     0,                      // rotation
                     5);                     // ropration speed
-                this.set_image('static/debris/email.png'); // Using email as placeholder
+                this.set_image('debris_email'); // Using email as placeholder
                 this.set_type("facebook");
                 this.set_max_life(55);
                 let facebook_action = [
@@ -141,7 +141,7 @@ class Derbis extends game_object {
                     2,                    // mass
                     0,                      // rotation
                     7);                     // ropration speed
-                this.set_image('static/debris/pdf.png'); // Using pdf as placeholder
+                this.set_image('debris_pdf'); // Using pdf as placeholder
                 this.set_type("reddit");
                 this.set_max_life(40);
                 let reddit_action = [

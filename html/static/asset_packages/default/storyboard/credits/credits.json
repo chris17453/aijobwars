@@ -1,0 +1,221 @@
+[
+  {
+    "slide": 1,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/1.webp",
+        "timestamp": 0,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/2.webp",
+        "timestamp": 6,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/3.webp",
+        "timestamp": 12,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/4.webp",
+        "timestamp": 18,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/5.webp",
+        "timestamp": 24,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/6.webp",
+        "timestamp": 30,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/7.webp",
+        "timestamp": 36,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/8.webp",
+        "timestamp": 42,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/9.webp",
+        "timestamp": 48,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/10.webp",
+        "timestamp": 54,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/11.webp",
+        "timestamp": 60,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/12.webp",
+        "timestamp": 66,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/13.webp",
+        "timestamp": 72,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/14.webp",
+        "timestamp": 78,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/15.webp",
+        "timestamp": 84,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/16.webp",
+        "timestamp": 90,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/17.webp",
+        "timestamp": 96,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/18.webp",
+        "timestamp": 102,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/19.webp",
+        "timestamp": 108,
+        "duration": 6
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/20.webp",
+        "timestamp": 114,
+        "duration": 0
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/credits/tracks/Code of Dreams-2.mp3",
+        "timestamp": 0,
+        "duration": 127
+      }
+    ],
+    "text": [
+      {
+        "duration": 6,
+        "timestamp": 0,
+        "text": "From the mind of \nChris Watkins\nA coder bold"
+      },
+      {
+        "duration": 3,
+        "timestamp": 6,
+        "text": "A game took shape\nA story told"
+      },
+      {
+        "duration": 5,
+        "timestamp": 9,
+        "text": "With his Threadripper running\nLinux, he took the helm"
+      },
+      {
+        "duration": 3,
+        "timestamp": 14,
+        "text": "Crafting a world \nfrom \nthe digital realm."
+      },
+      {
+        "duration": 3,
+        "timestamp": 17,
+        "text": "With lines of code\nHe built with glee"
+      },
+      {
+        "duration": 3,
+        "timestamp": 20,
+        "text": "A game from scratch\nWild and free"
+      },
+      {
+        "duration": 2.5,
+        "timestamp": 23.5,
+        "text": "No fame in mindn\nJust joy and play"
+      },
+      {
+        "duration": 3.5,
+        "timestamp": 27,
+        "text": "Chris, the coder\nPaved his own way"
+      },
+      {
+        "duration": 6,
+        "timestamp": 31,
+        "text": "Just him\nNobody else\nyea yea yea"
+      },
+      {
+        "duration": 3,
+        "timestamp": 38,
+        "text": "Characters danced and\nPixels flew"
+      },
+      {
+        "duration": 3,
+        "timestamp": 41,
+        "text": "In Chris's gamen\nDreams came true"
+      },
+      {
+        "duration": 3,
+        "timestamp": 44,
+        "text": "Unemployed but \nUndeterred, he delved"
+      },
+      {
+        "duration": 4,
+        "timestamp": 48,
+        "text": "Into the depths of code\nWhere wonders swelled"
+      },
+      {
+        "duration": 3,
+        "timestamp": 52,
+        "text": "His Threadripper hummed \nLinux shone bright"
+      },
+      {
+        "duration": 3,
+        "timestamp": 55,
+        "text": "Guiding his hands \nThrough the digital night"
+      },
+      {
+        "duration": 3,
+        "timestamp": 58,
+        "text": "No plans for glory\nJust passion's flame"
+      },
+      {
+        "duration": 6.51,
+        "timestamp": 61,
+        "text": "As Chris's creation\nBore his name.\nOK\nIt's called ai job wars"
+      },
+      {
+        "duration": 5,
+        "timestamp": 68,
+        "text": "From the depths\nOf his imagination\nIt arose"
+      },
+      {
+        "duration": 5,
+        "timestamp": 73,
+        "text": "A testament to \nthe power that \nCoding bestows"
+      },
+      {
+        "duration": 4,
+        "timestamp": 79,
+        "text": "Unemployed but \nFulfilled he \nStood tall"
+      },
+      {
+        "duration": 0,
+        "timestamp": 83,
+        "text": "For in his game\nHe found his all"
+      }
+    ]
+  }
+]

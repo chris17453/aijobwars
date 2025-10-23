@@ -36,7 +36,7 @@ class Ship extends game_object {
                 this.set_sound("lazer", 'static/audio/projectiles/sfx_wpn_laser6.wav')
                 this.set_sound("missile", 'static/audio/projectiles/sfx_weapon_singleshot13.wav')
             
-                this.set_image('static/ships/ship1.png');
+                this.set_image('ship_player');
                 this.set_center(64, 64);
                 this.booster = new Projectile(window_manager, +0, 100, 0, "booster");
                 this.thrusters.push(this.booster);
@@ -55,7 +55,7 @@ class Ship extends game_object {
                 //this.set_sound("accel", 'static/audio/ship/static.mp3')
                 //this.set_sound("decel", 'static/audio/ship/static.mp3')
                 //this.set_sound("lazer", 'static/audio/ship/static.mp3')
-                this.set_image('static/ships/teams.png',64,1,270);
+                this.set_image('ship_teams',64,1,270);
 
                 //this.set_image('static/projectiles/Arcane Bolt.png', 16, 5, 270);
                 this.set_rotation(270);

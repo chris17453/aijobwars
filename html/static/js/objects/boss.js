@@ -7,7 +7,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     4);                   // rotation speed
 
-                this.set_image('static/ships/chatgpt.png');
+                this.set_image('ship_chatgpt');
                 this.set_type("boss");
                 this.set_max_life(50000); // 10x player ship health (player has 5000)
                 this.set_center(200, 200); // Center point for 400x400
@@ -53,7 +53,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     4);                   // rotation speed
 
-                this.set_image('static/ships/resume.png');
+                this.set_image('ship_resume');
                 this.set_type("boss");
                 this.set_max_life(50000); // 10x player ship health (player has 5000)
                 this.set_center(200, 200); // Center point for 400x400
@@ -99,7 +99,7 @@ class Boss extends game_object {
                     0,                    // rotation
                     6);                   // rotation speed
 
-                this.set_image('static/ships/teams.png', 64, 1, 270); // Using teams ship as placeholder
+                this.set_image('ship_teams', 64, 1, 270); // Using teams ship as placeholder
                 this.set_type("boss");
                 this.set_max_life(500); // Much higher health
                 this.set_center(64, 64);
@@ -204,16 +204,31 @@ class Boss extends game_object {
 
         // Clamp boss to screen boundaries (prevent going off screen)
         const viewport = this.graphics.viewport.virtual;
-        const margin = this.width / 2; // Half boss width for center-based positioning
+        const marginX = this.width / 2; // Half boss width for center-based positioning
+        const marginY = this.height / 2; // Half boss height for center-based positioning
+
+        // Get current viewport Y boundaries in world coordinates
+        const viewportTop = this.graphics.viewport.world.y;
+        const viewportBottom = viewportTop + viewport.height;
 
         // Clamp X position (left/right boundaries)
-        if (this.position.x < margin) {
-            this.position.x = margin;
+        if (this.position.x < marginX) {
+            this.position.x = marginX;
             this.velocity.x = 0; // Stop horizontal movement
         }
-        if (this.position.x > viewport.width - margin) {
-            this.position.x = viewport.width - margin;
+        if (this.position.x > viewport.width - marginX) {
+            this.position.x = viewport.width - marginX;
             this.velocity.x = 0;
+        }
+
+        // Clamp Y position (top/bottom boundaries) - boss stays within viewport
+        if (this.position.y < viewportTop + marginY) {
+            this.position.y = viewportTop + marginY;
+            this.velocity.y = 0;
+        }
+        if (this.position.y > viewportBottom - marginY) {
+            this.position.y = viewportBottom - marginY;
+            this.velocity.y = 0;
         }
 
         if (this.laser_fire_control) {
@@ -248,6 +263,11 @@ class Boss extends game_object {
             // Scale to object size (400x400)
             let dest = new rect(-this.center.x, -this.center.y, this.width, this.height);
             this.graphics.sprites.render(this.img, src, dest, 1, 'none');
+
+            // Render health bar if recently damaged
+            if (this.show_health_bar && this.max_life > 0) {
+                this.render_health_bar();
+            }
 
             // Render explosions
             for(let i = 0; i < this.explosions.length; i++){

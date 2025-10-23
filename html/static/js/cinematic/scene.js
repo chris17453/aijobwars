@@ -208,7 +208,8 @@ class scene {
             let object=objects[i];
             if(object.type=='images') {
                 let current_img = object.data.path;
-                this.graphics.sprites.render(current_img, null, position, 1, "fill");
+                // Use "cover" mode to always fill viewport (crop edges if needed)
+                this.graphics.sprites.render(current_img, null, position, 1, "cover");
             }
 
         }
@@ -277,25 +278,24 @@ class scene {
         for(let i=0;i<objects.length;i++ ) {
             let object=objects[i];
             if(object.type=='text') {
+                // Wrap text to fit within dialog width with padding
+                const text_padding = 40; // 20px padding on each side
+                const max_text_width = position.width - text_padding;
+                const wrapped_text = this.graphics.font.wrap_text(object.data.text, max_text_width, false);
 
                 let text_position=new rect(position.x+position.width/2,position.y+position.height/4,null,null,"center","center");
-                let bounds=this.graphics.font.get_bounds(object.data.text,false);
-                var line_count = (object.data.text.match(/\n/g) || []).length+1;
+                let bounds=this.graphics.font.get_bounds(wrapped_text,false);
+                var line_count = (wrapped_text.match(/\n/g) || []).length+1;
 
                 bounds.width=position.width;
                 bounds.height=this.graphics.font.mono_char_height*line_count+30;
                 bounds.x=position.x+0;
                 bounds.y=text_position.y-bounds.height/2;
-                let current_position=this.elapsed-object.timestamp;
-                let percentage=current_position/(object.data.duration*1000);
-                let brightness=0;
-                if(percentage<=0.5) brightness=.3+1.6*percentage;
-                else  brightness=1.7-1.6*(percentage);
-                this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, "+brightness+")");
+                this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, 0.8)");
 
-                this.graphics.font.draw_text(text_position, object.data.text,true,false);
+                this.graphics.font.draw_text(text_position, wrapped_text,true,false);
 
-                
+
             }
         }
 
