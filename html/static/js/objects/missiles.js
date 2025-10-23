@@ -2,9 +2,9 @@ class HeatSeekingMissile extends game_object {
     constructor(window_manager, x=0, y=0, rotation=0) {
         super(window_manager, x, y, 32, 32, 100, rotation, 8);
         this.target = null; // Will be set to nearest enemy
-        this.maxSpeed = 300; // Maximum speed of the missile
-        this.turningRate = 5; // Rate at which the missile can turn
-        this.accelerationRate = 50; // Rate at which the missile accelerates
+        this.maxSpeed = 800; // Maximum speed of the missile
+        this.turningRate = 8; // Rate at which the missile can turn
+        this.accelerationRate = 300; // Rate at which the missile accelerates
 
         this.set_image('static/projectiles/P4.png', 16, 4, 270);
         this.set_center(16, 16);

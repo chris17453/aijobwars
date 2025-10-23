@@ -211,13 +211,13 @@ class game extends modal{
                         // Apply physics-based collision response (bounce)
                         obj1.impact2(obj2);
 
-                        // Calculate impact position relative to ship center for shield effect
+                        // Calculate impact position relative to each object's center
                         const impactX = obj2.position.x - obj1.position.x;
                         const impactY = obj2.position.y - obj1.position.y;
                         obj1.damage(50, impactX, impactY);  // Reduced collision damage - ~40 collisions to kill with shields
                         obj2.damage(50);
-                        obj1.explosion();
-                        obj2.explosion();
+                        obj1.explosion(impactX, impactY);  // Explosion at impact point on ship
+                        obj2.explosion(-impactX, -impactY);  // Explosion at impact point on NPC
                     }
                     break;
 
@@ -228,9 +228,11 @@ class game extends modal{
                     }
                     // Player projectile hit NPC
                     console.log('[Game] Player projectile HIT:', obj2.type, 'Life:', obj2.life, '→', obj2.life - 25);
+                    const projImpactX = obj1.position.x - obj2.position.x;
+                    const projImpactY = obj1.position.y - obj2.position.y;
                     obj1.destroy();
                     obj2.damage(25);
-                    obj2.explosion();
+                    obj2.explosion(projImpactX, projImpactY);  // Explosion at projectile impact point
 
                     // Award score and check for kill
                     this.score += 10;
@@ -253,11 +255,11 @@ class game extends modal{
                     // (removed impact2 bounce)
 
                     // Calculate impact position relative to ship center
-                    const impactX = obj1.position.x - obj2.position.x;
-                    const impactY = obj1.position.y - obj2.position.y;
+                    const enemyImpactX = obj1.position.x - obj2.position.x;
+                    const enemyImpactY = obj1.position.y - obj2.position.y;
                     obj1.destroy();
-                    obj2.damage(250, impactX, impactY);  // Increased damage - should take ~20 hits to kill
-                    obj2.explosion();
+                    obj2.damage(250, enemyImpactX, enemyImpactY);  // Increased damage - should take ~20 hits to kill
+                    obj2.explosion(enemyImpactX, enemyImpactY);  // Explosion at enemy projectile impact point
                     break;
             }
         }
@@ -600,16 +602,16 @@ class game extends modal{
             // In your game loop, check keysPressed object to determine actions
             if (kb.is_pressed('ArrowLeft')) this.level.spaceship.bank_left();
             if (kb.is_pressed('ArrowRight')) this.level.spaceship.bank_right();
-            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(100);
-            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(100);
+            if (kb.is_pressed('ArrowUp')) this.level.spaceship.accelerate(400);
+            if (kb.is_pressed('ArrowDown')) this.level.spaceship.decelerate(400);
             if (kb.is_pressed(' ')) this.level.spaceship.fire_lazer();
             if (kb.just_stopped(' ')) this.level.spaceship.stop_firing_lazer();
             if (kb.just_stopped('Enter')) this.level.spaceship.fire_missle(this.level.npc);
-            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(100);
-            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(100);
+            if (kb.is_pressed('a') || kb.is_pressed('A')) this.level.spaceship.strafe_left(400);
+            if (kb.is_pressed('d') || kb.is_pressed('D')) this.level.spaceship.strafe_right(400);
             if (kb.is_pressed('w') || kb.is_pressed('W'))
-            this.level.spaceship.accelerate(100);
-            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(100);
+            this.level.spaceship.accelerate(400);
+            if (kb.is_pressed('s') || kb.is_pressed('S')) this.level.spaceship.decelerate(400);
 
             if (kb.is_pressed('Shift')) this.level.spaceship.boost();
             if (kb.just_stopped('Shift')) this.level.spaceship.stop_boost();

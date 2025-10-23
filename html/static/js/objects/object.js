@@ -58,6 +58,11 @@ class game_object extends motion {
         this.collision_mask = null; // Pixel-perfect collision mask
         this.mask_bounds = null; // Tight bounding box from mask
 
+        // Health bar display
+        this.show_health_bar = false;
+        this.health_bar_time = 0;
+        this.health_bar_duration = 3000; // Show for 3 seconds after damage
+
         this.id=game_object.uuid_generator.next().value;
     }
 
@@ -90,6 +95,11 @@ class game_object extends motion {
         if (this.destroy_object) return;
 
         this.life -= damage;
+
+        // Show health bar when damaged
+        this.show_health_bar = true;
+        this.health_bar_time = Date.now();
+
         if (this.life <= 0) {
             this.life = 0;
             this.destroy();
@@ -162,21 +172,28 @@ class game_object extends motion {
 
     get_collision_mask() {
         // Wait for sprite to load, then get or create cached mask
-        setTimeout(() => {
+        const tryGetMask = () => {
             try {
                 const position = new rect(0, 0, this.width, this.height);
 
                 // Get cached mask from sprite (or generate if first time)
                 const maskData = this.graphics.sprites.get_or_create_collision_mask(this.img, position);
-                if (!maskData) return;
+                if (!maskData) {
+                    // Retry after another delay if sprite not ready
+                    setTimeout(tryGetMask, 100);
+                    return;
+                }
 
                 // Reference the cached mask (not a copy)
                 this.collision_mask = maskData.collision_mask;
                 this.mask_bounds = maskData.mask_bounds;
+                console.log(`[${this.type}] Collision mask loaded:`, this.img, 'bounds:', this.mask_bounds);
             } catch (error) {
                 console.error(`[${this.type}] Failed to get collision mask:`, error);
             }
-        }, 100); // Small delay to ensure sprite is loaded
+        };
+
+        setTimeout(tryGetMask, 100); // Small delay to ensure sprite is loaded
     }
 
     image_rotate(rotation) {
@@ -258,11 +275,19 @@ class game_object extends motion {
             this.image_frame %= this.image_frames;
         }
 
-        
-        for (let b = 0; b < this.explosions.length; b++) {
-            this.explosions[b].update_frame(deltaTime)
+        // Update health bar visibility
+        if (this.show_health_bar) {
+            const elapsed = Date.now() - this.health_bar_time;
+            if (elapsed > this.health_bar_duration) {
+                this.show_health_bar = false;
+            }
+        }
+
+        // Update explosions - iterate backwards to safely remove completed ones
+        for (let b = this.explosions.length - 1; b >= 0; b--) {
+            this.explosions[b].update_frame(deltaTime);
             if (this.explosions[b].loop_complete()) {
-                this.explosions.splice(b, 1); // Remove the projectile from the array
+                this.explosions.splice(b, 1);
             }
         }
 
@@ -339,9 +364,48 @@ class game_object extends motion {
         let dest = new rect(-this.center.x, -this.center.y, sourceWidth, sourceHeight);
         this.graphics.sprites.render(this.img, src, dest, 1, 'none');
 
+        // Render health bar if recently damaged
+        if (this.show_health_bar && this.max_life > 0) {
+            this.render_health_bar();
+        }
+
         for(let i = 0; i < this.explosions.length; i++){
             this.explosions[i].render();
         }
+    }
+
+    render_health_bar() {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+        const barWidth = this.width * 0.8; // 80% of object width
+        const barHeight = 6;
+        const barX = -barWidth / 2;
+        const barY = -this.center.y - 15; // Above the object
+
+        const healthPercent = this.life / this.max_life;
+
+        // Background (black)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Health (green to red gradient based on health)
+        let barColor;
+        if (healthPercent > 0.6) {
+            barColor = '#00FF00'; // Green
+        } else if (healthPercent > 0.3) {
+            barColor = '#FFFF00'; // Yellow
+        } else {
+            barColor = '#FF0000'; // Red
+        }
+
+        ctx.fillStyle = barColor;
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // Border (white)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
     }
     renderWithOverlay(overlayColor) {
         // Render the object normally
@@ -458,8 +522,14 @@ class game_object extends motion {
         return new Promise(resolve => setTimeout(resolve, frames * millisecondsPerFrame));
     }
 
-    explosion(){
-        let exp = new Explosion(this.window_manager, 0,0,this.play_sounds,this.volume);
+    explosion(offsetX = 0, offsetY = 0){
+        // Limit concurrent explosions to prevent visual stacking
+        if (this.explosions.length >= 5) {
+            // Remove oldest explosion to make room
+            this.explosions.shift();
+        }
+
+        let exp = new Explosion(this.window_manager, offsetX, offsetY, this.play_sounds, this.volume);
         this.explosions.push(exp);
     }
 

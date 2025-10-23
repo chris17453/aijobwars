@@ -39,8 +39,11 @@ class sprites extends events{
         this.add("bar-blue-fluid", "static/UI/UI4.png", 781, 939, 312,33);
         this.add("bar-orange-fluid", "static/UI/UI4.png", 1098, 939, 312,33);
         this.add("portal", "static/UI/UI4.png", 569, 763, 158,158);
-        
+
         this.add("menu","static/UI/menu.webp");
+        this.add("credits","static/UI/credits.webp");
+        this.add("highscore","static/UI/highscore.webp");
+        this.add("prologue","static/UI/prologue.webp");
         this.add("blue_font","static/fonts/obitron-blue.png");
         this.add("grey_font","static/fonts/obitron-grey.png");
         this.add("red_font","static/fonts/obitron-red.png");

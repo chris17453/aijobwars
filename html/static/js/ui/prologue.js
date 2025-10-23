@@ -1,6 +1,7 @@
 class prologue extends cinematic_player {
 
     layout() {
+        this.set_background("prologue");
         this.ok = false;
         this.cancel = false;
         this.closeButton = true;

@@ -6,10 +6,10 @@ class Ship extends game_object {
         super(window_manager, x, y, 128, 153,
             10,                   // mass (balanced for responsive movement and collision physics)
             0,                    // rotation
-            8);                   // rotation speed
+            1.5);                 // rotation speed - very fine aiming control
         
         this.boost_fire_control = new fire_control(1);
-        this.laser_fire_control = new fire_control(5);
+        this.laser_fire_control = new fire_control(2);  // Reduced from 5 to 2 - less heat per shot
         this.missile_fire_control = new fire_control(10);
         this.shield_fire_control = new fire_control(3, 2000, 2000); // Shield uses fire_control for auto decay/ramp
         this.thrusters = [];
@@ -95,7 +95,7 @@ class Ship extends game_object {
         // Boost applies continuous acceleration while held, not fire-rate limited
         if (!this.boost_fire_control.overheated) {
             this.booster.set_visible(true);
-            this.accelerate(200);  // Higher acceleration for boost
+            this.accelerate(600);  // Higher acceleration for boost
 
             // Heat up the boost system
             this.boost_fire_control.temprature += 0.5;  // Gradual heat buildup
@@ -202,14 +202,20 @@ class Ship extends game_object {
         if (this.laser_fire_control.can_fire()) {
             let lazer1 = this.get_relative_position(-60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer1.x, this.position.y + lazer1.y, this.rotation, this.bolt_type);
-            projectile.set_velocity(this.velocity);
-            projectile.accelerate(50);
+
+            // Set constant laser velocity - lasers don't accelerate
+            const laserSpeed = 1500;  // Very fast constant speed
+            const radians = this.rotation * Math.PI / 180;
+            projectile.velocity.x = Math.sin(radians) * laserSpeed;
+            projectile.velocity.y = -Math.cos(radians) * laserSpeed;
             this.projectiles.push(projectile);
 
             let lazer2 = this.get_relative_position(+60, -35)
             var projectile = new Projectile(this.window_manager,this.position.x + lazer2.x, this.position.y + lazer2.y, this.rotation, this.bolt_type);
-            projectile.set_velocity(this.velocity);
-            projectile.accelerate(50);
+
+            // Set constant laser velocity - lasers don't accelerate
+            projectile.velocity.x = Math.sin(radians) * laserSpeed;
+            projectile.velocity.y = -Math.cos(radians) * laserSpeed;
             this.projectiles.push(projectile);
             this.play("lazer");
 
@@ -231,9 +237,11 @@ class Ship extends game_object {
                 this.rotation
             );
 
-            // Set initial velocity to match ship
-            missile.set_velocity(this.velocity);
-            missile.accelerate(30);
+            // Give missile strong initial velocity in firing direction
+            const missileInitialSpeed = 600;  // Fast initial speed
+            const radians = this.rotation * Math.PI / 180;
+            missile.velocity.x = Math.sin(radians) * missileInitialSpeed;
+            missile.velocity.y = -Math.cos(radians) * missileInitialSpeed;
 
             // Find and set target
             if (npcs && npcs.length > 0) {

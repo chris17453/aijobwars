@@ -64,10 +64,8 @@ class Projectile extends game_object {
                 this.set_velocity_loss_off();
                 this.expire(5);
                 this.set_type("bolt");
-                actions = [
-                    { type: "accelerate", frames: 1, speed: 50 }
-                ];
-                this.action_list=actions;
+                // No action list - lasers move at constant velocity
+                this.action_list = null;
 
                 break;
             case 'bolt4':

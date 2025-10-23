@@ -1,5 +1,6 @@
 class high_scores extends modal{
     layout(){
+        this.set_background("highscore");
         this.active=true;
         this.ok=false;
         this.cancel=false;

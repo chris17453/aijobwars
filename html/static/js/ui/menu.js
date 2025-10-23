@@ -117,6 +117,9 @@ class menu extends modal{
         if (this.closeButton != null && typeof this.closeButton.render === "function") {
             this.closeButton.render();
         }
+
+        // Render tagline below title
+        this.render_tagline();
     }
 
     render_title_with_glow(image) {
@@ -166,6 +169,68 @@ class menu extends modal{
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
+    }
+
+    render_tagline() {
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.title_image) return;
+
+        const ctx = this.graphics.ctx;
+        const vw = this.graphics.viewport.virtual.width;
+
+        // Calculate position below title
+        const title_bottom = this.title_image.position.y + this.title_image.position.height;
+        const centerX = vw / 2;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // Measure all text to find widest line
+        ctx.font = 'bold 32px monospace';
+        const mainText = 'The Battle for Humanity\'s Jobs Has Begun.';
+        const mainMetrics = ctx.measureText(mainText);
+
+        ctx.font = '18px monospace';
+        const subText1 = 'Command your ship. Defend the last human workforce.';
+        const subText2 = 'Destroy the machine overlords before they automate everything.';
+        const sub1Metrics = ctx.measureText(subText1);
+        const sub2Metrics = ctx.measureText(subText2);
+
+        // Find widest text
+        const maxWidth = Math.max(mainMetrics.width, sub1Metrics.width, sub2Metrics.width);
+        const boxPadding = 20;
+        const boxWidth = maxWidth + boxPadding * 2;
+        const boxHeight = 125;  // Increased for more vertical padding
+        const boxX = centerX - boxWidth / 2;
+        const boxY = title_bottom + 20;
+
+        // Draw semi-transparent background box for all text
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Optional: Add border for more definition
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Draw main text with glow - more padding from top
+        ctx.font = 'bold 32px monospace';
+        ctx.fillStyle = '#FF6B00';
+        ctx.shadowColor = 'rgba(255, 107, 0, 0.8)';
+        ctx.shadowBlur = 15;
+        ctx.fillText(mainText, centerX, title_bottom + 55);
+
+        // Clear shadow for subtext
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Subtext lines - smaller, cyan colored
+        ctx.fillStyle = '#00FFFF';
+        ctx.font = '18px monospace';
+        ctx.fillText(subText1, centerX, title_bottom + 85);
+        ctx.fillText(subText2, centerX, title_bottom + 110);
+
+        ctx.restore();
     }
 
     show_help() {

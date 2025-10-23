@@ -1,6 +1,7 @@
 class credits extends cinematic_player {
 
     layout() {
+        this.set_background("credits");
         this.active = true;
         this.ok = false;
         this.cancel = false;

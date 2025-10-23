@@ -13,9 +13,9 @@ class fire_control {
         this.overheated_cooldown_start=0;
    
         //internal
-        this.max_rps=10;
-        this.rps_min=1;
-        this.rps=10;
+        this.max_rps=20;  // Increased from 10 to 20 - fire twice as fast
+        this.rps_min=5;   // Increased minimum from 1 to 5
+        this.rps=20;
         this.temprature=0;
         
         this.temp_cycle=temp_cycle;
@@ -64,7 +64,7 @@ class fire_control {
             return false;
         }
         if(this.is_firing==false) {
-            this.temprature-=2;  // Refill at 2x the decay rate
+            this.temprature-=5;  // Increased from 2 to 5 - faster cooldown
             this.rps=(this.max_rps*this.get_cooldown_percentage())/100;
             if(this.temprature<0) this.temprature=0;
         }
