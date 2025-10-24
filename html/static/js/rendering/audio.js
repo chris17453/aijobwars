@@ -2,6 +2,7 @@ class audio_manager {
     constructor(logger) {
         this.audioBuffers = new Map(); // Decoded audio buffers
         this.audioSources = new Map(); // Currently playing sources
+        this.audioStates = new Map(); // Track loading state: 'loading'|'ready'|'error'
         this.playSounds = true;
         this.defaultVolume = 0.4;
         this.logger = logger || console;
@@ -28,16 +29,27 @@ class audio_manager {
             if (audioPath === null) audioPath = key;
             audioPath = this.sanitize_path(audioPath);
 
+            // If already loaded or loading, return existing promise
+            if (this.audioBuffers.has(key)) {
+                return this.audioBuffers.get(key);
+            }
+
+            // Mark as loading
+            this.audioStates.set(key, 'loading');
+
             // Fetch and decode audio buffer
             const response = await fetch(audioPath);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-            // Store the decoded buffer
+            // Store the decoded buffer and mark as ready
             this.audioBuffers.set(key, audioBuffer);
+            this.audioStates.set(key, 'ready');
 
             return audioBuffer;
         } catch (error) {
+            // Mark as error state
+            this.audioStates.set(key, 'error');
             console.error(`add(${key}): ${error.message}`);
             throw error;
         }
@@ -207,5 +219,38 @@ class audio_manager {
         } catch (error) {
             console.error(`set_master_volume: ${error.message}`);
         }
+    }
+
+    isReady(key) {
+        return this.audioStates.get(key) === 'ready';
+    }
+
+    async waitForAudio(key) {
+        // If already ready, return immediately
+        if (this.isReady(key)) {
+            return Promise.resolve();
+        }
+
+        // If in error state, reject
+        if (this.audioStates.get(key) === 'error') {
+            return Promise.reject(new Error(`Audio ${key} failed to load`));
+        }
+
+        // Wait for state to change to 'ready' or 'error'
+        return new Promise((resolve, reject) => {
+            const checkState = () => {
+                const state = this.audioStates.get(key);
+
+                if (state === 'ready') {
+                    resolve();
+                } else if (state === 'error') {
+                    reject(new Error(`Audio ${key} failed to load`));
+                } else {
+                    // Still loading, check again next frame
+                    requestAnimationFrame(checkState);
+                }
+            };
+            checkState();
+        });
     }
 }

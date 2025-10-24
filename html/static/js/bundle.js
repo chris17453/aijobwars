@@ -556,6 +556,7 @@ class key_states {
     constructor(logger) {
         this.audioBuffers = new Map(); // Decoded audio buffers
         this.audioSources = new Map(); // Currently playing sources
+        this.audioStates = new Map(); // Track loading state: 'loading'|'ready'|'error'
         this.playSounds = true;
         this.defaultVolume = 0.4;
         this.logger = logger || console;
@@ -582,16 +583,27 @@ class key_states {
             if (audioPath === null) audioPath = key;
             audioPath = this.sanitize_path(audioPath);
 
+            // If already loaded or loading, return existing promise
+            if (this.audioBuffers.has(key)) {
+                return this.audioBuffers.get(key);
+            }
+
+            // Mark as loading
+            this.audioStates.set(key, 'loading');
+
             // Fetch and decode audio buffer
             const response = await fetch(audioPath);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-            // Store the decoded buffer
+            // Store the decoded buffer and mark as ready
             this.audioBuffers.set(key, audioBuffer);
+            this.audioStates.set(key, 'ready');
 
             return audioBuffer;
         } catch (error) {
+            // Mark as error state
+            this.audioStates.set(key, 'error');
             console.error(`add(${key}): ${error.message}`);
             throw error;
         }
@@ -761,6 +773,39 @@ class key_states {
         } catch (error) {
             console.error(`set_master_volume: ${error.message}`);
         }
+    }
+
+    isReady(key) {
+        return this.audioStates.get(key) === 'ready';
+    }
+
+    async waitForAudio(key) {
+        // If already ready, return immediately
+        if (this.isReady(key)) {
+            return Promise.resolve();
+        }
+
+        // If in error state, reject
+        if (this.audioStates.get(key) === 'error') {
+            return Promise.reject(new Error(`Audio ${key} failed to load`));
+        }
+
+        // Wait for state to change to 'ready' or 'error'
+        return new Promise((resolve, reject) => {
+            const checkState = () => {
+                const state = this.audioStates.get(key);
+
+                if (state === 'ready') {
+                    resolve();
+                } else if (state === 'error') {
+                    reject(new Error(`Audio ${key} failed to load`));
+                } else {
+                    // Still loading, check again next frame
+                    requestAnimationFrame(checkState);
+                }
+            };
+            checkState();
+        });
     }
 }
 class sprites extends events{
@@ -6890,6 +6935,7 @@ class level extends events{
         this.is_seeking = false; // Prevent audio from playing during seek
         this._seek_timeout = null;
         this.currently_playing_audio = new Set(); // Track which audio files are playing
+        this.pending_audio = new Map(); // Track audio waiting to load: path -> true
         this.load_scene_data(this.scene_url);
     }
 
@@ -7016,6 +7062,7 @@ class level extends events{
             // Seek complete: stop all audio and allow it to restart at new position
             this.stop_all_audio();
             this.currently_playing_audio.clear();
+            this.pending_audio.clear(); // Clear pending audio on seek
             this.is_seeking = false;
         }
     }
@@ -7046,6 +7093,7 @@ class level extends events{
             this.manual_time_offset = this.elapsed;
             this.stop_all_audio();
             this.currently_playing_audio.clear();
+            this.pending_audio.clear(); // Clear pending audio on pause
         } else {
             // Resume from stored time
             this.start_time = Date.now() - this.manual_time_offset;
@@ -7108,7 +7156,7 @@ class level extends events{
 
             // Start audio that should be playing but isn't
             for (let audio_path of should_be_playing) {
-                if (!this.currently_playing_audio.has(audio_path)) {
+                if (!this.currently_playing_audio.has(audio_path) && !this.pending_audio.has(audio_path)) {
                     // Find ALL instances of this audio in the timeline to get the one that matches current time
                     let matching_audio = null;
                     let current_elapsed_seconds = this.elapsed / 1000;
@@ -7140,9 +7188,39 @@ class level extends events{
 
                         // Only play with offset if we're past the start and within duration
                         if (offset_in_audio >= 0 && offset_in_audio <= matching_audio.duration) {
-                            // Add to Set BEFORE playing to prevent duplicate calls on subsequent frames
-                            this.currently_playing_audio.add(audio_path);
-                            this.audio_manager.play(audio_path, offset_in_audio);
+                            // Check if audio is ready to play
+                            if (this.audio_manager.isReady(audio_path)) {
+                                // Audio is ready, play immediately
+                                this.currently_playing_audio.add(audio_path);
+                                this.audio_manager.play(audio_path, offset_in_audio);
+                            } else {
+                                // Audio not ready yet, mark as pending and wait for it
+                                this.pending_audio.set(audio_path, true);
+
+                                // Wait for audio to load, then play
+                                this.audio_manager.waitForAudio(audio_path).then(() => {
+                                    // Only play if still should be playing and not paused/seeking
+                                    if (this.pending_audio.has(audio_path) && !this.paused && !this.is_seeking) {
+                                        // Recalculate offset based on current time
+                                        let current_time_seconds = this.elapsed / 1000;
+                                        let new_offset = current_time_seconds - matching_audio.timestamp;
+
+                                        // Only play if we're still within the audio's duration window
+                                        if (new_offset >= 0 && new_offset <= matching_audio.duration) {
+                                            this.currently_playing_audio.add(audio_path);
+                                            this.audio_manager.play(audio_path, new_offset);
+                                        }
+                                        this.pending_audio.delete(audio_path);
+                                    } else {
+                                        // No longer should be playing, just remove from pending
+                                        this.pending_audio.delete(audio_path);
+                                    }
+                                }).catch((error) => {
+                                    // Audio failed to load, remove from pending
+                                    console.warn(`Failed to load audio ${audio_path}:`, error);
+                                    this.pending_audio.delete(audio_path);
+                                });
+                            }
                         }
                     }
                 }
@@ -7220,6 +7298,7 @@ class level extends events{
         // Stop all audio playback
         this.stop_all_audio();
         this.currently_playing_audio.clear();
+        this.pending_audio.clear(); // Clear pending audio on close
     }
 }
 class help extends modal{
