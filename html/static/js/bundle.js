@@ -6935,7 +6935,6 @@ class level extends events{
         this.is_seeking = false; // Prevent audio from playing during seek
         this._seek_timeout = null;
         this.currently_playing_audio = new Set(); // Track which audio files are playing
-        this.pending_audio = new Map(); // Track audio waiting to load: path -> true
         this.load_scene_data(this.scene_url);
     }
 
@@ -6967,23 +6966,26 @@ class level extends events{
             });
         this.scene_data=data;
 
-        // Load all slides (async audio loading)
+        // Load all slides (async audio loading) - but don't wait yet
         const loadPromises = [];
         for(let i=0;i<this.scene_data.length;i++){
             loadPromises.push(this.load_slide(this.scene_data[i]));
         }
 
-        // Wait for all audio to finish loading
-        await Promise.all(loadPromises);
-
-        // Wait for sprites to load, then start playing
-        if (this.graphics.sprites.loaded) {
-            // Sprites already loaded, start immediately
-            this.play_scene();
-        } else {
-            // Wait for sprites to load
-            this.graphics.sprites.on("complete", this.play_scene.bind(this));
+        // Wait for sprites to load first
+        if (!this.graphics.sprites.loaded) {
+            await new Promise(resolve => {
+                this.graphics.sprites.on("complete", resolve);
+            });
         }
+
+        // Now wait for ALL audio to finish loading before starting playback
+        console.log('[Scene] Waiting for all audio to load...');
+        await Promise.all(loadPromises);
+        console.log('[Scene] All audio loaded, starting playback');
+
+        // Audio is ready, now safe to start playing
+        this.play_scene();
     }
 
     async play_scene() {
@@ -7062,7 +7064,6 @@ class level extends events{
             // Seek complete: stop all audio and allow it to restart at new position
             this.stop_all_audio();
             this.currently_playing_audio.clear();
-            this.pending_audio.clear(); // Clear pending audio on seek
             this.is_seeking = false;
         }
     }
@@ -7093,7 +7094,6 @@ class level extends events{
             this.manual_time_offset = this.elapsed;
             this.stop_all_audio();
             this.currently_playing_audio.clear();
-            this.pending_audio.clear(); // Clear pending audio on pause
         } else {
             // Resume from stored time
             this.start_time = Date.now() - this.manual_time_offset;
@@ -7156,7 +7156,7 @@ class level extends events{
 
             // Start audio that should be playing but isn't
             for (let audio_path of should_be_playing) {
-                if (!this.currently_playing_audio.has(audio_path) && !this.pending_audio.has(audio_path)) {
+                if (!this.currently_playing_audio.has(audio_path)) {
                     // Find ALL instances of this audio in the timeline to get the one that matches current time
                     let matching_audio = null;
                     let current_elapsed_seconds = this.elapsed / 1000;
@@ -7188,39 +7188,9 @@ class level extends events{
 
                         // Only play with offset if we're past the start and within duration
                         if (offset_in_audio >= 0 && offset_in_audio <= matching_audio.duration) {
-                            // Check if audio is ready to play
-                            if (this.audio_manager.isReady(audio_path)) {
-                                // Audio is ready, play immediately
-                                this.currently_playing_audio.add(audio_path);
-                                this.audio_manager.play(audio_path, offset_in_audio);
-                            } else {
-                                // Audio not ready yet, mark as pending and wait for it
-                                this.pending_audio.set(audio_path, true);
-
-                                // Wait for audio to load, then play
-                                this.audio_manager.waitForAudio(audio_path).then(() => {
-                                    // Only play if still should be playing and not paused/seeking
-                                    if (this.pending_audio.has(audio_path) && !this.paused && !this.is_seeking) {
-                                        // Recalculate offset based on current time
-                                        let current_time_seconds = this.elapsed / 1000;
-                                        let new_offset = current_time_seconds - matching_audio.timestamp;
-
-                                        // Only play if we're still within the audio's duration window
-                                        if (new_offset >= 0 && new_offset <= matching_audio.duration) {
-                                            this.currently_playing_audio.add(audio_path);
-                                            this.audio_manager.play(audio_path, new_offset);
-                                        }
-                                        this.pending_audio.delete(audio_path);
-                                    } else {
-                                        // No longer should be playing, just remove from pending
-                                        this.pending_audio.delete(audio_path);
-                                    }
-                                }).catch((error) => {
-                                    // Audio failed to load, remove from pending
-                                    console.warn(`Failed to load audio ${audio_path}:`, error);
-                                    this.pending_audio.delete(audio_path);
-                                });
-                            }
+                            // Audio should be preloaded - play immediately
+                            this.currently_playing_audio.add(audio_path);
+                            this.audio_manager.play(audio_path, offset_in_audio);
                         }
                     }
                 }
@@ -7298,7 +7268,6 @@ class level extends events{
         // Stop all audio playback
         this.stop_all_audio();
         this.currently_playing_audio.clear();
-        this.pending_audio.clear(); // Clear pending audio on close
     }
 }
 class help extends modal{
