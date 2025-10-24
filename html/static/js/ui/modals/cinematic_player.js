@@ -68,10 +68,14 @@ class cinematic_player extends modal {
     position_video_scrollbar() {
         if (!this.video_scrollbar || !this.internal_rect) return;
 
+        // Scale scrollbar thickness based on orientation (match vertical scrollbar scaling)
+        const isPortrait = this.graphics.viewport.isPortrait();
+        const fontScale = isPortrait ? 2 : 1;
+        const scrollbar_height = 31 * fontScale;  // Same scaling as vertical scrollbar width
+
         // Anchor scrollbar to left and right edges with 10px margin, 30px from bottom
         const margin_x = 10;
         const margin_bottom = 30;
-        const scrollbar_height = 20;
 
         // Update the video scrollbar's position rect
         if (this.video_scrollbar._legacy_position) {

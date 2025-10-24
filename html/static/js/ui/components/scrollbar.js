@@ -140,23 +140,23 @@ class scrollbar extends ui_component {
             const { current, max } = value_data;
             if (typeof current !== 'number' || typeof max !== 'number' || max <= 0) return;
 
-            // Calculate absolute position
+            // Calculate absolute position (floor to pixel boundaries for crisp rendering)
             let scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height;
 
             if (this._legacy_anchor_position) {
                 // Legacy mode: add anchor position
                 let relative_position = this.position.clone();
                 relative_position.add(this._legacy_anchor_position);
-                scrollbar_x = relative_position.x;
-                scrollbar_y = relative_position.y;
-                scrollbar_width = this.position.width;
-                scrollbar_height = this.position.height;
+                scrollbar_x = Math.floor(relative_position.x);
+                scrollbar_y = Math.floor(relative_position.y);
+                scrollbar_width = Math.floor(this.position.width);
+                scrollbar_height = Math.floor(this.position.height);
             } else {
                 // New mode: position is already absolute
-                scrollbar_x = this.position.x;
-                scrollbar_y = this.position.y;
-                scrollbar_width = this.position.width;
-                scrollbar_height = this.position.height;
+                scrollbar_x = Math.floor(this.position.x);
+                scrollbar_y = Math.floor(this.position.y);
+                scrollbar_width = Math.floor(this.position.width);
+                scrollbar_height = Math.floor(this.position.height);
             }
 
             const ctx = this.graphics.ctx;
@@ -164,90 +164,93 @@ class scrollbar extends ui_component {
 
             // Button and thumb dimensions scaled to scrollbar size
             // Original sprite dimensions: up=31x32, down=31x31, thumb=31x53
-            const scale_factor = scrollbar_width / 31;
+            // For vertical: scale based on width (thickness)
+            // For horizontal: scale based on height (thickness)
+            const scale_factor = is_horizontal ? (scrollbar_height / 31) : (scrollbar_width / 31);
             const button_up_height = Math.round(32 * scale_factor);
             const button_down_height = Math.round(31 * scale_factor);
             const thumb_size = Math.round(53 * scale_factor);
-            const track_padding = Math.round(5 * scale_factor);  // Scale padding with scrollbar size
+            const track_padding = 0;  // No gap between buttons and track
 
             if (is_horizontal) {
-                // HORIZONTAL scrollbar
+                // HORIZONTAL scrollbar (all positions floored to pixel boundaries)
                 // Left button - anchored to LEFT (using up button rotated)
                 const left_button_x = scrollbar_x;
                 this.button_start_rect = new rect(left_button_x, scrollbar_y, button_up_height, scrollbar_height);
 
                 // Right button - anchored to RIGHT (using down button rotated)
-                const right_button_x = scrollbar_x + scrollbar_width - button_down_height;
+                const right_button_x = Math.floor(scrollbar_x + scrollbar_width - button_down_height);
                 this.button_end_rect = new rect(right_button_x, scrollbar_y, button_down_height, scrollbar_height);
 
                 // Track area - BETWEEN the two buttons (with padding to prevent 9-slice overlap)
-                const track_x = left_button_x + button_up_height + track_padding;
-                const track_width = right_button_x - track_x - track_padding;
+                const track_x = Math.floor(left_button_x + button_up_height + track_padding);
+                const track_width = Math.floor(right_button_x - track_x - track_padding);
                 this.track_rect = new rect(track_x, scrollbar_y, track_width, scrollbar_height);
 
-                // Calculate thumb position (fixed size)
-                const max_thumb_x = track_x + track_width - thumb_size;
-                const thumb_x = Math.min(max_thumb_x, track_x + ((current / max) * (track_width - thumb_size)));
-                this.thumb_rect = new rect(thumb_x, scrollbar_y, thumb_size, scrollbar_height);
+                // Calculate thumb position (fixed size - for horizontal, use scrollbar_height as thumb width)
+                const horizontal_thumb_width = scrollbar_height;  // Match the thickness
+                const max_thumb_x = track_x + track_width - horizontal_thumb_width;
+                const thumb_x = Math.floor(Math.min(max_thumb_x, track_x + ((current / max) * (track_width - horizontal_thumb_width))));
+                this.thumb_rect = new rect(thumb_x, scrollbar_y, horizontal_thumb_width, scrollbar_height);
 
                 // Draw track (9-slice) FIRST, so buttons render on top
                 this.graphics.sprites.slice_9("scroll-bg", this.track_rect, 10, 30);
 
-                // Render thumb with state
+                // Render thumb with state (square thumb for horizontal)
                 let thumb_intensity = 1.0;
                 if (this.is_dragging_thumb) thumb_intensity = 0.7;
                 else if (this.thumb_hover) thumb_intensity = 0.9;
 
-                // Rotate thumb 90° for horizontal
+                // Rotate thumb -90° for horizontal (same as buttons)
                 ctx.save();
-                ctx.translate(thumb_x + thumb_size / 2, scrollbar_y + scrollbar_height / 2);
-                ctx.rotate(Math.PI / 2);
-                const rotated_rect = new rect(-scrollbar_height / 2, -thumb_size / 2, scrollbar_height, thumb_size);
+                ctx.translate(thumb_x + horizontal_thumb_width / 2, scrollbar_y + scrollbar_height / 2);
+                ctx.rotate(-Math.PI / 2);
+                const rotated_rect = new rect(-scrollbar_height / 2, -horizontal_thumb_width / 2, scrollbar_height, horizontal_thumb_width);
                 this.graphics.sprites.render("scroll-drag", null, rotated_rect, thumb_intensity, "fill");
                 ctx.restore();
 
-                // Render left button ON TOP of track (rotate up button 90° clockwise)
+                // Render left button ON TOP of track (rotate up button -90° to point left)
                 let left_button_intensity = 1.0;
                 if (this.button_start_down) left_button_intensity = 0.7;
                 else if (this.button_start_hover) left_button_intensity = 0.9;
 
                 ctx.save();
                 ctx.translate(left_button_x + button_up_height / 2, scrollbar_y + scrollbar_height / 2);
-                ctx.rotate(Math.PI / 2);
+                ctx.rotate(-Math.PI / 2);  // Counter-clockwise to point left
                 const rotated_left_rect = new rect(-scrollbar_height / 2, -button_up_height / 2, scrollbar_height, button_up_height);
                 this.graphics.sprites.render("scroll-up", null, rotated_left_rect, left_button_intensity, "fill");
                 ctx.restore();
 
-                // Render right button ON TOP of track (rotate down button 90° clockwise)
+                // Render right button ON TOP of track (rotate down button -90° to point right)
                 let right_button_intensity = 1.0;
                 if (this.button_end_down) right_button_intensity = 0.7;
                 else if (this.button_end_hover) right_button_intensity = 0.9;
 
                 ctx.save();
                 ctx.translate(right_button_x + button_down_height / 2, scrollbar_y + scrollbar_height / 2);
-                ctx.rotate(Math.PI / 2);
+                ctx.rotate(-Math.PI / 2);  // Counter-clockwise so down arrow points right
                 const rotated_right_rect = new rect(-scrollbar_height / 2, -button_down_height / 2, scrollbar_height, button_down_height);
                 this.graphics.sprites.render("scroll-down", null, rotated_right_rect, right_button_intensity, "fill");
                 ctx.restore();
 
             } else {
-                // VERTICAL scrollbar
+                // VERTICAL scrollbar (all positions floored to pixel boundaries)
                 // Up button - anchored to TOP
                 const up_button_y = scrollbar_y;
                 this.button_start_rect = new rect(scrollbar_x, up_button_y, scrollbar_width, button_up_height);
 
                 // Down button - anchored to BOTTOM
-                const down_button_y = scrollbar_y + scrollbar_height - button_down_height;
+                const down_button_y = Math.floor(scrollbar_y + scrollbar_height - button_down_height);
                 this.button_end_rect = new rect(scrollbar_x, down_button_y, scrollbar_width, button_down_height);
 
                 // Track area - BETWEEN the two buttons (with padding to prevent 9-slice overlap)
-                const track_y = up_button_y + button_up_height + track_padding;
-                const track_height = down_button_y - track_y - track_padding;
+                const track_y = Math.floor(up_button_y + button_up_height + track_padding);
+                const track_height = Math.floor(down_button_y - track_y - track_padding);
                 this.track_rect = new rect(scrollbar_x, track_y, scrollbar_width, track_height);
 
                 // Calculate thumb position (fixed size)
                 const max_thumb_y = track_y + track_height - thumb_size;
-                const thumb_y = Math.min(max_thumb_y, track_y + ((current / max) * (track_height - thumb_size)));
+                const thumb_y = Math.floor(Math.min(max_thumb_y, track_y + ((current / max) * (track_height - thumb_size))));
                 this.thumb_rect = new rect(scrollbar_x, thumb_y, scrollbar_width, thumb_size);
 
                 // Draw track (9-slice) FIRST, so buttons render on top

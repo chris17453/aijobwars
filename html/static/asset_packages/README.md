@@ -73,3 +73,5 @@ The game loads assets from `static/ASSETS.json` which references the active pack
 - **Audio**: MP3 or WAV format
 - **Storyboard Images**: WebP format recommended for size
 - **JSON Data**: Must maintain same structure as original files
+
+

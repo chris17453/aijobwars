@@ -233,13 +233,8 @@ class ui_component extends events {
 
             // Transform mouse coordinates from physical to virtual space
             const viewport = this.graphics.viewport;
-            const scale = viewport.scale;
-            const renderedWidth = viewport.virtual.width * scale.x;
-            const renderedHeight = viewport.virtual.height * scale.y;
-            const offsetX = (viewport.given.width - renderedWidth) / 2;
-            const offsetY = (viewport.given.height - renderedHeight) / 2;
-            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
-            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+            const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (mouse_y - viewport.offset.y) / viewport.scale.y;
 
             // Check collision in virtual coordinate space
             return virtual_mouse_x >= this.position.x &&

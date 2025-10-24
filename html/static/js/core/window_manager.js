@@ -4,7 +4,15 @@ class window_manager extends events{
       this.canvas = document.getElementById(elements.canvasId);
       this.ctx = this.canvas.getContext('2d');
 
-      this.graphics = new graphics(this.canvas, this.ctx); //drawing the main level logic
+      // Create offscreen canvas for double buffering (eliminates flicker)
+      this.offscreenCanvas = document.createElement('canvas');
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+
+      // Use offscreen canvas for all rendering
+      this.graphics = new graphics(this.offscreenCanvas, this.offscreenCtx);
+
+      // Store reference to visible canvas for mouse event handling
+      this.graphics.visibleCanvas = this.canvas;
       this.audio_manager = new audio_manager();
       this.modals = [];
       this.active_modal=null;
@@ -12,8 +20,10 @@ class window_manager extends events{
 
       this.kb = new key_states();
 
-      // Set initial canvas size
+      // Set initial canvas size (offscreen canvas via graphics, then sync visible canvas)
       this.graphics.recalc_canvas();
+      this.canvas.width = this.offscreenCanvas.width;
+      this.canvas.height = this.offscreenCanvas.height;
 
       // DEBUG: Frame stepping mode - disabled by default (F12 to toggle, F11 to step)
       this.debug_frame_step = false;
@@ -79,8 +89,13 @@ class window_manager extends events{
       window.addEventListener('resize', () => {
           if (!this.graphics || !this.graphics.viewport) return;
 
-          // Recalculate canvas and viewport on resize
+          // Recalculate canvas and viewport on resize (updates offscreen canvas)
           this.graphics.recalc_canvas();
+
+          // Sync visible canvas dimensions with offscreen canvas
+          // NOTE: Setting canvas width/height clears the canvas, so we must render immediately after
+          this.canvas.width = this.offscreenCanvas.width;
+          this.canvas.height = this.offscreenCanvas.height;
 
           // Check if dimensions actually changed
           const dimensions_key = `${this.graphics.canvas.width}x${this.graphics.canvas.height}`;
@@ -88,6 +103,9 @@ class window_manager extends events{
 
           // ONLY update modals if dimensions actually changed since last resize
           if (!dimensions_changed) {
+              // Even if dimensions didn't change, we still need to render immediately
+              // because setting canvas width/height cleared the visible canvas
+              this.render();
               return;
           }
 
@@ -127,6 +145,10 @@ class window_manager extends events{
           });
 
           this.last_orientation = current_orientation;
+
+          // Immediately render after resize to prevent blank flash
+          // (setting canvas width/height clears the canvas)
+          this.render();
       });
 
       setInterval(() => {
@@ -258,31 +280,17 @@ class window_manager extends events{
           this.graphics.ctx.save();
           this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 0) + 1;
 
-          // ALWAYS render base gradient background FIRST (before any transformations)
-          // Fill the ENTIRE canvas, not just the viewport
-          const baseGradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.given.height);
-          baseGradient.addColorStop(0, '#0a1628');    // Dark blue top
-          baseGradient.addColorStop(0.5, '#06292e');  // Teal middle (existing body bg)
-          baseGradient.addColorStop(1, '#0d1b2a');    // Dark blue bottom
-          this.graphics.ctx.fillStyle = baseGradient;
+          // Clear canvas with a base color (fallback for any gaps)
+          this.graphics.ctx.fillStyle = '#0a1628';
           this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.given.width, this.graphics.viewport.given.height);
 
           // Apply viewport scaling and centering transformation
           // This makes everything drawn in virtual coordinates automatically scale to physical pixels
-          const scale = this.graphics.viewport.scale;
           const viewport = this.graphics.viewport;
 
-          // Calculate the actual rendered size after scaling
-          const renderedWidth = viewport.virtual.width * scale.x;
-          const renderedHeight = viewport.virtual.height * scale.y;
-
-          // Calculate offset to center the viewport in the canvas
-          const offsetX = (viewport.given.width - renderedWidth) / 2;
-          const offsetY = (viewport.given.height - renderedHeight) / 2;
-
-          // Apply translation to center, then scale
-          this.graphics.ctx.translate(offsetX, offsetY);
-          this.graphics.ctx.scale(scale.x, scale.y);
+          // Apply translation to center (using precalculated offset), then scale
+          this.graphics.ctx.translate(viewport.offset.x, viewport.offset.y);
+          this.graphics.ctx.scale(viewport.scale.x, viewport.scale.y);
 
           // Now everything is drawn in virtual coordinate space (1920x1080)
           // and automatically scaled and centered to fit the canvas
@@ -316,12 +324,88 @@ class window_manager extends events{
           this.graphics.ctx.restore();
           this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 1) - 1;
 
+          // Fill letterbox/pillarbox areas with edge pixels from viewport
+          this.fill_letterbox_with_edge_pixels();
+
           // DEBUG: Verify save/restore balance
           const finalSaveCount = this.graphics.ctx._saveCount || 0;
           if (finalSaveCount !== initialSaveCount) {
             console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}`);
           }
+
+          // BLIT: Copy the entire offscreen canvas to the visible canvas in one operation
+          // This eliminates flicker by making all updates atomic
+          this.ctx.drawImage(this.offscreenCanvas, 0, 0);
         }
+    }
+
+    fill_letterbox_with_edge_pixels() {
+      const ctx = this.graphics.ctx;
+      const viewport = this.graphics.viewport;
+
+      // Check if there's any letterbox/pillarbox space to fill
+      const hasLeftPadding = viewport.offset.x > 0;
+      const hasRightPadding = viewport.offset.x > 0;
+      const hasTopPadding = viewport.offset.y > 0;
+      const hasBottomPadding = viewport.offset.y > 0;
+
+      if (!hasLeftPadding && !hasRightPadding && !hasTopPadding && !hasBottomPadding) {
+        return; // No padding to fill
+      }
+
+      // Round to exact pixel boundaries to prevent sampling from wrong pixels
+      const rendered_x = Math.round(viewport.offset.x);
+      const rendered_y = Math.round(viewport.offset.y);
+      const rendered_width = Math.round(viewport.rendered.width);
+      const rendered_height = Math.round(viewport.rendered.height);
+
+      // Left padding - sample one pixel INSIDE rendered area
+      if (hasLeftPadding && rendered_x > 0) {
+        const edgeData = ctx.getImageData(rendered_x + 1, rendered_y, 1, rendered_height);
+
+        for (let x = 0; x < rendered_x; x++) {
+          ctx.putImageData(edgeData, x, rendered_y);
+        }
+      }
+
+      // Right padding - sample from the edge pixel
+      if (hasRightPadding) {
+        const right_edge_x = rendered_x + rendered_width - 1;
+        const right_padding_start = rendered_x + rendered_width;
+        const right_padding_width = viewport.given.width - right_padding_start;
+
+        if (right_padding_width > 0) {
+          const edgeData = ctx.getImageData(right_edge_x, rendered_y, 1, rendered_height);
+
+          for (let x = right_padding_start; x < viewport.given.width; x++) {
+            ctx.putImageData(edgeData, x, rendered_y);
+          }
+        }
+      }
+
+      // Top padding - sample topmost pixel row and stretch vertically
+      if (hasTopPadding && rendered_y > 0) {
+        const edgeData = ctx.getImageData(0, rendered_y, viewport.given.width, 1);
+
+        for (let y = 0; y < rendered_y; y++) {
+          ctx.putImageData(edgeData, 0, y);
+        }
+      }
+
+      // Bottom padding - sample bottommost pixel row and stretch vertically
+      if (hasBottomPadding) {
+        const bottom_edge_y = rendered_y + rendered_height - 1;
+        const bottom_padding_start = rendered_y + rendered_height;
+        const bottom_padding_height = viewport.given.height - bottom_padding_start;
+
+        if (bottom_padding_height > 0) {
+          const edgeData = ctx.getImageData(0, bottom_edge_y, viewport.given.width, 1);
+
+          for (let y = bottom_padding_start; y < viewport.given.height; y++) {
+            ctx.putImageData(edgeData, 0, y);
+          }
+        }
+      }
     }
   }
 

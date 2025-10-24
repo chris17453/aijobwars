@@ -9,11 +9,11 @@ class credits extends cinematic_player {
         this.title = "Credits";
         this.text = "";
 
-        // Store landscape dimensions for orientation changes (16:9 aspect ratio)
-        this.landscape_width = 960;
-        this.landscape_height = 540;
+        // Store landscape dimensions
+        this.landscape_width = 1400;
+        this.landscape_height = 800;
 
-        // Calculate dialog dimensions based on orientation
+        // Calculate initial dimensions
         const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
         this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();

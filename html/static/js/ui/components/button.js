@@ -8,26 +8,27 @@ class button extends ui_component {
    *     margin_left: 20, margin_top: 10,
    *     width: 200, height: 60,
    *     width_mode: "fill"  // or "fixed" or "dynamic"
-   *   }, callback, "button-up-cyan", "button-down-cyan");
+   *   }, callback, "button-up-cyan", "button-down-cyan", "button-hover-cyan");
    *
    * Usage (legacy style - backward compatible):
-   *   new button(parent, graphics, label, position_rect, anchor_position_rect, callback, "button-up-cyan", "button-down-cyan");
+   *   new button(parent, graphics, label, position_rect, anchor_position_rect, callback, "button-up-cyan", "button-down-cyan", "button-hover-cyan");
    */
-  constructor(parent, graphics, label, position_or_config, anchor_position_or_callback, callback_or_up_image, up_image_or_down_image, down_image_or_logger, logger) {
+  constructor(parent, graphics, label, position_or_config, anchor_position_or_callback, callback_or_up_image, up_image_or_down_image, down_image_or_hover_image, hover_image_or_logger, logger) {
     // Detect legacy vs new style constructor
     let layout_config = {};
-    let callback, up_image, down_image;
+    let callback, up_image, down_image, hover_image;
     let legacy_anchor_position = null;
     let legacy_position = null;
     let is_legacy = (position_or_config && typeof position_or_config === 'object' && 'x' in position_or_config && 'width' in position_or_config);
 
     if (is_legacy) {
-      // Legacy style: (parent, graphics, label, position, anchor_position, callback, up_image, down_image, logger)
+      // Legacy style: (parent, graphics, label, position, anchor_position, callback, up_image, down_image, hover_image, logger)
       let position = position_or_config;
       let anchor_position = anchor_position_or_callback;
       callback = callback_or_up_image;
       up_image = up_image_or_down_image;
-      down_image = down_image_or_logger;
+      down_image = down_image_or_hover_image;
+      hover_image = hover_image_or_logger;
 
       // Convert legacy position/anchor to layout config
       layout_config = {
@@ -46,11 +47,12 @@ class button extends ui_component {
       legacy_anchor_position = anchor_position;
       legacy_position = position;
     } else {
-      // New style: (parent, graphics, label, layout_config, callback, up_image, down_image, logger)
+      // New style: (parent, graphics, label, layout_config, callback, up_image, down_image, hover_image, logger)
       layout_config = position_or_config || {};
       callback = anchor_position_or_callback;
       up_image = callback_or_up_image;
       down_image = up_image_or_down_image;
+      hover_image = down_image_or_hover_image;
     }
 
     super(parent, graphics, layout_config, logger);
@@ -69,6 +71,7 @@ class button extends ui_component {
       // Sanitize image paths
       this.up_image = this.sanitize_path(up_image);
       this.down_image = this.sanitize_path(down_image);
+      this.hover_image = hover_image ? this.sanitize_path(hover_image) : null;
 
       this.label = label;
       this.is_down = false;
@@ -81,14 +84,14 @@ class button extends ui_component {
       this.inner = new rect(0, 0, 0, 0);
       this.calculate_inner_rect();
 
-      // Store bound event handlers to enable proper removal later
+      // Store bound event handlers to enable proper removal later (use visible canvas)
       this._bound_mouse_down = this.handle_mouse_down.bind(this);
       this._bound_mouse_up = this.handle_mouse_up.bind(this);
       this._bound_mouse_move = this.handle_mouse_move.bind(this);
 
-      graphics.canvas.addEventListener('mousedown', this._bound_mouse_down);
-      graphics.canvas.addEventListener('mouseup', this._bound_mouse_up);
-      graphics.canvas.addEventListener('mousemove', this._bound_mouse_move);
+      graphics.visibleCanvas.addEventListener('mousedown', this._bound_mouse_down);
+      graphics.visibleCanvas.addEventListener('mouseup', this._bound_mouse_up);
+      graphics.visibleCanvas.addEventListener('mousemove', this._bound_mouse_move);
     } catch (error) {
       this.logger.error(`button constructor: ${error.message}`);
       throw error;
@@ -185,10 +188,15 @@ class button extends ui_component {
       if (this.is_down) {
         img = this.down_image;
       } else if (this.is_hover) {
-        render_position.x += 2;
-        render_position.y += 2;
-        render_inner.x += 2;
-        render_inner.y += 2;
+        // Use hover_image if available, otherwise use up_image with position shift
+        if (this.hover_image) {
+          img = this.hover_image;
+        } else {
+          render_position.x += 2;
+          render_position.y += 2;
+          render_inner.x += 2;
+          render_inner.y += 2;
+        }
       }
 
       this.sprites.slice_9(img, render_position, 10, 10);
@@ -207,13 +215,8 @@ class button extends ui_component {
 
       // Transform mouse coordinates from physical to virtual space
       const viewport = this.graphics.viewport;
-      const scale = viewport.scale;
-      const renderedWidth = viewport.virtual.width * scale.x;
-      const renderedHeight = viewport.virtual.height * scale.y;
-      const offsetX = (viewport.given.width - renderedWidth) / 2;
-      const offsetY = (viewport.given.height - renderedHeight) / 2;
-      const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
-      const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+      const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
+      const virtual_mouse_y = (mouse_y - viewport.offset.y) / viewport.scale.y;
 
       // Calculate absolute position
       let check_position = this.position.clone();
@@ -278,15 +281,16 @@ class button extends ui_component {
 
   delete() {
     try {
-      if (this.graphics && this.graphics.canvas) {
-        this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
-        this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
-        this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+      if (this.graphics && this.graphics.visibleCanvas) {
+        this.graphics.visibleCanvas.removeEventListener('mousedown', this._bound_mouse_down);
+        this.graphics.visibleCanvas.removeEventListener('mouseup', this._bound_mouse_up);
+        this.graphics.visibleCanvas.removeEventListener('mousemove', this._bound_mouse_move);
       }
 
       delete this.sprites;
       delete this.up_image;
       delete this.down_image;
+      delete this.hover_image;
       delete this.label;
       delete this.is_down;
       delete this.is_hover;

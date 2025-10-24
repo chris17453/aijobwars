@@ -38,7 +38,6 @@
 
     <!-- UI Screens -->
     <script src="./static/js/ui/screens/intro.js"></script>
-    <script src="./static/js/ui/screens/title_screen.js"></script>
     <script src="./static/js/ui/screens/menu.js"></script>
     <script src="./static/js/ui/screens/pause.js"></script>
     <script src="./static/js/ui/screens/game.js"></script>
@@ -81,13 +80,8 @@
             
             const wm = new window_manager(elementIds);
             wm.graphics.on("complete",()=> {
-              // Add title screen first (stays on top, anchored)
-              let title = new title_screen();
-              wm.add(title);
-
-              // Add menu below title
+              // Add menu
               let modal = new menu();
-              modal.title_component = title;  // Reference to title for positioning
               wm.add(modal);
             });
 

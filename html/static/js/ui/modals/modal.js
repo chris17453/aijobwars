@@ -34,7 +34,8 @@ class modal {
       this.window_manager = window_manager;
       this.graphics = window_manager.graphics;
       this.audio_manager = window_manager.audio_manager;
-      this.canvas = this.graphics.canvas;
+      this.canvas = this.graphics.canvas;  // Offscreen canvas for rendering
+      this.visibleCanvas = this.graphics.visibleCanvas;  // Visible canvas for mouse events
       this.sprites = this.graphics.sprites;
 
       // Create modal's own keyboard state tracker

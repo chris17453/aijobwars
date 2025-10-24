@@ -103,6 +103,14 @@ class game extends modal{
         }
     }
 
+    render() {
+        // Call parent render first (renders game content via updateFrame callback)
+        super.render();
+
+        // NOW draw the border on top of everything
+        this.draw_viewport_border();
+    }
+
 
 
 
@@ -277,11 +285,6 @@ class game extends modal{
 
         // window_manager already applies viewport transform, so we work in virtual coordinates
         const viewport = this.graphics.viewport;
-
-        // Draw green border around game area for debugging
-        this.graphics.ctx.strokeStyle = '#00FF00';
-        this.graphics.ctx.lineWidth = 4;
-        this.graphics.ctx.strokeRect(this.position.x, this.position.y, this.position.width, this.position.height);
 
         // Modal already handles clipping, so we don't need to save/restore here
         // Removing ctx.save() and ctx.restore() to preserve viewport transform
@@ -461,14 +464,20 @@ class game extends modal{
         // Draw background - tile vertically if needed
         const tiles_needed = Math.ceil(viewport.height / scaled_height) + 1;
         for (let i = -1; i < tiles_needed; i++) {
-            const y_pos = i * scaled_height - bg_y_offset;
+            const y_pos = Math.floor(i * scaled_height - bg_y_offset);
+            // Floor destination coordinates and dimensions, add +1 to prevent gaps from sub-pixel issues
+            const dest_x = 0;
+            const dest_y = y_pos;
+            const dest_width = Math.floor(viewport.width) + 1;
+            const dest_height = Math.floor(scaled_height) + 1;
+
             // drawImage with 5 params: image, dx, dy, dWidth, dHeight
             ctx.drawImage(
                 bg_sprite.image,
-                0,              // destination x
-                y_pos,          // destination y
-                viewport.width,  // destination width
-                scaled_height   // destination height
+                dest_x,
+                dest_y,
+                dest_width,
+                dest_height
             );
         }
     }
@@ -486,6 +495,36 @@ class game extends modal{
         this.ctx.font = '20px monospace';
         this.ctx.fillText(scoreText, x, y);
         this.ctx.restore();
+    }
+
+    draw_viewport_border() {
+        const ctx = this.graphics.ctx;
+        if (!ctx) return;
+
+        const viewport = this.graphics.viewport.virtual;
+        const borderWidth = 6;
+
+        ctx.save();
+
+        // Draw dark border all around
+        ctx.strokeStyle = 'rgba(40, 40, 40, 0.9)'; // Dark grey
+        ctx.lineWidth = borderWidth;
+        ctx.beginPath();
+        // Top edge
+        ctx.moveTo(0, borderWidth / 2);
+        ctx.lineTo(viewport.width, borderWidth / 2);
+        // Left edge
+        ctx.moveTo(borderWidth / 2, 0);
+        ctx.lineTo(borderWidth / 2, viewport.height);
+        // Bottom edge
+        ctx.moveTo(0, viewport.height - borderWidth / 2);
+        ctx.lineTo(viewport.width, viewport.height - borderWidth / 2);
+        // Right edge
+        ctx.moveTo(viewport.width - borderWidth / 2, 0);
+        ctx.lineTo(viewport.width - borderWidth / 2, viewport.height);
+        ctx.stroke();
+
+        ctx.restore();
     }
 
     game_over() {

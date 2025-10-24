@@ -9,11 +9,11 @@ class prologue extends cinematic_player {
         this.text = "";
         this.active = true;
 
-        // Store landscape dimensions for orientation changes
-        this.landscape_width = 800;
-        this.landscape_height = 600;
+        // Store landscape dimensions
+        this.landscape_width = 1400;
+        this.landscape_height = 800;
 
-        // Calculate dialog dimensions based on orientation
+        // Calculate initial dimensions
         const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
         this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();

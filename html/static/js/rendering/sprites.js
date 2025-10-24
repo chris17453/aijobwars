@@ -45,10 +45,12 @@ class sprites extends events{
         this.add("window-close-up", ui4, 1806, 678, 42, 42);
         this.add("window-close-down", ui4, 1857, 677, 42, 42);
         this.add("window-right-corner", ui4, 1908, 661, 80, 73);
-        this.add("scroll-down", ui4, 1641, 585, 32, 32);
-        this.add("scroll-up", ui4, 1641, 144, 32, 32);
-        this.add("scroll-drag", ui4, 1641, 194, 30, 54);
-        this.add("scroll-bg", ui4, 1641, 267, 32, 300);
+
+        // Scrollbar components - updated with precise coordinates
+        this.add("scroll-down", ui4, 1641, 585, 31, 31);      // Down button: 1641,585 x 1672,616
+        this.add("scroll-up", ui4, 1641, 143, 31, 32);        // Up button: 1641,143 x 1672,175 (rotate 90 deg)
+        this.add("scroll-drag", ui4, 1641, 194, 31, 53);      // Scrollbar slider: 1641,194 x 1672,247
+        this.add("scroll-bg", ui4, 1641, 267, 31, 299);       // Scroll body: 1641,267 x 1672,566
         this.add("bar", ui4, 766, 760, 357, 47);
         this.add("bar-red-fluid", ui4, 780, 901, 312, 33);
         this.add("bar-green-fluid", ui4, 1097, 901, 312, 32);
@@ -406,30 +408,30 @@ class sprites extends events{
         let right_x = center_x + center_w;
         let right_w = (dx + dw) - right_x;
 
-        // Draw the 9 quadrants - each quadrant starts exactly where the previous one ended
+        // Draw the 9 quadrants - add +1 to dimensions to prevent gaps from anti-aliasing
         // Top row
         this.ctx.drawImage(s.image, s.x, s.y, x_margin, y_margin,
-                          left_x, top_y, left_w, top_h);
+                          left_x, top_y, left_w + 1, top_h + 1);
         this.ctx.drawImage(s.image, s.x + x_margin, s.y, s.width - x_margin * 2, y_margin,
-                          center_x, top_y, center_w, top_h);
+                          center_x, top_y, center_w + 1, top_h + 1);
         this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y, x_margin, y_margin,
-                          right_x, top_y, right_w, top_h);
+                          right_x, top_y, right_w + 1, top_h + 1);
 
         // Middle row
         this.ctx.drawImage(s.image, s.x, s.y + y_margin, x_margin, s.height - y_margin * 2,
-                          left_x, mid_y, left_w, mid_h);
+                          left_x, mid_y, left_w + 1, mid_h + 1);
         this.ctx.drawImage(s.image, s.x + x_margin, s.y + y_margin, s.width - x_margin * 2, s.height - y_margin * 2,
-                          center_x, mid_y, center_w, mid_h);
+                          center_x, mid_y, center_w + 1, mid_h + 1);
         this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + y_margin, x_margin, s.height - y_margin * 2,
-                          right_x, mid_y, right_w, mid_h);
+                          right_x, mid_y, right_w + 1, mid_h + 1);
 
         // Bottom row
         this.ctx.drawImage(s.image, s.x, s.y + s.height - y_margin, x_margin, y_margin,
-                          left_x, bot_y, left_w, bot_h);
+                          left_x, bot_y, left_w + 1, bot_h + 1);
         this.ctx.drawImage(s.image, s.x + x_margin, s.y + s.height - y_margin, s.width - x_margin * 2, y_margin,
-                          center_x, bot_y, center_w, bot_h);
+                          center_x, bot_y, center_w + 1, bot_h + 1);
         this.ctx.drawImage(s.image, s.x + s.width - x_margin, s.y + s.height - y_margin, x_margin, y_margin,
-                          right_x, bot_y, right_w, bot_h);
+                          right_x, bot_y, right_w + 1, bot_h + 1);
     }
 
     slice_3(key, dest) {

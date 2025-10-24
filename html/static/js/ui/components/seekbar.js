@@ -66,14 +66,14 @@ class seekbar extends ui_component {
             this.seek_callback = seek_callback; // Function called when user seeks
             this.is_dragging = false;
 
-            // Store bound event handlers
+            // Store bound event handlers (use visible canvas for events)
             this._bound_mouse_down = this.handle_mouse_down.bind(this);
             this._bound_mouse_up = this.handle_mouse_up.bind(this);
             this._bound_mouse_move = this.handle_mouse_move.bind(this);
 
-            graphics.canvas.addEventListener('mousedown', this._bound_mouse_down);
-            graphics.canvas.addEventListener('mouseup', this._bound_mouse_up);
-            graphics.canvas.addEventListener('mousemove', this._bound_mouse_move);
+            graphics.visibleCanvas.addEventListener('mousedown', this._bound_mouse_down);
+            graphics.visibleCanvas.addEventListener('mouseup', this._bound_mouse_up);
+            graphics.visibleCanvas.addEventListener('mousemove', this._bound_mouse_move);
         } catch (error) {
             this.logger.error(`seekbar constructor: ${error.message}`);
             throw error;
@@ -188,13 +188,8 @@ class seekbar extends ui_component {
 
             // Transform mouse coordinates to virtual space
             const viewport = this.graphics.viewport;
-            const scale = viewport.scale;
-            const renderedWidth = viewport.virtual.width * scale.x;
-            const renderedHeight = viewport.virtual.height * scale.y;
-            const offsetX = (viewport.given.width - renderedWidth) / 2;
-            const offsetY = (viewport.given.height - renderedHeight) / 2;
-            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
-            const virtual_mouse_y = (mouse_y - offsetY) / scale.y;
+            const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (mouse_y - viewport.offset.y) / viewport.scale.y;
 
             // Calculate absolute position
             let check_position = this.position.clone();
@@ -258,12 +253,7 @@ class seekbar extends ui_component {
 
             // Transform mouse coordinates to virtual space
             const viewport = this.graphics.viewport;
-            const scale = viewport.scale;
-            const renderedWidth = viewport.virtual.width * scale.x;
-            const renderedHeight = viewport.virtual.height * scale.y;
-            const offsetX = (viewport.given.width - renderedWidth) / 2;
-            const offsetY = (viewport.given.height - renderedHeight) / 2;
-            const virtual_mouse_x = (mouse_x - offsetX) / scale.x;
+            const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
 
             // Calculate absolute position
             let seekbar_x, seekbar_width;
@@ -296,10 +286,10 @@ class seekbar extends ui_component {
             // Set active to false first to prevent any ongoing operations
             this.active = false;
 
-            if (this.graphics && this.graphics.canvas) {
-                this.graphics.canvas.removeEventListener('mousedown', this._bound_mouse_down);
-                this.graphics.canvas.removeEventListener('mouseup', this._bound_mouse_up);
-                this.graphics.canvas.removeEventListener('mousemove', this._bound_mouse_move);
+            if (this.graphics && this.graphics.visibleCanvas) {
+                this.graphics.visibleCanvas.removeEventListener('mousedown', this._bound_mouse_down);
+                this.graphics.visibleCanvas.removeEventListener('mouseup', this._bound_mouse_up);
+                this.graphics.visibleCanvas.removeEventListener('mousemove', this._bound_mouse_move);
             }
 
             delete this.get_progress_callback;

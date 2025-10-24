@@ -8,12 +8,12 @@ class high_scores extends modal{
         this.title="High Scores";
         this.text="";
 
-        // Store landscape dimensions for orientation changes
+        // Store landscape dimensions
         this.landscape_width = 800;
         this.landscape_height = 600;
 
-        // Calculate position centered between title and bottom of viewport
-        const dims = this.calculate_centered_position(this.landscape_width, this.landscape_height);
+        // Calculate initial dimensions
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
         this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
         this.resize();
         this.add_buttons();
@@ -250,99 +250,6 @@ class high_scores extends modal{
         }
     }
 
-    // Calculate position centered between title bottom and viewport bottom
-    calculate_centered_position(landscape_width, landscape_height) {
-        const vw = this.graphics.viewport.virtual.width;
-        const vh = this.graphics.viewport.virtual.height;
-        const isPortrait = this.graphics.viewport.isPortrait();
-
-        // Get title bottom position - look for title_screen in window manager
-        let titleBottom = 210; // Default fallback
-        if (this.window_manager && this.window_manager.modals) {
-            const titleScreen = this.window_manager.modals.find(m => m.constructor.name === 'title_screen');
-            if (titleScreen && titleScreen.getBottomY) {
-                titleBottom = titleScreen.getBottomY();
-            }
-        }
-
-        const topMargin = 20;
-        const bottomMargin = 20;
-
-        if (isPortrait) {
-            // Portrait mode: fill available space with margins (no height cap)
-            const width = vw - (topMargin * 2);
-            const availableHeight = vh - titleBottom - topMargin - bottomMargin;
-            const height = availableHeight; // Use full available height in portrait
-
-            return {
-                width,
-                height,
-                x: topMargin,
-                y: titleBottom + topMargin
-            };
-        } else {
-            // Landscape mode: center in available space below title
-            const availableHeight = vh - titleBottom - topMargin - bottomMargin;
-
-            // Calculate centered position in available space
-            const y = titleBottom + topMargin + (availableHeight - landscape_height) / 2;
-            const x = (vw - landscape_width) / 2;
-
-            return {
-                width: landscape_width,
-                height: landscape_height,
-                x,
-                y: Math.max(titleBottom + topMargin, y)
-            };
-        }
-    }
-
-    // Override to maintain centered position when orientation/viewport changes
-    update_dimensions_for_orientation() {
-        const landscape_width = this.landscape_width || this.position.width;
-        const landscape_height = this.landscape_height || this.position.height;
-
-        // Recalculate centered position based on new orientation
-        const dims = this.calculate_centered_position(landscape_width, landscape_height);
-
-        // Update position dimensions
-        this.position.x = dims.x;
-        this.position.y = dims.y;
-        this.position.width = dims.width;
-        this.position.height = dims.height;
-
-        // Update line height based on orientation
-        const isPortrait = this.graphics.viewport.isPortrait();
-        this.line_height = isPortrait ? 80 : 40;
-
-        // Reset scroll offset to prevent weird scrolling after orientation change
-        this.scroll_offset = 0;
-
-        // Trigger resize to update all internal positioning
-        this.resize();
-
-        // Reposition scrollbar for new orientation
-        const fontScale = isPortrait ? 2 : 1;
-        const scrollbar_width = 31 * fontScale;
-        const header_height = 60 * fontScale;
-
-        if (this.scrollbar_component && this.scrollbar_component._legacy_position) {
-            // Calculate absolute x position from right edge
-            const scrollbar_x = this.internal_rect.width - scrollbar_width - (5 * fontScale);
-
-            this.scrollbar_component._legacy_position.x = scrollbar_x;
-            this.scrollbar_component._legacy_position.y = header_height;
-            this.scrollbar_component._legacy_position.width = scrollbar_width;
-            this.scrollbar_component._legacy_position.height = this.internal_rect.height - header_height;
-            this.scrollbar_component.position = this.scrollbar_component._legacy_position.clone();
-
-            // Update anchor position to include both modal position and internal_rect
-            let anchor_position = new rect(0, 0, 0, 0);
-            anchor_position.add(this.position);
-            anchor_position.add(this.internal_rect);
-            this.scrollbar_component._legacy_anchor_position = anchor_position;
-        }
-    }
 
     delete() {
         // Remove wheel event listener (from visible canvas)

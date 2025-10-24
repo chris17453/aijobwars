@@ -6,7 +6,7 @@ class Ship extends game_object {
         super(window_manager, x, y, 128, 153,
             10,                   // mass (balanced for responsive movement and collision physics)
             0,                    // rotation
-            1.5);                 // rotation speed - very fine aiming control
+            4.0);                 // rotation speed - faster turning with fine control
         
         this.boost_fire_control = new fire_control(1);
         this.laser_fire_control = new fire_control(2);  // Reduced from 5 to 2 - less heat per shot
@@ -29,13 +29,19 @@ class Ship extends game_object {
         switch (type) {
             case 'user':
                 this.set_type("ship");
-                this.set_sound("left", 'static/audio/ship/static.mp3')
-                this.set_sound("right", 'static/audio/ship/static.mp3')
-                this.set_sound("accel", 'static/audio/ship/static.mp3')
-                this.set_sound("decel", 'static/audio/ship/static.mp3')
-                this.set_sound("lazer", 'static/audio/projectiles/sfx_wpn_laser6.wav')
-                this.set_sound("missile", 'static/audio/projectiles/sfx_weapon_singleshot13.wav')
-            
+                // Load audio paths from ASSETS.json manifest
+                const asset_loader = this.graphics.asset_loader;
+                const ship_static = asset_loader.get('audio.ship_static');
+                const laser_sound = asset_loader.get('audio.laser');
+                const missile_sound = asset_loader.get('audio.missile');
+
+                this.set_sound("left", ship_static)
+                this.set_sound("right", ship_static)
+                this.set_sound("accel", ship_static)
+                this.set_sound("decel", ship_static)
+                this.set_sound("lazer", laser_sound)
+                this.set_sound("missile", missile_sound)
+
                 this.set_image('ship_player');
                 this.set_center(64, 64);
                 this.booster = new Projectile(window_manager, +0, 100, 0, "booster");
