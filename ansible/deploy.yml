@@ -184,7 +184,7 @@
               - Ready for deployment
 
     - name: Deploy to remote server
-      tags: ['deploy', 'never']
+      tags: ['deploy', 'build']
       block:
         - name: Verify publish directory exists
           stat:
