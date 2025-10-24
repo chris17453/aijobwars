@@ -6,7 +6,7 @@ class window_manager extends events{
 
       // Create offscreen canvas for double buffering (eliminates flicker)
       this.offscreenCanvas = document.createElement('canvas');
-      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
 
       // Use offscreen canvas for all rendering
       this.graphics = new graphics(this.offscreenCanvas, this.offscreenCtx);
