@@ -25,71 +25,73 @@ class cinematic_player extends modal {
             this.handle_cinematic_keys(data.kb);
         });
 
-        // Create seekbar - position will be recalculated on resize
+        // Create horizontal scrollbar for video scrubbing - position will be recalculated on resize
         // Start with relative dimensions (will be properly positioned in resize)
-        let seekbar_position = new rect(10, 0, 100, 20, "left", "top");
-        this.seekbar = this.create_seekbar(
-            seekbar_position,
-            () => this.player ? this.player.get_progress() : null,
+        let scrollbar_position = new rect(10, 0, 100, 20, "left", "top");
+        this.video_scrollbar = this.create_video_scrollbar(
+            scrollbar_position,
+            () => this.player ? this.player.get_progress() : {current: 0, max: 1},
             (time) => { if (this.player) this.player.seek_to(time, true); }
         );
 
-        // Add seekbar to ui_components so it gets resized automatically
-        this.ui_components.push(this.seekbar);
-
-        // Listen for seek end to resume audio
-        this.seekbar.on('seek_end', () => {
-            if (this.player) this.player.end_seek();
-        });
+        // Add video scrollbar to ui_components so it gets resized automatically
+        this.ui_components.push(this.video_scrollbar);
 
         // Initial positioning
-        this.position_seekbar();
+        this.position_video_scrollbar();
 
-        // Add click handler for pause/play
+        // Add click handler for pause/play (use visible canvas)
         this._bound_click_handler = this.handle_click.bind(this);
-        this.graphics.canvas.addEventListener('click', this._bound_click_handler);
+        this.graphics.visibleCanvas.addEventListener('click', this._bound_click_handler);
     }
 
-    create_seekbar(position, get_progress_callback, seek_callback) {
-        // Seekbar is positioned relative to the modal's internal rect (virtual coordinates)
+    create_video_scrollbar(position, get_progress_callback, seek_callback) {
+        // Video scrollbar is positioned relative to the modal's internal rect (virtual coordinates)
         let anchor_position = new rect(0, 0, 0, 0);
         anchor_position.add(this.position);
         anchor_position.add(this.internal_rect);
 
-        return new seekbar(this, this.graphics, position, anchor_position, get_progress_callback, seek_callback);
+        // Convert progress callback to return {current, max} format expected by scrollbar
+        const get_value_callback = () => {
+            const progress = get_progress_callback();
+            if (!progress) return {current: 0, max: 1};
+            return {current: progress.current, max: progress.total};
+        };
+
+        return new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
     }
 
     /**
-     * Position seekbar at bottom of dialog, anchored to left and right edges
+     * Position video scrollbar at bottom of dialog, anchored to left and right edges
      * Called on initial setup and whenever the dialog resizes
      */
-    position_seekbar() {
-        if (!this.seekbar || !this.internal_rect) return;
+    position_video_scrollbar() {
+        if (!this.video_scrollbar || !this.internal_rect) return;
 
-        // Anchor seekbar to left and right edges with 10px margin, 30px from bottom
+        // Anchor scrollbar to left and right edges with 10px margin, 30px from bottom
         const margin_x = 10;
         const margin_bottom = 30;
-        const seekbar_height = 20;
+        const scrollbar_height = 20;
 
-        // Update the seekbar's position rect
-        if (this.seekbar._legacy_position) {
+        // Update the video scrollbar's position rect
+        if (this.video_scrollbar._legacy_position) {
             // Update legacy position directly
-            this.seekbar._legacy_position.x = margin_x;
-            this.seekbar._legacy_position.y = this.internal_rect.height - margin_bottom;
-            this.seekbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
-            this.seekbar._legacy_position.height = seekbar_height;
+            this.video_scrollbar._legacy_position.x = margin_x;
+            this.video_scrollbar._legacy_position.y = this.internal_rect.height - margin_bottom;
+            this.video_scrollbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
+            this.video_scrollbar._legacy_position.height = scrollbar_height;
 
             // Update the actual position rect
-            this.seekbar.position = this.seekbar._legacy_position.clone();
+            this.video_scrollbar.position = this.video_scrollbar._legacy_position.clone();
         }
     }
 
     /**
-     * Override resize to reposition seekbar when dialog resizes
+     * Override resize to reposition video scrollbar when dialog resizes
      */
     resize() {
         super.resize();
-        this.position_seekbar();
+        this.position_video_scrollbar();
     }
 
     handle_click(event) {
@@ -97,13 +99,8 @@ class cinematic_player extends modal {
 
         // Transform mouse coordinates from physical to virtual space
         const viewport = this.graphics.viewport;
-        const scale = viewport.scale;
-        const renderedWidth = viewport.virtual.width * scale.x;
-        const renderedHeight = viewport.virtual.height * scale.y;
-        const offsetX = (viewport.given.width - renderedWidth) / 2;
-        const offsetY = (viewport.given.height - renderedHeight) / 2;
-        const virtual_click_x = (event.offsetX - offsetX) / scale.x;
-        const virtual_click_y = (event.offsetY - offsetY) / scale.y;
+        const virtual_click_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+        const virtual_click_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
 
         // Check if click is inside the modal window (using virtual coordinates)
         if (virtual_click_x >= this.position.x &&
@@ -120,9 +117,24 @@ class cinematic_player extends modal {
                     }
                 });
 
-                // Don't toggle if clicking on seekbar (seekbar handles transformation internally)
-                if (this.seekbar && this.seekbar.is_inside(event.offsetX, event.offsetY)) {
-                    clicking_button = true;
+                // Don't toggle if clicking on video scrollbar (scrollbar handles transformation internally)
+                if (this.video_scrollbar && this.video_scrollbar.active) {
+                    // Check if clicking inside scrollbar bounds (use visible canvas coordinates)
+                    const viewport = this.graphics.viewport;
+                    const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+                    const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+                    let scrollbar_absolute_pos = this.video_scrollbar.position.clone();
+                    if (this.video_scrollbar._legacy_anchor_position) {
+                        scrollbar_absolute_pos.add(this.video_scrollbar._legacy_anchor_position);
+                    }
+
+                    if (virtual_mouse_x >= scrollbar_absolute_pos.x &&
+                        virtual_mouse_x <= scrollbar_absolute_pos.x + scrollbar_absolute_pos.width &&
+                        virtual_mouse_y >= scrollbar_absolute_pos.y &&
+                        virtual_mouse_y <= scrollbar_absolute_pos.y + scrollbar_absolute_pos.height) {
+                        clicking_button = true;
+                    }
                 }
 
                 if (!clicking_button) {
@@ -160,9 +172,9 @@ class cinematic_player extends modal {
         // Now safe to call super.render()
         super.render();
 
-        // Render seekbar
-        if (this.seekbar) {
-            this.seekbar.render();
+        // Render video scrollbar
+        if (this.video_scrollbar) {
+            this.video_scrollbar.render();
         }
 
         // Draw pause/play indicator in center of video area
@@ -199,15 +211,15 @@ class cinematic_player extends modal {
         // Set inactive first to stop rendering
         this.active = false;
 
-        // Clean up seekbar
-        if (this.seekbar) {
-            this.seekbar.delete();
-            this.seekbar = null;
+        // Clean up video scrollbar
+        if (this.video_scrollbar) {
+            this.video_scrollbar.delete();
+            this.video_scrollbar = null;
         }
 
-        // Clean up click handler
-        if (this._bound_click_handler && this.graphics && this.graphics.canvas) {
-            this.graphics.canvas.removeEventListener('click', this._bound_click_handler);
+        // Clean up click handler (from visible canvas)
+        if (this._bound_click_handler && this.graphics && this.graphics.visibleCanvas) {
+            this.graphics.visibleCanvas.removeEventListener('click', this._bound_click_handler);
             this._bound_click_handler = null;
         }
 

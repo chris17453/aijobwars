@@ -15,19 +15,33 @@
 
     # JavaScript files in dependency order
     js_files:
-      - "{{ static_dir }}/js/windows/events.js"
-      - "{{ static_dir }}/js/windows/containers.js"
-      - "{{ static_dir }}/js/windows/audio.js"
-      - "{{ static_dir }}/js/windows/sprites.js"
-      - "{{ static_dir }}/js/windows/font.js"
-      - "{{ static_dir }}/js/windows/button.js"
-      - "{{ static_dir }}/js/windows/seekbar.js"
-      - "{{ static_dir }}/js/windows/modal.js"
-      - "{{ static_dir }}/js/windows/viewport.js"
-      - "{{ static_dir }}/js/windows/window_manager.js"
-      - "{{ static_dir }}/js/windows/graphics.js"
-      - "{{ static_dir }}/js/windows/kb.js"
-      - "{{ static_dir }}/js/ui/menu.js"
+      # Core classes
+      - "{{ static_dir }}/js/core/events.js"
+      - "{{ static_dir }}/js/core/containers.js"
+      - "{{ static_dir }}/js/core/asset_loader.js"
+      - "{{ static_dir }}/js/core/viewport.js"
+      - "{{ static_dir }}/js/core/kb.js"
+
+      # Rendering
+      - "{{ static_dir }}/js/rendering/audio.js"
+      - "{{ static_dir }}/js/rendering/sprites.js"
+      - "{{ static_dir }}/js/rendering/font.js"
+
+      # UI Components
+      - "{{ static_dir }}/js/ui/components/ui_component.js"
+      - "{{ static_dir }}/js/ui/components/button.js"
+      - "{{ static_dir }}/js/ui/components/seekbar.js"
+      - "{{ static_dir }}/js/ui/components/scrollbar.js"
+      - "{{ static_dir }}/js/ui/components/percentage_bar.js"
+
+      # UI Modals
+      - "{{ static_dir }}/js/ui/modals/modal.js"
+
+      # Core Graphics (depends on viewport, sprites, font, button, modal)
+      - "{{ static_dir }}/js/core/graphics.js"
+      - "{{ static_dir }}/js/core/window_manager.js"
+
+      # Objects
       - "{{ static_dir }}/js/objects/motion.js"
       - "{{ static_dir }}/js/objects/object.js"
       - "{{ static_dir }}/js/objects/explosion.js"
@@ -39,20 +53,29 @@
       - "{{ static_dir }}/js/objects/enemy.js"
       - "{{ static_dir }}/js/objects/mine.js"
       - "{{ static_dir }}/js/objects/powerup.js"
+
+      # Logic
       - "{{ static_dir }}/js/logic/fire_control.js"
       - "{{ static_dir }}/js/logic/level.js"
       - "{{ static_dir }}/js/logic/ui.js"
-      - "{{ static_dir }}/js/ui/help.js"
-      - "{{ static_dir }}/js/ui/prologue.js"
-      - "{{ static_dir }}/js/ui/high_scores.js"
-      - "{{ static_dir }}/js/ui/credits.js"
-      - "{{ static_dir }}/js/ui-components/ui_component.js"
-      - "{{ static_dir }}/js/ui-components/percentage_bar.js"
-      - "{{ static_dir }}/js/ui/pause.js"
-      - "{{ static_dir }}/js/ui/cinematic_player.js"
+
+      # Cinematic
       - "{{ static_dir }}/js/cinematic/scene.js"
-      - "{{ static_dir }}/js/ui/game.js"
-      - "{{ static_dir }}/js/intro.js"
+
+      # UI Modals (rest)
+      - "{{ static_dir }}/js/ui/modals/help.js"
+      - "{{ static_dir }}/js/ui/modals/cinematic_player.js"
+      - "{{ static_dir }}/js/ui/modals/prologue.js"
+      - "{{ static_dir }}/js/ui/modals/high_scores.js"
+      - "{{ static_dir }}/js/ui/modals/credits.js"
+
+      # UI Screens
+      - "{{ static_dir }}/js/ui/screens/title_screen.js"
+      - "{{ static_dir }}/js/ui/screens/menu.js"
+      - "{{ static_dir }}/js/ui/screens/pause.js"
+      - "{{ static_dir }}/js/ui/screens/game.js"
+      - "{{ static_dir }}/js/ui/screens/boss_mode.js"
+      - "{{ static_dir }}/js/ui/screens/intro.js"
 
   tasks:
     - name: Bundle JavaScript files
