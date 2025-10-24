@@ -70,7 +70,6 @@
       - "{{ static_dir }}/js/ui/modals/credits.js"
 
       # UI Screens
-      - "{{ static_dir }}/js/ui/screens/title_screen.js"
       - "{{ static_dir }}/js/ui/screens/menu.js"
       - "{{ static_dir }}/js/ui/screens/pause.js"
       - "{{ static_dir }}/js/ui/screens/game.js"

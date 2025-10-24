@@ -357,7 +357,202 @@ class asset_loader extends events {
         };
     }
 }
-class audio_manager {
+
+// This class manages viewport scaling with minimum dimensions
+// Maintains a minimum virtual viewport and scales appropriately
+// Handles letterboxing/pillarboxing when aspect ratios don't match
+
+class viewport {
+
+    constructor(width, height) {
+        this.frame = { x: 0, y: 0, width: 0, height: 0 };
+        this.requested = { width: width, height: height };
+        this.virtual = { width: 0, height: 0 };
+        this.given = { x: 0, y: 0, width: 0, height: 0 };
+        this.world = { x:0, y:0, width: 0, height: 0 };
+
+        // Minimum virtual dimensions (design target) by orientation
+        this.min_virtual_landscape = {
+            width: 1920,
+            height: 1080
+        };
+
+        this.min_virtual_portrait = {
+            width: 1080,
+            height: 1920
+        };
+
+        this.scale = { x: 1, y: 1 };
+        this.calculate();
+    }
+
+    calculate() {
+        // Display area size (force integers to match canvas dimensions)
+        this.frame = {
+            x: 0,
+            y: 0,
+            width: Math.floor(window.innerWidth),
+            height: Math.floor(window.innerHeight)
+        };
+
+        // Canvas dimensions match the window
+        this.given.width = Math.floor(this.frame.width);
+        this.given.height = Math.floor(this.frame.height);
+        this.given.x = 0;
+        this.given.y = 0;
+
+        this.calculate_scale();
+        this.world.height = this.virtual.height;
+        this.world.width = this.virtual.width;
+    }
+
+    calculate_scale() {
+        // Select minimum dimensions based on orientation
+        const isPortrait = this.given.height > this.given.width;
+        const min_virtual = isPortrait ? this.min_virtual_portrait : this.min_virtual_landscape;
+
+        // Virtual viewport is ALWAYS the minimum/design resolution
+        // This ensures consistent coordinate space for all game objects
+        this.virtual.width = min_virtual.width;
+        this.virtual.height = min_virtual.height;
+
+        // Calculate how much we need to scale to fit the screen
+        // Use the smaller scale factor to ensure entire viewport fits (letterbox if needed)
+        const scaleX = this.given.width / this.virtual.width;
+        const scaleY = this.given.height / this.virtual.height;
+        const uniformScale = Math.min(scaleX, scaleY);
+
+        // Use uniform scaling to maintain aspect ratio
+        this.scale.x = uniformScale;
+        this.scale.y = uniformScale;
+
+        // Calculate rendered dimensions and letterbox/pillarbox offsets
+        // These are used throughout the app for coordinate transformations
+        this.rendered = {
+            width: this.virtual.width * this.scale.x,
+            height: this.virtual.height * this.scale.y
+        };
+
+        this.offset = {
+            x: (this.given.width - this.rendered.width) / 2,
+            y: (this.given.height - this.rendered.height) / 2
+        };
+    }
+
+    isPortrait() {
+        // Portrait mode when height is greater than width
+        return this.frame.height > this.frame.width;
+    }
+}
+class key_states {
+    constructor(logger) {
+      this.logger = logger || console;
+      try {
+        this.states = [];
+        // Renamed property to avoid conflict with the method name 'shift'
+        this.shift_state = false;
+        this.ctrl_state = false;
+      } catch (error) {
+        this.logger.error(`key_states constructor: ${error.message}`);
+      }
+    }
+  
+    up(key) {
+      try {
+        if (!this.states[key] || !this.states[key].justStopped) { // Ensure the justStopped logic
+          this.states[key] = { pressed: false, up: true, down: false, justStopped: true };
+        }
+      } catch (error) {
+        this.logger.error(`up(${key}): ${error.message}`);
+      }
+    }
+  
+    down(key) {
+      try {
+        if (!this.states[key] || !this.states[key].justPressed) { // Ensure the justPressed logic
+          this.states[key] = { pressed: true, up: false, down: true, justPressed: true };
+        }
+      } catch (error) {
+        this.logger.error(`down(${key}): ${error.message}`);
+      }
+    }
+  
+    get_state(key) {
+      try {
+        if (key in this.states) {
+          return this.states[key];
+        }
+        this.states[key] = { pressed: false, up: false, down: false };
+        return this.states[key];
+      } catch (error) {
+        this.logger.error(`get_state(${key}): ${error.message}`);
+        return { pressed: false, up: false, down: false };
+      }
+    }
+  
+    is_pressed(key) {
+      try {
+        return key in this.states && this.states[key].pressed;
+      } catch (error) {
+        this.logger.error(`is_pressed(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    just_pressed(key) {
+      try {
+        if (key in this.states && this.states[key].justPressed) {
+          this.states[key].justPressed = false; // Reset after checking
+          return true;
+        }
+        return false;
+      } catch (error) {
+        this.logger.error(`just_pressed(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    just_stopped(key) {
+      try {
+        if (key in this.states && this.states[key].justStopped) {
+          this.states[key].justStopped = false; // Reset after checking
+          return true;
+        }
+        return false;
+      } catch (error) {
+        this.logger.error(`just_stopped(${key}): ${error.message}`);
+        return false;
+      }
+    }
+  
+    shift() {
+      try {
+        return this.shift_state;
+      } catch (error) {
+        this.logger.error(`shift(): ${error.message}`);
+        return false;
+      }
+    }
+  
+    ctrl() {
+      try {
+        return this.ctrl_state;
+      } catch (error) {
+        this.logger.error(`ctrl(): ${error.message}`);
+        return false;
+      }
+    }
+  
+    event(event) {
+      try {
+        this.shift_state = event.shiftKey;
+        this.ctrl_state = event.ctrlKey;
+      } catch (error) {
+        this.logger.error(`event(): ${error.message}`);
+      }
+    }
+  }
+  class audio_manager {
     constructor(logger) {
         this.audioBuffers = new Map(); // Decoded audio buffers
         this.audioSources = new Map(); // Currently playing sources
@@ -1297,6 +1492,334 @@ class sprites extends events{
     }
   }
 }
+// Base class for all UI components with standardized layout system
+class ui_component extends events {
+    constructor(parent, graphics, layout_config = {}, logger) {
+        super();
+        this.logger = logger || console;
+        this.parent = parent;
+        this.graphics = graphics;
+        this.ctx = graphics.ctx;
+        this.active = true;
+
+        // Layout configuration with sensible defaults
+        this.layout = {
+            // Positioning mode: "absolute", "relative", "anchored"
+            mode: layout_config.mode || "relative",
+
+            // Anchoring: which edges to anchor to parent
+            // Can be: "top", "bottom", "left", "right", "center", or combinations like "top-left"
+            anchor: {
+                x: layout_config.anchor_x || "left",  // "left", "right", "center"
+                y: layout_config.anchor_y || "top"     // "top", "bottom", "center"
+            },
+
+            // Margins: space outside the component (from parent edges)
+            margin: {
+                top: layout_config.margin_top || 0,
+                right: layout_config.margin_right || 0,
+                bottom: layout_config.margin_bottom || 0,
+                left: layout_config.margin_left || 0
+            },
+
+            // Padding: space inside the component (for content)
+            padding: {
+                top: layout_config.padding_top || 0,
+                right: layout_config.padding_right || 0,
+                bottom: layout_config.padding_bottom || 0,
+                left: layout_config.padding_left || 0
+            },
+
+            // Size mode: "fixed", "dynamic", "fill"
+            width_mode: layout_config.width_mode || "fixed",   // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
+            height_mode: layout_config.height_mode || "fixed", // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
+
+            // Size values (used when mode is "fixed")
+            width: layout_config.width || 100,
+            height: layout_config.height || 40,
+
+            // Offset from anchor point (relative positioning)
+            offset_x: layout_config.offset_x || 0,
+            offset_y: layout_config.offset_y || 0
+        };
+
+        // Computed position (absolute coordinates in virtual space)
+        this.position = new rect(0, 0, this.layout.width, this.layout.height);
+
+        // Parent's position (for relative positioning)
+        this.parent_rect = null;
+
+        // Content area (position minus padding)
+        this.content_rect = new rect(0, 0, 0, 0);
+
+        // Children components for event bubbling
+        this.children = [];
+    }
+
+    /**
+     * Calculate absolute position based on parent and layout configuration
+     * This is called when parent resizes or layout properties change
+     */
+    calculate_layout(parent_rect) {
+        try {
+            if (!parent_rect) {
+                this.logger.error("calculate_layout: parent_rect is required");
+                return;
+            }
+
+            this.parent_rect = parent_rect;
+
+            // 1. Calculate width based on width_mode
+            let width = 0;
+            switch (this.layout.width_mode) {
+                case "fixed":
+                    width = this.layout.width;
+                    break;
+                case "fill":
+                    width = parent_rect.width - this.layout.margin.left - this.layout.margin.right;
+                    break;
+                case "dynamic":
+                    // Dynamic sizing will be handled by subclasses (e.g., button measures text)
+                    width = this.layout.width; // Use specified width for now
+                    break;
+            }
+
+            // 2. Calculate height based on height_mode
+            let height = 0;
+            switch (this.layout.height_mode) {
+                case "fixed":
+                    height = this.layout.height;
+                    break;
+                case "fill":
+                    height = parent_rect.height - this.layout.margin.top - this.layout.margin.bottom;
+                    break;
+                case "dynamic":
+                    // Dynamic sizing will be handled by subclasses
+                    height = this.layout.height; // Use specified height for now
+                    break;
+            }
+
+            // 3. Calculate X position based on anchor_x
+            let x = parent_rect.x;
+            switch (this.layout.anchor.x) {
+                case "left":
+                    x = parent_rect.x + this.layout.margin.left + this.layout.offset_x;
+                    break;
+                case "right":
+                    x = parent_rect.x + parent_rect.width - width - this.layout.margin.right - this.layout.offset_x;
+                    break;
+                case "center":
+                    x = parent_rect.x + (parent_rect.width - width) / 2 + this.layout.offset_x;
+                    break;
+            }
+
+            // 4. Calculate Y position based on anchor_y
+            let y = parent_rect.y;
+            switch (this.layout.anchor.y) {
+                case "top":
+                    y = parent_rect.y + this.layout.margin.top + this.layout.offset_y;
+                    break;
+                case "bottom":
+                    y = parent_rect.y + parent_rect.height - height - this.layout.margin.bottom - this.layout.offset_y;
+                    break;
+                case "center":
+                    y = parent_rect.y + (parent_rect.height - height) / 2 + this.layout.offset_y;
+                    break;
+            }
+
+            // 5. Update position rect
+            this.position.x = Math.round(x);
+            this.position.y = Math.round(y);
+            this.position.width = Math.round(width);
+            this.position.height = Math.round(height);
+
+            // 6. Calculate content rect (position minus padding)
+            this.content_rect.x = this.position.x + this.layout.padding.left;
+            this.content_rect.y = this.position.y + this.layout.padding.top;
+            this.content_rect.width = this.position.width - this.layout.padding.left - this.layout.padding.right;
+            this.content_rect.height = this.position.height - this.layout.padding.top - this.layout.padding.bottom;
+
+            // 7. Call resize hook for subclasses
+            this.on_layout_calculated();
+
+            // 8. Bubble resize to children
+            this.resize_children();
+
+        } catch (error) {
+            this.logger.error(`calculate_layout: ${error.message}`);
+        }
+    }
+
+    /**
+     * Hook for subclasses to override - called after layout is calculated
+     */
+    on_layout_calculated() {
+        // Subclasses can override this
+    }
+
+    /**
+     * Resize this component (triggered by parent)
+     * This is the external API that parent components call
+     */
+    resize(parent_rect) {
+        try {
+            this.calculate_layout(parent_rect);
+            this.emit('resize', { component: this, position: this.position });
+        } catch (error) {
+            this.logger.error(`resize: ${error.message}`);
+        }
+    }
+
+    /**
+     * Bubble resize event to all children
+     */
+    resize_children() {
+        try {
+            // Pass our content_rect as the parent_rect for children
+            // (so children are positioned relative to our content area, not including padding)
+            this.children.forEach(child => {
+                if (child && child.resize && typeof child.resize === 'function') {
+                    child.resize(this.content_rect);
+                }
+            });
+        } catch (error) {
+            this.logger.error(`resize_children: ${error.message}`);
+        }
+    }
+
+    /**
+     * Add a child component
+     */
+    add_child(child) {
+        try {
+            if (child) {
+                this.children.push(child);
+                // Initial layout for the child
+                if (this.content_rect) {
+                    child.calculate_layout(this.content_rect);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`add_child: ${error.message}`);
+        }
+    }
+
+    /**
+     * Remove a child component
+     */
+    remove_child(child) {
+        try {
+            const index = this.children.indexOf(child);
+            if (index > -1) {
+                this.children.splice(index, 1);
+            }
+        } catch (error) {
+            this.logger.error(`remove_child: ${error.message}`);
+        }
+    }
+
+    /**
+     * Check if a point (in physical pixels) is inside this component
+     */
+    is_inside(mouse_x, mouse_y) {
+        try {
+            if (!this.active || !this.position) return false;
+
+            // Transform mouse coordinates from physical to virtual space
+            const viewport = this.graphics.viewport;
+            const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (mouse_y - viewport.offset.y) / viewport.scale.y;
+
+            // Check collision in virtual coordinate space
+            return virtual_mouse_x >= this.position.x &&
+                   virtual_mouse_x <= this.position.x + this.position.width &&
+                   virtual_mouse_y >= this.position.y &&
+                   virtual_mouse_y <= this.position.y + this.position.height;
+        } catch (error) {
+            this.logger.error(`is_inside: ${error.message}`);
+            return false;
+        }
+    }
+
+    /**
+     * Update layout properties and recalculate
+     */
+    update_layout(new_config) {
+        try {
+            // Merge new config into existing layout
+            Object.assign(this.layout, new_config);
+
+            // Recalculate if we have a parent rect
+            if (this.parent_rect) {
+                this.calculate_layout(this.parent_rect);
+            }
+        } catch (error) {
+            this.logger.error(`update_layout: ${error.message}`);
+        }
+    }
+
+    /**
+     * Set active state
+     */
+    set_active(active) {
+        try {
+            this.active = active;
+            // Propagate to children
+            this.children.forEach(child => {
+                if (child && child.set_active && typeof child.set_active === 'function') {
+                    child.set_active(active);
+                }
+            });
+        } catch (error) {
+            this.logger.error(`set_active: ${error.message}`);
+        }
+    }
+
+    /**
+     * Render - subclasses should override
+     */
+    render() {
+        // Subclasses override this
+    }
+
+    /**
+     * Cleanup
+     */
+    delete() {
+        try {
+            this.active = false;
+
+            // Delete all children
+            this.children.forEach(child => {
+                if (child && child.delete && typeof child.delete === 'function') {
+                    child.delete();
+                }
+            });
+            this.children = [];
+
+            // Clear references
+            delete this.parent;
+            delete this.graphics;
+            delete this.ctx;
+            delete this.layout;
+            delete this.position;
+            delete this.parent_rect;
+            delete this.content_rect;
+        } catch (error) {
+            this.logger.error(`delete: ${error.message}`);
+        }
+    }
+
+    /**
+     * Helper: Sanitize paths for security
+     */
+    sanitize_path(path) {
+        if (typeof path !== 'string') {
+            throw new Error("Invalid path type");
+        }
+        return path.replace(/[<>"'`;]/g, '');
+    }
+}
 class button extends ui_component {
   /**
    * Button component with proper layout system
@@ -1922,6 +2445,535 @@ class seekbar extends ui_component {
         }
     }
 }
+class scrollbar extends ui_component {
+    /**
+     * Scrollbar component with proper layout system
+     *
+     * Usage (new style with layout config):
+     *   new scrollbar(parent, graphics, {
+     *     anchor_x: "right", anchor_y: "top",
+     *     margin_right: 10, margin_top: 10,
+     *     width: 31, height: 400,
+     *     orientation: "vertical"  // or "horizontal"
+     *   }, get_value_callback, set_value_callback);
+     *
+     * Usage (legacy style - backward compatible):
+     *   new scrollbar(parent, graphics, position_rect, anchor_position_rect, orientation, get_value_callback, set_value_callback);
+     *
+     * Callbacks:
+     *   get_value_callback() - returns {current, max} where current is 0 to max
+     *   set_value_callback(value) - called when user changes value
+     */
+    constructor(parent, graphics, position_or_config, anchor_position_or_get_value, orientation_or_set_value, get_value_or_logger, set_value_or_logger, logger) {
+        // Detect legacy vs new style constructor
+        let layout_config = {};
+        let orientation, get_value_callback, set_value_callback;
+        let legacy_anchor_position = null;
+        let legacy_position = null;
+        let is_legacy = (position_or_config && typeof position_or_config === 'object' && 'x' in position_or_config && 'width' in position_or_config);
+
+        if (is_legacy) {
+            // Legacy style: (parent, graphics, position, anchor_position, orientation, get_value_callback, set_value_callback, logger)
+            let position = position_or_config;
+            let anchor_position = anchor_position_or_get_value;
+            orientation = orientation_or_set_value;
+            get_value_callback = get_value_or_logger;
+            set_value_callback = set_value_or_logger;
+
+            // Convert legacy position/anchor to layout config
+            layout_config = {
+                mode: "absolute",
+                width: position.width,
+                height: position.height,
+                width_mode: "fixed",
+                height_mode: "fixed",
+                offset_x: position.x,
+                offset_y: position.y,
+                anchor_x: position._x_mode || "left",
+                anchor_y: position._y_mode || "top",
+                orientation: orientation || "vertical"
+            };
+
+            // Store for assignment after super()
+            legacy_anchor_position = anchor_position;
+            legacy_position = position;
+        } else {
+            // New style: (parent, graphics, layout_config, get_value_callback, set_value_callback, logger)
+            layout_config = position_or_config || {};
+            get_value_callback = anchor_position_or_get_value;
+            set_value_callback = orientation_or_set_value;
+            orientation = layout_config.orientation || "vertical";
+            layout_config.orientation = orientation;
+        }
+
+        super(parent, graphics, layout_config, logger);
+
+        // NOW we can access 'this' - assign legacy properties if needed
+        if (is_legacy) {
+            this._legacy_anchor_position = legacy_anchor_position;
+            this._legacy_position = legacy_position;
+            // For legacy mode, directly set position to the legacy position (don't use layout system)
+            this.position = legacy_position.clone();
+        }
+
+        try {
+            this.sprites = graphics.sprites;
+            this.orientation = orientation;
+            this.get_value_callback = get_value_callback;
+            this.set_value_callback = set_value_callback;
+
+            // Button and track rects for hit detection
+            this.button_start_rect = null;  // Up/Left button
+            this.button_end_rect = null;    // Down/Right button
+            this.track_rect = null;
+            this.thumb_rect = null;
+
+            // State tracking
+            this.button_start_hover = false;
+            this.button_start_down = false;
+            this.button_end_hover = false;
+            this.button_end_down = false;
+            this.thumb_hover = false;
+            this.is_dragging_thumb = false;
+            this.drag_start_pos = 0;  // X or Y depending on orientation
+            this.drag_start_value = 0;
+
+            // Store bound event handlers (use visible canvas)
+            this._bound_mouse_down = this.handle_mouse_down.bind(this);
+            this._bound_mouse_up = this.handle_mouse_up.bind(this);
+            this._bound_mouse_move = this.handle_mouse_move.bind(this);
+
+            graphics.visibleCanvas.addEventListener('mousedown', this._bound_mouse_down);
+            graphics.visibleCanvas.addEventListener('mouseup', this._bound_mouse_up);
+            graphics.visibleCanvas.addEventListener('mousemove', this._bound_mouse_move);
+        } catch (error) {
+            this.logger.error(`scrollbar constructor: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Legacy resize support
+     */
+    resize(anchor_position_or_parent_rect) {
+        try {
+            if (this._legacy_position && anchor_position_or_parent_rect) {
+                // Legacy mode: update the anchor position
+                this._legacy_anchor_position = anchor_position_or_parent_rect;
+
+                // Update position rect
+                if (this._legacy_position) {
+                    this.position = this._legacy_position.clone();
+                }
+
+                this.emit('resize', { component: this, position: this.position });
+            } else {
+                // New style: use parent's layout system
+                super.resize(anchor_position_or_parent_rect);
+            }
+        } catch (error) {
+            this.logger.error(`scrollbar resize: ${error.message}`);
+        }
+    }
+
+    render() {
+        try {
+            if (this.active !== true) return;
+            if (!this.get_value_callback) return;
+
+            const value_data = this.get_value_callback();
+            if (!value_data) return;
+
+            const { current, max } = value_data;
+            if (typeof current !== 'number' || typeof max !== 'number' || max <= 0) return;
+
+            // Calculate absolute position (floor to pixel boundaries for crisp rendering)
+            let scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height;
+
+            if (this._legacy_anchor_position) {
+                // Legacy mode: add anchor position
+                let relative_position = this.position.clone();
+                relative_position.add(this._legacy_anchor_position);
+                scrollbar_x = Math.floor(relative_position.x);
+                scrollbar_y = Math.floor(relative_position.y);
+                scrollbar_width = Math.floor(this.position.width);
+                scrollbar_height = Math.floor(this.position.height);
+            } else {
+                // New mode: position is already absolute
+                scrollbar_x = Math.floor(this.position.x);
+                scrollbar_y = Math.floor(this.position.y);
+                scrollbar_width = Math.floor(this.position.width);
+                scrollbar_height = Math.floor(this.position.height);
+            }
+
+            const ctx = this.graphics.ctx;
+            const is_horizontal = (this.orientation === "horizontal");
+
+            // Button and thumb dimensions scaled to scrollbar size
+            // Original sprite dimensions: up=31x32, down=31x31, thumb=31x53
+            // For vertical: scale based on width (thickness)
+            // For horizontal: scale based on height (thickness)
+            const scale_factor = is_horizontal ? (scrollbar_height / 31) : (scrollbar_width / 31);
+            const button_up_height = Math.round(32 * scale_factor);
+            const button_down_height = Math.round(31 * scale_factor);
+            const thumb_size = Math.round(53 * scale_factor);
+            const track_padding = 0;  // No gap between buttons and track
+
+            if (is_horizontal) {
+                // HORIZONTAL scrollbar (all positions floored to pixel boundaries)
+                // Left button - anchored to LEFT (using up button rotated)
+                const left_button_x = scrollbar_x;
+                this.button_start_rect = new rect(left_button_x, scrollbar_y, button_up_height, scrollbar_height);
+
+                // Right button - anchored to RIGHT (using down button rotated)
+                const right_button_x = Math.floor(scrollbar_x + scrollbar_width - button_down_height);
+                this.button_end_rect = new rect(right_button_x, scrollbar_y, button_down_height, scrollbar_height);
+
+                // Track area - BETWEEN the two buttons (with padding to prevent 9-slice overlap)
+                const track_x = Math.floor(left_button_x + button_up_height + track_padding);
+                const track_width = Math.floor(right_button_x - track_x - track_padding);
+                this.track_rect = new rect(track_x, scrollbar_y, track_width, scrollbar_height);
+
+                // Calculate thumb position (fixed size - for horizontal, use scrollbar_height as thumb width)
+                const horizontal_thumb_width = scrollbar_height;  // Match the thickness
+                const max_thumb_x = track_x + track_width - horizontal_thumb_width;
+                const thumb_x = Math.floor(Math.min(max_thumb_x, track_x + ((current / max) * (track_width - horizontal_thumb_width))));
+                this.thumb_rect = new rect(thumb_x, scrollbar_y, horizontal_thumb_width, scrollbar_height);
+
+                // Draw track (9-slice) FIRST, so buttons render on top
+                this.graphics.sprites.slice_9("scroll-bg", this.track_rect, 10, 30);
+
+                // Render thumb with state (square thumb for horizontal)
+                let thumb_intensity = 1.0;
+                if (this.is_dragging_thumb) thumb_intensity = 0.7;
+                else if (this.thumb_hover) thumb_intensity = 0.9;
+
+                // Rotate thumb -90° for horizontal (same as buttons)
+                ctx.save();
+                ctx.translate(thumb_x + horizontal_thumb_width / 2, scrollbar_y + scrollbar_height / 2);
+                ctx.rotate(-Math.PI / 2);
+                const rotated_rect = new rect(-scrollbar_height / 2, -horizontal_thumb_width / 2, scrollbar_height, horizontal_thumb_width);
+                this.graphics.sprites.render("scroll-drag", null, rotated_rect, thumb_intensity, "fill");
+                ctx.restore();
+
+                // Render left button ON TOP of track (rotate up button -90° to point left)
+                let left_button_intensity = 1.0;
+                if (this.button_start_down) left_button_intensity = 0.7;
+                else if (this.button_start_hover) left_button_intensity = 0.9;
+
+                ctx.save();
+                ctx.translate(left_button_x + button_up_height / 2, scrollbar_y + scrollbar_height / 2);
+                ctx.rotate(-Math.PI / 2);  // Counter-clockwise to point left
+                const rotated_left_rect = new rect(-scrollbar_height / 2, -button_up_height / 2, scrollbar_height, button_up_height);
+                this.graphics.sprites.render("scroll-up", null, rotated_left_rect, left_button_intensity, "fill");
+                ctx.restore();
+
+                // Render right button ON TOP of track (rotate down button -90° to point right)
+                let right_button_intensity = 1.0;
+                if (this.button_end_down) right_button_intensity = 0.7;
+                else if (this.button_end_hover) right_button_intensity = 0.9;
+
+                ctx.save();
+                ctx.translate(right_button_x + button_down_height / 2, scrollbar_y + scrollbar_height / 2);
+                ctx.rotate(-Math.PI / 2);  // Counter-clockwise so down arrow points right
+                const rotated_right_rect = new rect(-scrollbar_height / 2, -button_down_height / 2, scrollbar_height, button_down_height);
+                this.graphics.sprites.render("scroll-down", null, rotated_right_rect, right_button_intensity, "fill");
+                ctx.restore();
+
+            } else {
+                // VERTICAL scrollbar (all positions floored to pixel boundaries)
+                // Up button - anchored to TOP
+                const up_button_y = scrollbar_y;
+                this.button_start_rect = new rect(scrollbar_x, up_button_y, scrollbar_width, button_up_height);
+
+                // Down button - anchored to BOTTOM
+                const down_button_y = Math.floor(scrollbar_y + scrollbar_height - button_down_height);
+                this.button_end_rect = new rect(scrollbar_x, down_button_y, scrollbar_width, button_down_height);
+
+                // Track area - BETWEEN the two buttons (with padding to prevent 9-slice overlap)
+                const track_y = Math.floor(up_button_y + button_up_height + track_padding);
+                const track_height = Math.floor(down_button_y - track_y - track_padding);
+                this.track_rect = new rect(scrollbar_x, track_y, scrollbar_width, track_height);
+
+                // Calculate thumb position (fixed size)
+                const max_thumb_y = track_y + track_height - thumb_size;
+                const thumb_y = Math.floor(Math.min(max_thumb_y, track_y + ((current / max) * (track_height - thumb_size))));
+                this.thumb_rect = new rect(scrollbar_x, thumb_y, scrollbar_width, thumb_size);
+
+                // Draw track (9-slice) FIRST, so buttons render on top
+                this.graphics.sprites.slice_9("scroll-bg", this.track_rect, 10, 30);
+
+                // Render thumb with state
+                let thumb_intensity = 1.0;
+                if (this.is_dragging_thumb) thumb_intensity = 0.7;
+                else if (this.thumb_hover) thumb_intensity = 0.9;
+                this.graphics.sprites.render("scroll-drag", null, this.thumb_rect, thumb_intensity, "fill");
+
+                // Render up button ON TOP of track
+                let up_button_intensity = 1.0;
+                if (this.button_start_down) up_button_intensity = 0.7;
+                else if (this.button_start_hover) up_button_intensity = 0.9;
+                this.graphics.sprites.render("scroll-up", null, this.button_start_rect, up_button_intensity, "fill");
+
+                // Render down button ON TOP of track
+                let down_button_intensity = 1.0;
+                if (this.button_end_down) down_button_intensity = 0.7;
+                else if (this.button_end_hover) down_button_intensity = 0.9;
+                this.graphics.sprites.render("scroll-down", null, this.button_end_rect, down_button_intensity, "fill");
+            }
+        } catch (error) {
+            this.logger.error(`scrollbar render: ${error.message}`);
+        }
+    }
+
+    handle_mouse_down(event) {
+        try {
+            if (this.active !== true) return;
+
+            const viewport = this.graphics.viewport;
+            const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+            // Check start button (up/left)
+            if (this.is_inside_rect(this.button_start_rect, virtual_mouse_x, virtual_mouse_y)) {
+                this.button_start_down = true;
+                return;
+            }
+
+            // Check end button (down/right)
+            if (this.is_inside_rect(this.button_end_rect, virtual_mouse_x, virtual_mouse_y)) {
+                this.button_end_down = true;
+                return;
+            }
+
+            // Check thumb - start dragging
+            if (this.is_inside_rect(this.thumb_rect, virtual_mouse_x, virtual_mouse_y)) {
+                this.is_dragging_thumb = true;
+                this.drag_start_pos = this.orientation === "horizontal" ? virtual_mouse_x : virtual_mouse_y;
+                const value_data = this.get_value_callback();
+                this.drag_start_value = value_data ? value_data.current : 0;
+                return;
+            }
+
+            // Check track - page scroll
+            if (this.is_inside_rect(this.track_rect, virtual_mouse_x, virtual_mouse_y)) {
+                const value_data = this.get_value_callback();
+                if (!value_data) return;
+
+                const is_horizontal = (this.orientation === "horizontal");
+                const mouse_pos = is_horizontal ? virtual_mouse_x : virtual_mouse_y;
+                const thumb_pos = is_horizontal ? this.thumb_rect.x : this.thumb_rect.y;
+                const thumb_size = is_horizontal ? this.thumb_rect.width : this.thumb_rect.height;
+
+                // Calculate page size (10% of max)
+                const page_size = value_data.max * 0.1;
+
+                let new_value = value_data.current;
+                if (mouse_pos < thumb_pos) {
+                    // Clicked before thumb - page backward
+                    new_value -= page_size;
+                } else if (mouse_pos > thumb_pos + thumb_size) {
+                    // Clicked after thumb - page forward
+                    new_value += page_size;
+                }
+
+                new_value = Math.max(0, Math.min(new_value, value_data.max));
+                if (this.set_value_callback) {
+                    this.set_value_callback(new_value);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`scrollbar handle_mouse_down: ${error.message}`);
+        }
+    }
+
+    handle_mouse_up(event) {
+        try {
+            if (this.active !== true) return;
+
+            const viewport = this.graphics.viewport;
+            const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+            // Handle start button click
+            if (this.button_start_down && this.is_inside_rect(this.button_start_rect, virtual_mouse_x, virtual_mouse_y)) {
+                const value_data = this.get_value_callback();
+                if (value_data && this.set_value_callback) {
+                    // Decrement by 1% of max
+                    const step = value_data.max * 0.01;
+                    const new_value = Math.max(0, value_data.current - step);
+                    this.set_value_callback(new_value);
+                }
+            }
+
+            // Handle end button click
+            if (this.button_end_down && this.is_inside_rect(this.button_end_rect, virtual_mouse_x, virtual_mouse_y)) {
+                const value_data = this.get_value_callback();
+                if (value_data && this.set_value_callback) {
+                    // Increment by 1% of max
+                    const step = value_data.max * 0.01;
+                    const new_value = Math.min(value_data.max, value_data.current + step);
+                    this.set_value_callback(new_value);
+                }
+            }
+
+            this.button_start_down = false;
+            this.button_end_down = false;
+            this.is_dragging_thumb = false;
+        } catch (error) {
+            this.logger.error(`scrollbar handle_mouse_up: ${error.message}`);
+        }
+    }
+
+    handle_mouse_move(event) {
+        try {
+            if (this.active !== true) return;
+
+            const viewport = this.graphics.viewport;
+            const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+            const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+            // Handle thumb dragging
+            if (this.is_dragging_thumb && this.track_rect) {
+                const value_data = this.get_value_callback();
+                if (!value_data) return;
+
+                const is_horizontal = (this.orientation === "horizontal");
+                const current_pos = is_horizontal ? virtual_mouse_x : virtual_mouse_y;
+                const delta = current_pos - this.drag_start_pos;
+
+                // Calculate track size and convert mouse movement to value
+                const track_size = is_horizontal ? this.track_rect.width : this.track_rect.height;
+                const delta_value = (delta / track_size) * value_data.max;
+
+                let new_value = this.drag_start_value + delta_value;
+                new_value = Math.max(0, Math.min(new_value, value_data.max));
+
+                if (this.set_value_callback) {
+                    this.set_value_callback(new_value);
+                }
+                return;
+            }
+
+            // Update hover states
+            this.button_start_hover = this.is_inside_rect(this.button_start_rect, virtual_mouse_x, virtual_mouse_y);
+            this.button_end_hover = this.is_inside_rect(this.button_end_rect, virtual_mouse_x, virtual_mouse_y);
+            this.thumb_hover = this.is_inside_rect(this.thumb_rect, virtual_mouse_x, virtual_mouse_y);
+        } catch (error) {
+            this.logger.error(`scrollbar handle_mouse_move: ${error.message}`);
+        }
+    }
+
+    is_inside_rect(rect, mouse_x, mouse_y) {
+        if (!rect) return false;
+        return mouse_x >= rect.x &&
+               mouse_x <= rect.x + rect.width &&
+               mouse_y >= rect.y &&
+               mouse_y <= rect.y + rect.height;
+    }
+
+    delete() {
+        try {
+            // Set active to false first to prevent any ongoing operations
+            this.active = false;
+
+            if (this.graphics && this.graphics.visibleCanvas) {
+                this.graphics.visibleCanvas.removeEventListener('mousedown', this._bound_mouse_down);
+                this.graphics.visibleCanvas.removeEventListener('mouseup', this._bound_mouse_up);
+                this.graphics.visibleCanvas.removeEventListener('mousemove', this._bound_mouse_move);
+            }
+
+            delete this.sprites;
+            delete this.orientation;
+            delete this.get_value_callback;
+            delete this.set_value_callback;
+            delete this.button_start_rect;
+            delete this.button_end_rect;
+            delete this.track_rect;
+            delete this.thumb_rect;
+            delete this.button_start_hover;
+            delete this.button_start_down;
+            delete this.button_end_hover;
+            delete this.button_end_down;
+            delete this.thumb_hover;
+            delete this.is_dragging_thumb;
+            delete this.drag_start_pos;
+            delete this.drag_start_value;
+            delete this._bound_mouse_down;
+            delete this._bound_mouse_up;
+            delete this._bound_mouse_move;
+            delete this._legacy_position;
+            delete this._legacy_anchor_position;
+
+            // Call parent cleanup
+            super.delete();
+        } catch (error) {
+            if (this.logger) {
+                this.logger.error(`scrollbar delete: ${error.message}`);
+            }
+        }
+    }
+}
+
+
+class percentage_bar extends ui_component {
+    constructor(parent, graphics, position, overlay, underlay) {
+        // Convert old rect-based position to layout_config
+        let layout_config = {
+            mode: "relative",
+            anchor_x: "left",
+            anchor_y: "top",
+            width_mode: "fixed",
+            height_mode: "fixed",
+            width: position.width,
+            height: position.height,
+            offset_x: position.x,
+            offset_y: position.y
+        };
+
+        super(parent, graphics, layout_config);
+        this.underlay = underlay;
+        this.overlay = overlay;
+        this.percentage = 0;
+    }
+
+    /**
+     * Render the percentage bar
+     */
+    render() {
+        if (!this.active) return;
+
+        // Use the position calculated by ui_component
+        const absolute_position = this.position;
+
+        // Render underlay (fluid/progress)
+        let percentage_width = parseInt((absolute_position.width * this.percentage) / 100);
+        if (percentage_width != 0) {
+            // Calculate underlay position (inset from overlay)
+            const underlay_x = absolute_position.x + 20;
+            const underlay_y = absolute_position.y + 9;
+            let render_percentage = new rect(underlay_x, underlay_y, percentage_width * 0.85, absolute_position.height - 18);
+            this.graphics.sprites.render(this.underlay, null, render_percentage, 1, "none");
+        }
+
+        // Render overlay (bar frame)
+        this.graphics.sprites.slice_3(this.overlay, absolute_position);
+    }
+
+    /**
+     * Update the bar with a new percentage value
+     */
+    set_percentage(percentage) {
+        this.percentage = percentage;
+    }
+}
+
+
+class percentage_bar_fluid extends percentage_bar {
+    constructor(parent, graphics, position, overlay, underlay) {
+        super(parent, graphics, position, overlay, underlay);
+    }
+}
 class modal {
   constructor(logger) {
     this.logger = logger || console;
@@ -2497,94 +3549,142 @@ class modal {
     }
   }
 }
-
-// This class manages viewport scaling with minimum dimensions
-// Maintains a minimum virtual viewport and scales appropriately
-// Handles letterboxing/pillarboxing when aspect ratios don't match
-
-class viewport {
-
-    constructor(width, height) {
-        this.frame = { x: 0, y: 0, width: 0, height: 0 };
-        this.requested = { width: width, height: height };
-        this.virtual = { width: 0, height: 0 };
-        this.given = { x: 0, y: 0, width: 0, height: 0 };
-        this.world = { x:0, y:0, width: 0, height: 0 };
-
-        // Minimum virtual dimensions (design target) by orientation
-        this.min_virtual_landscape = {
-            width: 1920,
-            height: 1080
-        };
-
-        this.min_virtual_portrait = {
-            width: 1080,
-            height: 1920
-        };
-
-        this.scale = { x: 1, y: 1 };
-        this.calculate();
+class graphics extends events {
+    constructor(canvas = null, ctx = null, logger) {
+      super(logger);
+      this.logger = logger || console;
+      try {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.font = null;
+        this.asset_loader = new asset_loader();
+        this.sprites = new sprites(ctx, this.asset_loader);
+        this.sprites.on("complete", this.load_font.bind(this));
+        this.sprites.preload();
+        this.backround = null;
+        // Fixed virtual resolution - everything is designed for 1920x1080
+        this.viewport = new viewport(1920, 1080);
+        this.frame_background_color = '#222';
+        this.background_color = '#000000';
+      } catch (error) {
+        this.logger.error(`graphics constructor: ${error.message}`);
+      }
     }
-
-    calculate() {
-        // Display area size (force integers to match canvas dimensions)
-        this.frame = {
-            x: 0,
-            y: 0,
-            width: Math.floor(window.innerWidth),
-            height: Math.floor(window.innerHeight)
-        };
-
-        // Canvas dimensions match the window
-        this.given.width = Math.floor(this.frame.width);
-        this.given.height = Math.floor(this.frame.height);
-        this.given.x = 0;
-        this.given.y = 0;
-
-        this.calculate_scale();
-        this.world.height = this.virtual.height;
-        this.world.width = this.virtual.width;
+  
+    sanitize_path(path) {
+      if (typeof path !== 'string') {
+        throw new Error("Invalid image URL type");
+      }
+      return path.replace(/[<>"'`;]/g, '');
     }
-
-    calculate_scale() {
-        // Select minimum dimensions based on orientation
-        const isPortrait = this.given.height > this.given.width;
-        const min_virtual = isPortrait ? this.min_virtual_portrait : this.min_virtual_landscape;
-
-        // Virtual viewport is ALWAYS the minimum/design resolution
-        // This ensures consistent coordinate space for all game objects
-        this.virtual.width = min_virtual.width;
-        this.virtual.height = min_virtual.height;
-
-        // Calculate how much we need to scale to fit the screen
-        // Use the smaller scale factor to ensure entire viewport fits (letterbox if needed)
-        const scaleX = this.given.width / this.virtual.width;
-        const scaleY = this.given.height / this.virtual.height;
-        const uniformScale = Math.min(scaleX, scaleY);
-
-        // Use uniform scaling to maintain aspect ratio
-        this.scale.x = uniformScale;
-        this.scale.y = uniformScale;
-
-        // Calculate rendered dimensions and letterbox/pillarbox offsets
-        // These are used throughout the app for coordinate transformations
-        this.rendered = {
-            width: this.virtual.width * this.scale.x,
-            height: this.virtual.height * this.scale.y
-        };
-
-        this.offset = {
-            x: (this.given.width - this.rendered.width) / 2,
-            y: (this.given.height - this.rendered.height) / 2
-        };
+  
+    load_font() {
+      try {
+        let font = new sprite_font(this.ctx, this.sprites, "grey_font", this.logger, this.viewport);
+        this.font = font;
+        this.emit('complete');
+      } catch (error) {
+        this.logger.error(`load_font: ${error.message}`);
+      }
     }
-
-    isPortrait() {
-        // Portrait mode when height is greater than width
-        return this.frame.height > this.frame.width;
+  
+    set_background(image_url) {
+      try {
+        image_url = this.sanitize_path(image_url);
+        this.backround = new Image();
+        this.backround.src = image_url;
+      } catch (error) {
+        this.logger.error(`set_background: ${error.message}`);
+      }
     }
-}
-class window_manager extends events{
+  
+    recalc_canvas() {
+      try {
+        this.viewport.calculate();
+        // Only update canvas dimensions if they actually changed (to avoid triggering resize events)
+        if (this.canvas.width !== this.viewport.frame.width || this.canvas.height !== this.viewport.frame.height) {
+          this.canvas.windowWidth = this.viewport.frame.width;
+          this.canvas.windowHeight = this.viewport.frame.height;
+          this.canvas.width = this.viewport.frame.width;
+          this.canvas.height = this.viewport.frame.height;
+        }
+      } catch (error) {
+        this.logger.error(`recalc_canvas: ${error.message}`);
+      }
+    }
+  
+    updateCanvasSizeAndDrawImage(level_position) {
+      try {
+        if (this.backround == null) {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          return;
+        }
+        // Correct the window every frame
+        let srcX = 0;
+        let srcY = 0; // increment for scroll (start at bottom)
+        let destX = this.viewport.given.x;
+        let destY = this.viewport.given.y;
+        let scaledDestWidth = this.viewport.given.width;
+        let scaledDestHeight = this.viewport.given.height;
+  
+        let vp_h = this.viewport.virtual.height;
+        let scrollable_height = level_position.height - vp_h;
+        if (scrollable_height < 0) scrollable_height = 0;
+        let position_percentage = (scrollable_height) / level_position.y;
+        srcY = position_percentage * scrollable_height;
+  
+        position_percentage = level_position.y / (level_position.height - this.viewport.virtual.height);
+        srcY = position_percentage * (this.backround.height - this.viewport.virtual.height);
+  
+        this.ctx.save();
+        this.ctx.fillStyle = this.frame_background_color;
+        // Clear the canvas frame
+        this.ctx.fillRect(
+          this.viewport.frame.x,
+          this.viewport.frame.y,
+          this.viewport.frame.width,
+          this.viewport.frame.height
+        );
+        this.ctx.restore();
+  
+        this.ctx.fillStyle = this.background_color;
+        let bg_scale_x = this.viewport.given.width / this.backround.width;
+        let bg_h = this.viewport.virtual.height;
+  
+        // Draw the selected portion of the original image scaled on the canvas
+        this.ctx.drawImage(
+          this.backround,
+          srcX, srcY,
+          this.backround.width, bg_h,
+          destX, destY,
+          scaledDestWidth, scaledDestHeight
+        );
+      } catch (error) {
+        this.logger.error(`updateCanvasSizeAndDrawImage: ${error.message}`);
+      }
+    }
+  
+    fade_images(percentage) {
+      try {
+        if (!this.ctx || !this.canvas) {
+          this.logger.error("fade_images: Canvas or context not defined");
+          return;
+        }
+        // Assuming image1 and image2 are defined in the proper scope
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Draw the first image
+        this.ctx.globalAlpha = 1;
+        this.ctx.drawImage(image1, 0, 0, this.canvas.width, this.canvas.height);
+        // Draw the second image on top with adjusted opacity
+        this.ctx.globalAlpha = percentage / 100;
+        this.ctx.drawImage(image2, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.globalAlpha = 1;
+      } catch (error) {
+        this.logger.error(`fade_images: ${error.message}`);
+      }
+    }
+  }
+  class window_manager extends events{
     constructor(elements) {
       super();
       this.canvas = document.getElementById(elements.canvasId);
@@ -2592,7 +3692,7 @@ class window_manager extends events{
 
       // Create offscreen canvas for double buffering (eliminates flicker)
       this.offscreenCanvas = document.createElement('canvas');
-      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
 
       // Use offscreen canvas for all rendering
       this.graphics = new graphics(this.offscreenCanvas, this.offscreenCtx);
@@ -2737,6 +3837,14 @@ class window_manager extends events{
           this.render();
       });
 
+      // Input processing loop - runs at 60 FPS for responsive input
+      setInterval(() => {
+          if (this.has_windows() > 0) {
+              this.handle_keys();
+          }
+      }, 1000 / 60);
+
+      // Render loop - runs at 24 FPS for display
       setInterval(() => {
           // Skip rendering if in frame step mode and F11 wasn't pressed
           if (this.debug_frame_step && !this.debug_render_next_frame) {
@@ -2747,10 +3855,9 @@ class window_manager extends events{
           // DO NOT call recalc_canvas every frame - it triggers resize events!
           // Canvas dimensions are set in the window resize listener
           if (this.has_windows() > 0) {
-              this.handle_keys();
               this.render();
           }
-        },1000 / 24);
+      }, 1000 / 24);
     }
 
 
@@ -2995,685 +4102,7 @@ class window_manager extends events{
     }
   }
 
-  class graphics extends events {
-    constructor(canvas = null, ctx = null, logger) {
-      super(logger);
-      this.logger = logger || console;
-      try {
-        this.canvas = canvas;
-        this.ctx = ctx;
-        this.font = null;
-        this.asset_loader = new asset_loader();
-        this.sprites = new sprites(ctx, this.asset_loader);
-        this.sprites.on("complete", this.load_font.bind(this));
-        this.sprites.preload();
-        this.backround = null;
-        // Fixed virtual resolution - everything is designed for 1920x1080
-        this.viewport = new viewport(1920, 1080);
-        this.frame_background_color = '#222';
-        this.background_color = '#000000';
-      } catch (error) {
-        this.logger.error(`graphics constructor: ${error.message}`);
-      }
-    }
-  
-    sanitize_path(path) {
-      if (typeof path !== 'string') {
-        throw new Error("Invalid image URL type");
-      }
-      return path.replace(/[<>"'`;]/g, '');
-    }
-  
-    load_font() {
-      try {
-        let font = new sprite_font(this.ctx, this.sprites, "grey_font", this.logger, this.viewport);
-        this.font = font;
-        this.emit('complete');
-      } catch (error) {
-        this.logger.error(`load_font: ${error.message}`);
-      }
-    }
-  
-    set_background(image_url) {
-      try {
-        image_url = this.sanitize_path(image_url);
-        this.backround = new Image();
-        this.backround.src = image_url;
-      } catch (error) {
-        this.logger.error(`set_background: ${error.message}`);
-      }
-    }
-  
-    recalc_canvas() {
-      try {
-        this.viewport.calculate();
-        // Only update canvas dimensions if they actually changed (to avoid triggering resize events)
-        if (this.canvas.width !== this.viewport.frame.width || this.canvas.height !== this.viewport.frame.height) {
-          this.canvas.windowWidth = this.viewport.frame.width;
-          this.canvas.windowHeight = this.viewport.frame.height;
-          this.canvas.width = this.viewport.frame.width;
-          this.canvas.height = this.viewport.frame.height;
-        }
-      } catch (error) {
-        this.logger.error(`recalc_canvas: ${error.message}`);
-      }
-    }
-  
-    updateCanvasSizeAndDrawImage(level_position) {
-      try {
-        if (this.backround == null) {
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-          return;
-        }
-        // Correct the window every frame
-        let srcX = 0;
-        let srcY = 0; // increment for scroll (start at bottom)
-        let destX = this.viewport.given.x;
-        let destY = this.viewport.given.y;
-        let scaledDestWidth = this.viewport.given.width;
-        let scaledDestHeight = this.viewport.given.height;
-  
-        let vp_h = this.viewport.virtual.height;
-        let scrollable_height = level_position.height - vp_h;
-        if (scrollable_height < 0) scrollable_height = 0;
-        let position_percentage = (scrollable_height) / level_position.y;
-        srcY = position_percentage * scrollable_height;
-  
-        position_percentage = level_position.y / (level_position.height - this.viewport.virtual.height);
-        srcY = position_percentage * (this.backround.height - this.viewport.virtual.height);
-  
-        this.ctx.save();
-        this.ctx.fillStyle = this.frame_background_color;
-        // Clear the canvas frame
-        this.ctx.fillRect(
-          this.viewport.frame.x,
-          this.viewport.frame.y,
-          this.viewport.frame.width,
-          this.viewport.frame.height
-        );
-        this.ctx.restore();
-  
-        this.ctx.fillStyle = this.background_color;
-        let bg_scale_x = this.viewport.given.width / this.backround.width;
-        let bg_h = this.viewport.virtual.height;
-  
-        // Draw the selected portion of the original image scaled on the canvas
-        this.ctx.drawImage(
-          this.backround,
-          srcX, srcY,
-          this.backround.width, bg_h,
-          destX, destY,
-          scaledDestWidth, scaledDestHeight
-        );
-      } catch (error) {
-        this.logger.error(`updateCanvasSizeAndDrawImage: ${error.message}`);
-      }
-    }
-  
-    fade_images(percentage) {
-      try {
-        if (!this.ctx || !this.canvas) {
-          this.logger.error("fade_images: Canvas or context not defined");
-          return;
-        }
-        // Assuming image1 and image2 are defined in the proper scope
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        // Draw the first image
-        this.ctx.globalAlpha = 1;
-        this.ctx.drawImage(image1, 0, 0, this.canvas.width, this.canvas.height);
-        // Draw the second image on top with adjusted opacity
-        this.ctx.globalAlpha = percentage / 100;
-        this.ctx.drawImage(image2, 0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.globalAlpha = 1;
-      } catch (error) {
-        this.logger.error(`fade_images: ${error.message}`);
-      }
-    }
-  }
-  class key_states {
-    constructor(logger) {
-      this.logger = logger || console;
-      try {
-        this.states = [];
-        // Renamed property to avoid conflict with the method name 'shift'
-        this.shift_state = false;
-        this.ctrl_state = false;
-      } catch (error) {
-        this.logger.error(`key_states constructor: ${error.message}`);
-      }
-    }
-  
-    up(key) {
-      try {
-        if (!this.states[key] || !this.states[key].justStopped) { // Ensure the justStopped logic
-          this.states[key] = { pressed: false, up: true, down: false, justStopped: true };
-        }
-      } catch (error) {
-        this.logger.error(`up(${key}): ${error.message}`);
-      }
-    }
-  
-    down(key) {
-      try {
-        if (!this.states[key] || !this.states[key].justPressed) { // Ensure the justPressed logic
-          this.states[key] = { pressed: true, up: false, down: true, justPressed: true };
-        }
-      } catch (error) {
-        this.logger.error(`down(${key}): ${error.message}`);
-      }
-    }
-  
-    get_state(key) {
-      try {
-        if (key in this.states) {
-          return this.states[key];
-        }
-        this.states[key] = { pressed: false, up: false, down: false };
-        return this.states[key];
-      } catch (error) {
-        this.logger.error(`get_state(${key}): ${error.message}`);
-        return { pressed: false, up: false, down: false };
-      }
-    }
-  
-    is_pressed(key) {
-      try {
-        return key in this.states && this.states[key].pressed;
-      } catch (error) {
-        this.logger.error(`is_pressed(${key}): ${error.message}`);
-        return false;
-      }
-    }
-  
-    just_pressed(key) {
-      try {
-        if (key in this.states && this.states[key].justPressed) {
-          this.states[key].justPressed = false; // Reset after checking
-          return true;
-        }
-        return false;
-      } catch (error) {
-        this.logger.error(`just_pressed(${key}): ${error.message}`);
-        return false;
-      }
-    }
-  
-    just_stopped(key) {
-      try {
-        if (key in this.states && this.states[key].justStopped) {
-          this.states[key].justStopped = false; // Reset after checking
-          return true;
-        }
-        return false;
-      } catch (error) {
-        this.logger.error(`just_stopped(${key}): ${error.message}`);
-        return false;
-      }
-    }
-  
-    shift() {
-      try {
-        return this.shift_state;
-      } catch (error) {
-        this.logger.error(`shift(): ${error.message}`);
-        return false;
-      }
-    }
-  
-    ctrl() {
-      try {
-        return this.ctrl_state;
-      } catch (error) {
-        this.logger.error(`ctrl(): ${error.message}`);
-        return false;
-      }
-    }
-  
-    event(event) {
-      try {
-        this.shift_state = event.shiftKey;
-        this.ctrl_state = event.ctrlKey;
-      } catch (error) {
-        this.logger.error(`event(): ${error.message}`);
-      }
-    }
-  }
-  class menu extends modal{
-    constructor(){
-        super();
-
-        // Store button data for resize recalculation
-        this.menu_buttons = [];
-        this.title_image = null;  // Reference to title graphic
-        this.glow_phase = 0;  // For pulsing glow animation
-    }
-
-    layout(){
-        //window specifics
-        this.set_background("menu");
-        this.ok=false;
-        this.cancel=false;
-        this.closeButton=false;  // No close button for main menu
-        this.no_close=true;  // Prevent ESC from closing main menu
-        this.title="Menu";
-        this.text="";
-        this.active=true;
-
-        // Use virtual viewport dimensions (logical pixels, not physical)
-        let vw = this.graphics.viewport.virtual.width;
-        let vh = this.graphics.viewport.virtual.height;
-
-        // Calculate menu position based on orientation
-        const isPortrait = this.graphics.viewport.isPortrait();
-
-        // Add title image at top of screen
-        this.setup_title_image();
-
-        // Get title bottom position (where menu should start)
-        const titleBottom = this.get_title_bottom();
-        const menuTopPadding = 20;
-        const menuTop = titleBottom + menuTopPadding;
-
-        if (isPortrait) {
-            // Portrait: Use minimum height, centered between title and bottom
-            const marginX = 20;
-            const marginBottom = 20;
-            const window_width = vw - (marginX * 2);
-
-            // Calculate minimum height based on button layout
-            // Top buttons: y=30 + 3 buttons with 80px spacing = 270
-            // Last regular button height = 60, ends at 330
-            // Gap before Exit button = 60
-            // Exit button height = 60
-            // Bottom margin for Exit = 20
-            // Extra padding = 20
-            const baseHeight = 30 + (3 * 80) + 60 + 60 + 60 + 20 + 20; // = 490px
-            const minMenuHeight = baseHeight * 1.2; // 20% larger = 588px
-
-            // Calculate available space and center the menu
-            const availableHeight = vh - menuTop - marginBottom;
-            const menuHeight = Math.max(minMenuHeight, Math.min(minMenuHeight, availableHeight));
-
-            // Center vertically in available space
-            const centeredY = menuTop + (availableHeight - menuHeight) / 2;
-            const x = marginX;
-
-            this.position = new rect(x, centeredY, window_width, menuHeight, "left", "top");
-        } else {
-            // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
-            let window_width = 400;
-            let x = 60;  // Left-anchored at 60 pixels
-            const menuBottom = vh * 0.90;
-            const menuHeight = menuBottom - menuTop;
-            this.position = new rect(x, menuTop, window_width, menuHeight, "left", "top");
-        }
-
-        this.resize();
-        this.add_buttons();
-
-        // Listen to modal's keyboard events for help
-        this.on("keys", (data) => {
-            if (data.kb.just_stopped('h') || data.kb.just_stopped('H')) {
-                this.show_help();
-            }
-        });
-
-        //layout options - keep gradient for visual effect
-        this.add_bg_gradient(0, 'rgba(0,0,0,0.3)');
-        this.add_bg_gradient(.7, 'rgba(211,211,211,0.2)');
-        this.add_bg_gradient(.8, 'rgba(169,169,169,0.2)');
-        this.add_bg_gradient(1, 'rgba(0,0,0,0.3)');
-
-        // Create buttons with viewport-relative positions
-        this.create_menu_buttons();
-    }
-
-    setup_title_image() {
-        const vw = this.graphics.viewport.virtual.width;
-
-        // Calculate title dimensions
-        let title_width = Math.min(1024, vw * 0.6);
-        let title_height = title_width * (236 / 1024);  // Maintain aspect ratio
-        let title_x = vw / 2 - title_width / 2;
-        let title_y = 10;
-
-        this.title_image = this.add_image(new rect(title_x, title_y, title_width, title_height, "left", "top"), "title");
-    }
-
-    get_title_bottom() {
-        if (!this.title_image) return 210;  // Default
-
-        const title_bottom = this.title_image.position.y + this.title_image.position.height;
-        return title_bottom + 20;  // Add small padding
-    }
-
-    recalculate_title() {
-        if (!this.title_image || !this.title_image.position) return;
-
-        const vw = this.graphics.viewport.virtual.width;
-
-        // Recalculate title image position - centered
-        const margin = 40;
-        const maxWidth = vw - (margin * 2);
-        let title_width = Math.min(1024, vw * 0.6, maxWidth);
-        let title_height = title_width * (236 / 1024);
-        let title_x = vw / 2 - title_width / 2;
-
-        // Set absolute positions
-        this.title_image.position.x = title_x;
-        this.title_image.position.y = 10;
-        this.title_image.position.width = title_width;
-        this.title_image.position.height = title_height;
-    }
-
-    render() {
-        if (!this.active) return;
-
-        // Call parent render first (draws dialog background, buttons, etc.)
-        super.render();
-
-        // Render title with glow
-        if (this.title_image) {
-            this.render_title_with_glow(this.title_image);
-        }
-
-        // Render tagline below title (only in landscape mode)
-        const isPortrait = this.graphics.viewport.isPortrait();
-        if (!isPortrait) {
-            this.render_tagline();
-        }
-    }
-
-    render_title_with_glow(image) {
-        if (!this.graphics || !this.graphics.ctx) return;
-
-        const ctx = this.graphics.ctx;
-
-        // Update glow animation phase
-        this.glow_phase += 0.05;
-
-        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
-        const pulse = 25 + Math.sin(this.glow_phase) * 15;
-
-        ctx.save();
-
-        // Draw the title multiple times with increasing glow for stronger effect
-        // Layer 1: Strongest glow (underneath)
-        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
-        ctx.shadowBlur = pulse * 2;
-        let image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Layer 2: Medium glow
-        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
-        ctx.shadowBlur = pulse * 1.5;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Layer 3: Soft glow
-        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
-        ctx.shadowBlur = pulse;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        // Final layer: No shadow (crisp title on top)
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        image_pos = image.position.clone();
-        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
-
-        ctx.restore();
-
-        // Extra cleanup to ensure no shadow state leaks
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-    }
-
-    render_tagline() {
-        if (!this.graphics || !this.graphics.ctx) return;
-        if (!this.title_image) return;
-
-        const ctx = this.graphics.ctx;
-        const vw = this.graphics.viewport.virtual.width;
-
-        // Calculate position below title
-        const title_bottom = this.title_image.position.y + this.title_image.position.height;
-
-        ctx.save();
-        ctx.textAlign = 'center';
-
-        const mainText = 'The Battle for Humanity\'s Jobs Has Begun.';
-        const subText1 = 'Command your ship. Defend the last human workforce.';
-        const subText2 = 'Destroy the machine overlords before they automate everything.';
-
-        // Landscape: fit in space to the right of menu
-        const menuRightEdge = 60 + 400;  // menu x + menu width
-        const marginFromMenu = 40;
-        const marginFromScreenEdge = 20;
-        const availableWidth = vw - menuRightEdge - marginFromMenu - marginFromScreenEdge;
-
-        // Start with default sizes and scale down if needed
-        let mainFontSize = 32;
-        let subFontSize = 18;
-
-        // Measure text with current font sizes
-        ctx.font = `bold ${mainFontSize}px monospace`;
-        let maxWidth = ctx.measureText(mainText).width;
-        ctx.font = `${subFontSize}px monospace`;
-        maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
-
-        const boxPadding = 20;
-        const neededWidth = maxWidth + boxPadding * 2;
-
-        // Scale down fonts if text doesn't fit
-        if (neededWidth > availableWidth) {
-            const scale = availableWidth / neededWidth;
-            mainFontSize = Math.max(16, Math.floor(mainFontSize * scale));
-            subFontSize = Math.max(12, Math.floor(subFontSize * scale));
-
-            // Recalculate width with new font sizes
-            ctx.font = `bold ${mainFontSize}px monospace`;
-            maxWidth = ctx.measureText(mainText).width;
-            ctx.font = `${subFontSize}px monospace`;
-            maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
-        }
-
-        const boxWidth = Math.min(maxWidth + boxPadding * 2, availableWidth);
-        const boxHeight = 125;
-        const boxX = menuRightEdge + marginFromMenu;
-        const textCenterX = boxX + boxWidth / 2;
-        const boxY = title_bottom + 20;
-
-        // Draw semi-transparent background box for all text
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
-
-        // Optional: Add border for more definition
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-        // Draw main text with glow
-        ctx.font = `bold ${mainFontSize}px monospace`;
-        ctx.fillStyle = '#FF6B00';
-        ctx.shadowColor = 'rgba(255, 107, 0, 0.8)';
-        ctx.shadowBlur = 15;
-        ctx.fillText(mainText, textCenterX, boxY + 35);
-
-        // Clear shadow for subtext
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-
-        // Subtext lines - smaller, cyan colored
-        ctx.fillStyle = '#00FFFF';
-        ctx.font = `${subFontSize}px monospace`;
-        ctx.fillText(subText1, textCenterX, boxY + 65);
-        ctx.fillText(subText2, textCenterX, boxY + 90);
-
-        ctx.restore();
-    }
-
-    show_help() {
-        let modal = new help();
-        this.window_manager.add(modal);
-    }
-
-    create_menu_buttons() {
-        // Clear existing menu buttons
-        this.menu_buttons = [];
-
-        const isPortrait = this.graphics.viewport.isPortrait();
-
-        // Button sizing - use base dimensions (canvas transformation handles UI scale)
-        const button_margin_x = 20;  // Margin from dialog edges
-        const button_width = this.internal_rect.width - (button_margin_x * 2);
-        const button_height = 60;  // Base height
-        const button_spacing = 80;  // Base spacing
-
-        let y = 30;
-
-        // Store button definitions
-        this.menu_buttons = [
-            { label: "New Game", callback: this.new_game, y_offset: y, style: "cyan" },
-            { label: "Prologue", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
-            { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
-            { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
-            { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - (button_height + 20), style: "red" }
-        ];
-
-        // Create actual button instances
-        for (let btn_def of this.menu_buttons) {
-            let button_position = new rect(button_margin_x, btn_def.y_offset, button_width, button_height, "left", "top");
-            let up_img = btn_def.style === "cyan" ? "button-up-cyan" : "button-up-red";
-            let down_img = btn_def.style === "cyan" ? "button-down-cyan" : "button-down-red";
-            btn_def.button = this.add_button(btn_def.label, button_position, btn_def.callback, up_img, down_img);
-            btn_def.position = button_position;
-        }
-    }
-
-    update_dimensions_for_orientation() {
-        // Just call resize() - it handles everything including button recreation
-        this.resize();
-    }
-
-    recreate_buttons() {
-        // Delete old buttons
-        if (this.buttons) {
-            this.buttons.forEach((button) => {
-                if (button.delete) button.delete();
-            });
-        }
-        this.buttons = [];
-
-        // Recreate with new sizing
-        this.create_menu_buttons();
-    }
-
-    resize() {
-        // Recalculate menu position based on new viewport and orientation
-        if (this.graphics && this.graphics.viewport) {
-            let vw = this.graphics.viewport.virtual.width;
-            let vh = this.graphics.viewport.virtual.height;
-            const isPortrait = this.graphics.viewport.isPortrait();
-
-            // Recalculate title position
-            this.recalculate_title();
-
-            // Get title bottom position (where menu should start)
-            const titleBottom = this.get_title_bottom();
-            const menuTopPadding = 20;
-            const menuTop = titleBottom + menuTopPadding;
-
-            if (isPortrait) {
-                // Portrait: Use minimum height, centered between title and bottom
-                const marginX = 20;
-                const marginBottom = 20;
-                const window_width = vw - (marginX * 2);
-
-                // Calculate minimum height based on button layout
-                // Top buttons: y=30 + 3 buttons with 80px spacing = 270
-                // Last regular button height = 60, ends at 330
-                // Gap before Exit button = 60
-                // Exit button height = 60
-                // Bottom margin for Exit = 20
-                // Extra padding = 20
-                const baseHeight = 30 + (3 * 80) + 60 + 60 + 60 + 20 + 20; // = 490px
-                const minMenuHeight = baseHeight * 1.2; // 20% larger = 588px
-
-                // Calculate available space and center the menu
-                const availableHeight = vh - menuTop - marginBottom;
-                const menuHeight = Math.max(minMenuHeight, Math.min(minMenuHeight, availableHeight));
-
-                // Center vertically in available space
-                const centeredY = menuTop + (availableHeight - menuHeight) / 2;
-                const x = marginX;
-
-                this.position.x = x;
-                this.position.y = centeredY;
-                this.position.width = window_width;
-                this.position.height = menuHeight;
-            } else {
-                // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
-                let window_width = 400;
-                let x = 60;
-                const menuBottom = vh * 0.90;
-                const menuHeight = menuBottom - menuTop;
-
-                this.position.x = x;
-                this.position.y = menuTop;
-                this.position.width = window_width;
-                this.position.height = menuHeight;
-            }
-        }
-
-        // Call parent resize to update internal_rect FIRST
-        super.resize();
-
-        // Recreate buttons to match new dialog width
-        this.recreate_buttons();
-    }
-
-
-    exit(event ){
-        alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
-    }
-
-    async credits(event) {
-        // Resume audio context on user interaction (browser autoplay policy)
-        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
-            await this.audio_manager.audioContext.resume();
-        }
-
-        let modal=new credits();
-        this.window_manager.add(modal)
-    }
-
-    high_scoress(event) {
-        let modal=new high_scores();
-        this.window_manager.add(modal)
-    }
-
-    async story(event) {
-        // Resume audio context on user interaction (browser autoplay policy)
-        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
-            await this.audio_manager.audioContext.resume();
-        }
-
-        let modal=new prologue();
-        this.window_manager.add(modal)
-    }
-
-    new_game(){
-        let modal=new game();
-        this.window_manager.add(modal)
-    }
-
-
-}class motion{
+  class motion{
     constructor(x,y,width,height,mass,rotation){
 
         this.mass = mass;
@@ -4943,82 +5372,7 @@ class HeatSeekingMissile extends game_object {
             this.velocity.y *= scaleFactor;
         }
     }
-}class Mine extends game_object {
-    constructor(window_manager, x, y, type) {
-        switch (type) {
-            case 'linkedin':
-                super(window_manager, x, y, 128, 128,
-                    8,                    // mass (heavy - hard to push)
-                    0,                    // rotation
-                    3);                   // rotation speed (slow menacing spin)
-
-                this.set_image('ship_linkedin');
-                this.set_type("mine");
-                this.set_max_life(50); // Fragile - explodes easily
-                this.set_center(64, 64);
-
-                // Mine behavior - slow drift
-                let mine_action = [
-                    { type: "bank_left", frames: 20 },
-                    { type: "bank_right", frames: 40 },
-                    { type: "bank_left", frames: 20 },
-                    { type: "skip", frames: 5 }
-                ];
-                this.action_list = mine_action;
-                this.action_position.frame = parseInt(Math.random() * mine_action.length);
-
-                // Proximity detection
-                this.proximity_range = 150; // Explodes when player within 150 pixels
-                this.armed = true;
-                this.explosion_damage = 500; // Heavy damage when triggered
-                break;
-        }
-
-        this.rotation = Math.random() * 360; // Random starting rotation
-    }
-
-    check_proximity(target) {
-        if (!this.armed || !target) return false;
-
-        // Calculate distance to target
-        const dx = this.position.x - target.position.x;
-        const dy = this.position.y - target.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        return distance < this.proximity_range;
-    }
-
-    trigger_explosion() {
-        if (!this.armed) return;
-
-        this.armed = false;
-
-        // Create multiple explosions for mine detonation
-        for (let i = 0; i < 3; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 10;  // Reduced from 30 to 10 for tighter explosion
-            const offsetX = Math.cos(angle) * radius;
-            const offsetY = Math.sin(angle) * radius;
-
-            let exp = new Explosion(this.window_manager,
-                this.position.x + offsetX,
-                this.position.y + offsetY);
-            exp.set_sub();
-            this.explosions.push(exp);
-        }
-
-        // Destroy the mine
-        this.life = 0;
-        this.destroy_object = true;
-
-        console.log('[Mine] Detonated!');
-    }
-
-    update_frame(deltaTime) {
-        super.update_frame(deltaTime);
-    }
 }
-
 
 class Ship extends game_object {
 
@@ -6004,6 +6358,81 @@ class Enemy extends game_object {
         }
     }
 }
+class Mine extends game_object {
+    constructor(window_manager, x, y, type) {
+        switch (type) {
+            case 'linkedin':
+                super(window_manager, x, y, 128, 128,
+                    8,                    // mass (heavy - hard to push)
+                    0,                    // rotation
+                    3);                   // rotation speed (slow menacing spin)
+
+                this.set_image('ship_linkedin');
+                this.set_type("mine");
+                this.set_max_life(50); // Fragile - explodes easily
+                this.set_center(64, 64);
+
+                // Mine behavior - slow drift
+                let mine_action = [
+                    { type: "bank_left", frames: 20 },
+                    { type: "bank_right", frames: 40 },
+                    { type: "bank_left", frames: 20 },
+                    { type: "skip", frames: 5 }
+                ];
+                this.action_list = mine_action;
+                this.action_position.frame = parseInt(Math.random() * mine_action.length);
+
+                // Proximity detection
+                this.proximity_range = 150; // Explodes when player within 150 pixels
+                this.armed = true;
+                this.explosion_damage = 500; // Heavy damage when triggered
+                break;
+        }
+
+        this.rotation = Math.random() * 360; // Random starting rotation
+    }
+
+    check_proximity(target) {
+        if (!this.armed || !target) return false;
+
+        // Calculate distance to target
+        const dx = this.position.x - target.position.x;
+        const dy = this.position.y - target.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        return distance < this.proximity_range;
+    }
+
+    trigger_explosion() {
+        if (!this.armed) return;
+
+        this.armed = false;
+
+        // Create multiple explosions for mine detonation
+        for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 10;  // Reduced from 30 to 10 for tighter explosion
+            const offsetX = Math.cos(angle) * radius;
+            const offsetY = Math.sin(angle) * radius;
+
+            let exp = new Explosion(this.window_manager,
+                this.position.x + offsetX,
+                this.position.y + offsetY);
+            exp.set_sub();
+            this.explosions.push(exp);
+        }
+
+        // Destroy the mine
+        this.life = 0;
+        this.destroy_object = true;
+
+        console.log('[Mine] Detonated!');
+    }
+
+    update_frame(deltaTime) {
+        super.update_frame(deltaTime);
+    }
+}
 class Powerup extends game_object {
     constructor(window_manager, x, y, type) {
         super(window_manager, x, y, 48, 48,
@@ -6431,1007 +6860,7 @@ class level extends events{
 
    
 
-}class help extends modal{
-    layout(){
-        this.active=true;
-        this.ok=false;
-        this.cancel=false;
-        this.closeButton=true;
-        this.title="Help";
-        let window_width=1024;
-        let window_height=700;
-        // Use virtual viewport dimensions for positioning (logical pixels)
-        let x=(this.graphics.viewport.virtual.width-window_width)/2;
-        let y=(this.graphics.viewport.virtual.height-window_height)/2;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
-
-
-        this.text = "| Key           | Action                 |\n" +
-            "|---------------|------------------------|\n" +
-            "| Arrow Keys    | Bank left/right        |\n" +
-            "|               | Accelerate/decelerate  |\n" +
-            "| WASD          | Strafe movement        |\n" +
-            "| Space         | Fire lasers            |\n" +
-            "| Enter         | Fire Missiles          |\n" +
-            "| Shift         | Boost                  |\n" +
-            "| M             | Toggle Sound           |\n" +
-            "| +             | Volume up              |\n" +
-            "| -             | Volume down            |\n" +
-            "| Escape        | Toggle Pause           |\n" +
-            "| Tab           | Boss Mode (toggle)     |\n" +
-            "| H             | Show this help         |\n";
-
-            this.resize();
-            this.add_buttons();
-    }
-
-
-}class prologue extends cinematic_player {
-
-    layout() {
-        this.set_background("prologue");
-        this.ok = false;
-        this.cancel = false;
-        this.closeButton = true;
-        this.title = "Prologue";
-        this.text = "";
-        this.active = true;
-
-        // Store landscape dimensions
-        this.landscape_width = 1400;
-        this.landscape_height = 800;
-
-        // Calculate initial dimensions
-        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
-        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
-        this.resize();
-        this.add_buttons();
-
-        // Load intro scene from ASSETS.json
-        const intro_scene_path = this.graphics.asset_loader.get('cinematics.intro.data');
-        this.setup_player(intro_scene_path);
-    }
-}
-class high_scores extends modal{
-    layout(){
-        this.set_background("highscore");
-        this.active=true;
-        this.ok=false;
-        this.cancel=false;
-        this.closeButton=true;
-        this.title="High Scores";
-        this.text="";
-
-        // Store landscape dimensions
-        this.landscape_width = 800;
-        this.landscape_height = 600;
-
-        // Calculate initial dimensions
-        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
-        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
-        this.resize();
-        this.add_buttons();
-        this.high_scores=null;
-        this.scroll_offset=0;
-
-        // Line height - doubled in portrait mode
-        const isPortrait = this.graphics.viewport.isPortrait();
-        this.line_height = isPortrait ? 80 : 40;
-
-        // Load highscores from ASSETS.json
-        const highscores_path = this.graphics.asset_loader.get('game_data.highscores');
-        this.load_high_scores(highscores_path);
-        this.render_callback(this.render_scores.bind(this));
-
-        // Listen to modal's keyboard events
-        this.on("keys", (data) => {
-            this.handle_scroll_keys(data.kb);
-        });
-
-        // Mouse wheel scrolling (use visible canvas for events)
-        this._bound_wheel_handler = this.handle_wheel.bind(this);
-        this.visibleCanvas.addEventListener('wheel', this._bound_wheel_handler);
-
-        // Create scrollbar component with proper anchoring (initially inactive, will be activated when needed)
-        const fontScale = isPortrait ? 2 : 1;
-        const scrollbar_width = 31 * fontScale;
-        const header_height = 60 * fontScale;
-
-        // Calculate absolute x position from right edge
-        const scrollbar_x = this.internal_rect.width - scrollbar_width - (5 * fontScale);
-
-        const scrollbar_pos = new rect(
-            scrollbar_x,                          // Relative to internal_rect
-            header_height,                        // Distance from TOP
-            scrollbar_width,
-            this.internal_rect.height - header_height,
-            "left",
-            "top"
-        );
-
-        // Create anchor position that includes both modal position and internal_rect
-        let anchor_position = new rect(0, 0, 0, 0);
-        anchor_position.add(this.position);
-        anchor_position.add(this.internal_rect);
-
-        this.scrollbar_component = new scrollbar(
-            this, this.graphics, scrollbar_pos, anchor_position, "vertical",
-            () => this.get_scroll_value(),
-            (value) => this.set_scroll_value(value)
-        );
-        this.scrollbar_component.active = false;
-    }
-
-    get_scroll_value() {
-        if (!this.high_scores) return { current: 0, max: 1 };
-
-        const isPortrait = this.graphics.viewport.isPortrait();
-        const fontScale = isPortrait ? 2 : 1;
-        const header_height = 60 * fontScale;
-        const scrollable_height = this.render_internal_rect.height - header_height;
-        const max_scroll = Math.max(1, (this.high_scores.length * this.line_height) - scrollable_height);
-
-        return { current: this.scroll_offset, max: max_scroll };
-    }
-
-    set_scroll_value(value) {
-        const isPortrait = this.graphics.viewport.isPortrait();
-        const fontScale = isPortrait ? 2 : 1;
-        const header_height = 60 * fontScale;
-        const scrollable_height = this.render_internal_rect.height - header_height;
-        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
-
-        this.scroll_offset = Math.max(0, Math.min(value, max_scroll));
-    }
-
-    async load_high_scores(jsonFileUrl){
-        try {
-                const response = await fetch(jsonFileUrl);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                this.high_scores=data;
-        } catch (error) {
-            console.error("Error loading the JSON file:", error);
-        }
-     }
-
-    handle_wheel(event) {
-        if (!this.active || !this.high_scores) return;
-
-        // Check if mouse is over the modal window (use visible canvas)
-        const rect = this.visibleCanvas.getBoundingClientRect();
-        const mouseX = event.clientX - rect.left;
-        const mouseY = event.clientY - rect.top;
-
-        if (mouseX >= this.render_internal_rect.x &&
-            mouseX <= this.render_internal_rect.x + this.render_internal_rect.width &&
-            mouseY >= this.render_internal_rect.y &&
-            mouseY <= this.render_internal_rect.y + this.render_internal_rect.height) {
-
-            event.preventDefault();
-
-            // Scroll by wheel delta
-            this.scroll_offset += event.deltaY * 0.5;
-
-            // Clamp scroll offset - account for portrait mode
-            const isPortrait = this.graphics.viewport.isPortrait();
-            const fontScale = isPortrait ? 2 : 1;
-            const header_height = 60 * fontScale;
-            const scrollable_height = this.render_internal_rect.height - header_height;
-            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
-            this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
-        }
-    }
-
-    handle_scroll_keys(kb) {
-        if (!this.active || !this.high_scores) return;
-
-        // Arrow key scrolling
-        if (kb.is_pressed('ArrowUp')) {
-            this.scroll_offset -= 5;
-        }
-        if (kb.is_pressed('ArrowDown')) {
-            this.scroll_offset += 5;
-        }
-
-        // Page up/down scrolling - account for portrait mode
-        const isPortrait = this.graphics.viewport.isPortrait();
-        const fontScale = isPortrait ? 2 : 1;
-        const header_height = 60 * fontScale;
-        const scrollable_height = this.render_internal_rect.height - header_height;
-
-        if (kb.just_stopped('PageUp')) {
-            this.scroll_offset -= scrollable_height;
-        }
-        if (kb.just_stopped('PageDown')) {
-            this.scroll_offset += scrollable_height;
-        }
-
-        // Home/End
-        if (kb.just_stopped('Home')) {
-            this.scroll_offset = 0;
-        }
-        if (kb.just_stopped('End')) {
-            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
-            this.scroll_offset = max_scroll;
-        }
-
-        // Clamp scroll offset
-        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
-        this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
-    }
-
-    render_scores(position) {
-        if (!this.high_scores) {
-            // Show loading text
-            let loading_pos = new rect(position.x + position.width/2, position.y + position.height/2, null, null, "center", "center");
-            this.graphics.font.draw_text(loading_pos, "Loading...", true, false);
-            return;
-        }
-
-        const ctx = this.graphics.ctx;
-        const isPortrait = this.graphics.viewport.isPortrait();
-
-        // Double sizes in portrait mode
-        const fontScale = isPortrait ? 2 : 1;
-        const header_height = 60 * fontScale; // Height reserved for header
-        const start_y = position.y + (70 * fontScale) - this.scroll_offset;
-        const header_y = position.y + (40 * fontScale);
-
-        // Draw column headers (fixed at top)
-        ctx.save();
-        ctx.fillStyle = '#00FFFF';
-        ctx.font = `bold ${18 * fontScale}px monospace`;
-
-        const rank_x = position.x + (20 * fontScale);
-        const name_x = position.x + (100 * fontScale);
-        const score_x = position.x + position.width - (150 * fontScale);
-
-        ctx.fillText("Rank", rank_x, header_y);
-        ctx.fillText("Name", name_x, header_y);
-        ctx.fillText("Score", score_x, header_y);
-
-        // Draw separator line
-        ctx.strokeStyle = '#00FFFF';
-        ctx.lineWidth = 2 * fontScale;
-        ctx.beginPath();
-        ctx.moveTo(position.x + (10 * fontScale), header_y + (10 * fontScale));
-        ctx.lineTo(position.x + position.width - (10 * fontScale), header_y + (10 * fontScale));
-        ctx.stroke();
-
-        // Draw scores (clip to scrollable area below header)
-        ctx.font = `${16 * fontScale}px monospace`;
-        for (let i = 0; i < this.high_scores.length; i++) {
-            const score = this.high_scores[i];
-            const y = start_y + (i * this.line_height);
-
-            // Skip if outside visible area (below header and above bottom)
-            if (y < position.y + header_height || y > position.y + position.height) {
-                continue;
-            }
-
-            // Highlight current player (if name matches)
-            if (score.name === "Chris Watkins") {
-                ctx.fillStyle = '#FFFF00';
-            } else {
-                // Gradient colors based on rank
-                if (score.rank === 1) ctx.fillStyle = '#FFD700'; // Gold
-                else if (score.rank === 2) ctx.fillStyle = '#C0C0C0'; // Silver
-                else if (score.rank === 3) ctx.fillStyle = '#CD7F32'; // Bronze
-                else ctx.fillStyle = '#00FF00'; // Green
-            }
-
-            ctx.fillText(score.rank.toString(), rank_x, y);
-            ctx.fillText(score.name, name_x, y);
-            ctx.fillText(score.score.toLocaleString(), score_x, y);
-        }
-
-        ctx.restore();
-
-        // Update scrollbar component state
-        const scrollable_height = position.height - header_height;
-        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
-
-        if (max_scroll > 0) {
-            // Activate and render scrollbar
-            this.scrollbar_component.active = true;
-            this.scrollbar_component.render();
-        } else {
-            // No scrolling needed, deactivate scrollbar
-            this.scrollbar_component.active = false;
-        }
-    }
-
-
-    delete() {
-        // Remove wheel event listener (from visible canvas)
-        if (this._bound_wheel_handler) {
-            this.visibleCanvas.removeEventListener('wheel', this._bound_wheel_handler);
-        }
-
-        // Clean up scrollbar component
-        if (this.scrollbar_component) {
-            this.scrollbar_component.delete();
-            this.scrollbar_component = null;
-        }
-
-        super.delete();
-    }
-}
-class credits extends cinematic_player {
-
-    layout() {
-        this.set_background("credits");
-        this.active = true;
-        this.ok = false;
-        this.cancel = false;
-        this.closeButton = true;
-        this.title = "Credits";
-        this.text = "";
-
-        // Store landscape dimensions
-        this.landscape_width = 1400;
-        this.landscape_height = 800;
-
-        // Calculate initial dimensions
-        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
-        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
-        this.resize();
-        this.add_buttons();
-
-        // Load credits scene from ASSETS.json
-        const credits_scene_path = this.graphics.asset_loader.get('cinematics.credits.data');
-        this.setup_player(credits_scene_path);
-    }
-}
-// Base class for all UI components with standardized layout system
-class ui_component extends events {
-    constructor(parent, graphics, layout_config = {}, logger) {
-        super();
-        this.logger = logger || console;
-        this.parent = parent;
-        this.graphics = graphics;
-        this.ctx = graphics.ctx;
-        this.active = true;
-
-        // Layout configuration with sensible defaults
-        this.layout = {
-            // Positioning mode: "absolute", "relative", "anchored"
-            mode: layout_config.mode || "relative",
-
-            // Anchoring: which edges to anchor to parent
-            // Can be: "top", "bottom", "left", "right", "center", or combinations like "top-left"
-            anchor: {
-                x: layout_config.anchor_x || "left",  // "left", "right", "center"
-                y: layout_config.anchor_y || "top"     // "top", "bottom", "center"
-            },
-
-            // Margins: space outside the component (from parent edges)
-            margin: {
-                top: layout_config.margin_top || 0,
-                right: layout_config.margin_right || 0,
-                bottom: layout_config.margin_bottom || 0,
-                left: layout_config.margin_left || 0
-            },
-
-            // Padding: space inside the component (for content)
-            padding: {
-                top: layout_config.padding_top || 0,
-                right: layout_config.padding_right || 0,
-                bottom: layout_config.padding_bottom || 0,
-                left: layout_config.padding_left || 0
-            },
-
-            // Size mode: "fixed", "dynamic", "fill"
-            width_mode: layout_config.width_mode || "fixed",   // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
-            height_mode: layout_config.height_mode || "fixed", // "fixed" (px), "fill" (parent - margins), "dynamic" (content)
-
-            // Size values (used when mode is "fixed")
-            width: layout_config.width || 100,
-            height: layout_config.height || 40,
-
-            // Offset from anchor point (relative positioning)
-            offset_x: layout_config.offset_x || 0,
-            offset_y: layout_config.offset_y || 0
-        };
-
-        // Computed position (absolute coordinates in virtual space)
-        this.position = new rect(0, 0, this.layout.width, this.layout.height);
-
-        // Parent's position (for relative positioning)
-        this.parent_rect = null;
-
-        // Content area (position minus padding)
-        this.content_rect = new rect(0, 0, 0, 0);
-
-        // Children components for event bubbling
-        this.children = [];
-    }
-
-    /**
-     * Calculate absolute position based on parent and layout configuration
-     * This is called when parent resizes or layout properties change
-     */
-    calculate_layout(parent_rect) {
-        try {
-            if (!parent_rect) {
-                this.logger.error("calculate_layout: parent_rect is required");
-                return;
-            }
-
-            this.parent_rect = parent_rect;
-
-            // 1. Calculate width based on width_mode
-            let width = 0;
-            switch (this.layout.width_mode) {
-                case "fixed":
-                    width = this.layout.width;
-                    break;
-                case "fill":
-                    width = parent_rect.width - this.layout.margin.left - this.layout.margin.right;
-                    break;
-                case "dynamic":
-                    // Dynamic sizing will be handled by subclasses (e.g., button measures text)
-                    width = this.layout.width; // Use specified width for now
-                    break;
-            }
-
-            // 2. Calculate height based on height_mode
-            let height = 0;
-            switch (this.layout.height_mode) {
-                case "fixed":
-                    height = this.layout.height;
-                    break;
-                case "fill":
-                    height = parent_rect.height - this.layout.margin.top - this.layout.margin.bottom;
-                    break;
-                case "dynamic":
-                    // Dynamic sizing will be handled by subclasses
-                    height = this.layout.height; // Use specified height for now
-                    break;
-            }
-
-            // 3. Calculate X position based on anchor_x
-            let x = parent_rect.x;
-            switch (this.layout.anchor.x) {
-                case "left":
-                    x = parent_rect.x + this.layout.margin.left + this.layout.offset_x;
-                    break;
-                case "right":
-                    x = parent_rect.x + parent_rect.width - width - this.layout.margin.right - this.layout.offset_x;
-                    break;
-                case "center":
-                    x = parent_rect.x + (parent_rect.width - width) / 2 + this.layout.offset_x;
-                    break;
-            }
-
-            // 4. Calculate Y position based on anchor_y
-            let y = parent_rect.y;
-            switch (this.layout.anchor.y) {
-                case "top":
-                    y = parent_rect.y + this.layout.margin.top + this.layout.offset_y;
-                    break;
-                case "bottom":
-                    y = parent_rect.y + parent_rect.height - height - this.layout.margin.bottom - this.layout.offset_y;
-                    break;
-                case "center":
-                    y = parent_rect.y + (parent_rect.height - height) / 2 + this.layout.offset_y;
-                    break;
-            }
-
-            // 5. Update position rect
-            this.position.x = Math.round(x);
-            this.position.y = Math.round(y);
-            this.position.width = Math.round(width);
-            this.position.height = Math.round(height);
-
-            // 6. Calculate content rect (position minus padding)
-            this.content_rect.x = this.position.x + this.layout.padding.left;
-            this.content_rect.y = this.position.y + this.layout.padding.top;
-            this.content_rect.width = this.position.width - this.layout.padding.left - this.layout.padding.right;
-            this.content_rect.height = this.position.height - this.layout.padding.top - this.layout.padding.bottom;
-
-            // 7. Call resize hook for subclasses
-            this.on_layout_calculated();
-
-            // 8. Bubble resize to children
-            this.resize_children();
-
-        } catch (error) {
-            this.logger.error(`calculate_layout: ${error.message}`);
-        }
-    }
-
-    /**
-     * Hook for subclasses to override - called after layout is calculated
-     */
-    on_layout_calculated() {
-        // Subclasses can override this
-    }
-
-    /**
-     * Resize this component (triggered by parent)
-     * This is the external API that parent components call
-     */
-    resize(parent_rect) {
-        try {
-            this.calculate_layout(parent_rect);
-            this.emit('resize', { component: this, position: this.position });
-        } catch (error) {
-            this.logger.error(`resize: ${error.message}`);
-        }
-    }
-
-    /**
-     * Bubble resize event to all children
-     */
-    resize_children() {
-        try {
-            // Pass our content_rect as the parent_rect for children
-            // (so children are positioned relative to our content area, not including padding)
-            this.children.forEach(child => {
-                if (child && child.resize && typeof child.resize === 'function') {
-                    child.resize(this.content_rect);
-                }
-            });
-        } catch (error) {
-            this.logger.error(`resize_children: ${error.message}`);
-        }
-    }
-
-    /**
-     * Add a child component
-     */
-    add_child(child) {
-        try {
-            if (child) {
-                this.children.push(child);
-                // Initial layout for the child
-                if (this.content_rect) {
-                    child.calculate_layout(this.content_rect);
-                }
-            }
-        } catch (error) {
-            this.logger.error(`add_child: ${error.message}`);
-        }
-    }
-
-    /**
-     * Remove a child component
-     */
-    remove_child(child) {
-        try {
-            const index = this.children.indexOf(child);
-            if (index > -1) {
-                this.children.splice(index, 1);
-            }
-        } catch (error) {
-            this.logger.error(`remove_child: ${error.message}`);
-        }
-    }
-
-    /**
-     * Check if a point (in physical pixels) is inside this component
-     */
-    is_inside(mouse_x, mouse_y) {
-        try {
-            if (!this.active || !this.position) return false;
-
-            // Transform mouse coordinates from physical to virtual space
-            const viewport = this.graphics.viewport;
-            const virtual_mouse_x = (mouse_x - viewport.offset.x) / viewport.scale.x;
-            const virtual_mouse_y = (mouse_y - viewport.offset.y) / viewport.scale.y;
-
-            // Check collision in virtual coordinate space
-            return virtual_mouse_x >= this.position.x &&
-                   virtual_mouse_x <= this.position.x + this.position.width &&
-                   virtual_mouse_y >= this.position.y &&
-                   virtual_mouse_y <= this.position.y + this.position.height;
-        } catch (error) {
-            this.logger.error(`is_inside: ${error.message}`);
-            return false;
-        }
-    }
-
-    /**
-     * Update layout properties and recalculate
-     */
-    update_layout(new_config) {
-        try {
-            // Merge new config into existing layout
-            Object.assign(this.layout, new_config);
-
-            // Recalculate if we have a parent rect
-            if (this.parent_rect) {
-                this.calculate_layout(this.parent_rect);
-            }
-        } catch (error) {
-            this.logger.error(`update_layout: ${error.message}`);
-        }
-    }
-
-    /**
-     * Set active state
-     */
-    set_active(active) {
-        try {
-            this.active = active;
-            // Propagate to children
-            this.children.forEach(child => {
-                if (child && child.set_active && typeof child.set_active === 'function') {
-                    child.set_active(active);
-                }
-            });
-        } catch (error) {
-            this.logger.error(`set_active: ${error.message}`);
-        }
-    }
-
-    /**
-     * Render - subclasses should override
-     */
-    render() {
-        // Subclasses override this
-    }
-
-    /**
-     * Cleanup
-     */
-    delete() {
-        try {
-            this.active = false;
-
-            // Delete all children
-            this.children.forEach(child => {
-                if (child && child.delete && typeof child.delete === 'function') {
-                    child.delete();
-                }
-            });
-            this.children = [];
-
-            // Clear references
-            delete this.parent;
-            delete this.graphics;
-            delete this.ctx;
-            delete this.layout;
-            delete this.position;
-            delete this.parent_rect;
-            delete this.content_rect;
-        } catch (error) {
-            this.logger.error(`delete: ${error.message}`);
-        }
-    }
-
-    /**
-     * Helper: Sanitize paths for security
-     */
-    sanitize_path(path) {
-        if (typeof path !== 'string') {
-            throw new Error("Invalid path type");
-        }
-        return path.replace(/[<>"'`;]/g, '');
-    }
-}
-
-
-class percentage_bar extends ui_component {
-    constructor(parent, graphics, position, overlay, underlay) {
-        // Convert old rect-based position to layout_config
-        let layout_config = {
-            mode: "relative",
-            anchor_x: "left",
-            anchor_y: "top",
-            width_mode: "fixed",
-            height_mode: "fixed",
-            width: position.width,
-            height: position.height,
-            offset_x: position.x,
-            offset_y: position.y
-        };
-
-        super(parent, graphics, layout_config);
-        this.underlay = underlay;
-        this.overlay = overlay;
-        this.percentage = 0;
-    }
-
-    /**
-     * Render the percentage bar
-     */
-    render() {
-        if (!this.active) return;
-
-        // Use the position calculated by ui_component
-        const absolute_position = this.position;
-
-        // Render underlay (fluid/progress)
-        let percentage_width = parseInt((absolute_position.width * this.percentage) / 100);
-        if (percentage_width != 0) {
-            // Calculate underlay position (inset from overlay)
-            const underlay_x = absolute_position.x + 20;
-            const underlay_y = absolute_position.y + 9;
-            let render_percentage = new rect(underlay_x, underlay_y, percentage_width * 0.85, absolute_position.height - 18);
-            this.graphics.sprites.render(this.underlay, null, render_percentage, 1, "none");
-        }
-
-        // Render overlay (bar frame)
-        this.graphics.sprites.slice_3(this.overlay, absolute_position);
-    }
-
-    /**
-     * Update the bar with a new percentage value
-     */
-    set_percentage(percentage) {
-        this.percentage = percentage;
-    }
-}
-
-
-class percentage_bar_fluid extends percentage_bar {
-    constructor(parent, graphics, position, overlay, underlay) {
-        super(parent, graphics, position, overlay, underlay);
-    }
-}
-class pause extends modal{
-    layout(){
-        this.active=true;
-        this.ok=true;
-        this.cancel=false;
-        this.closeButton=true;
-        this.title="Paused";
-        this.text="";
-        let window_width=800;
-        let window_height=600;
-
-        // Use virtual viewport dimensions for positioning (logical pixels)
-        let x=(this.graphics.viewport.virtual.width-window_width)/2;
-        let y=(this.graphics.viewport.virtual.height-window_height)/2;
-        this.position = new rect(x, y, window_width,window_height,"left","top");
-        this.resize();
-        this.add_buttons();
-    }
-
-}// Base class for modals that play cinematic scenes with seekbar and pause controls
-class cinematic_player extends modal {
-
-    setup_player(scene_url) {
-        this.player = new scene(this.window_manager, scene_url);
-        this.on("close", () => { if (this.player) this.player.close(); });
-        this.player.on("complete", () => {
-            // Scene finished, close the modal
-            this.close();
-        });
-        this.render_callback(this.player.update_frame.bind(this.player));
-
-        // Resume audio context on first user interaction (browser autoplay policy)
-        this._resume_audio_once = async () => {
-            if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
-                await this.audio_manager.audioContext.resume();
-                console.log('[CinematicPlayer] Audio context resumed on user interaction');
-            }
-        };
-        // Call it once immediately when modal opens
-        this._resume_audio_once();
-
-        // Listen to modal's keyboard events
-        this.on("keys", (data) => {
-            this.handle_cinematic_keys(data.kb);
-        });
-
-        // Create horizontal scrollbar for video scrubbing - position will be recalculated on resize
-        // Start with relative dimensions (will be properly positioned in resize)
-        let scrollbar_position = new rect(10, 0, 100, 20, "left", "top");
-        this.video_scrollbar = this.create_video_scrollbar(
-            scrollbar_position,
-            () => this.player ? this.player.get_progress() : {current: 0, max: 1},
-            (time) => { if (this.player) this.player.seek_to(time, true); }
-        );
-
-        // Add video scrollbar to ui_components so it gets resized automatically
-        this.ui_components.push(this.video_scrollbar);
-
-        // Initial positioning
-        this.position_video_scrollbar();
-
-        // Add click handler for pause/play (use visible canvas)
-        this._bound_click_handler = this.handle_click.bind(this);
-        this.graphics.visibleCanvas.addEventListener('click', this._bound_click_handler);
-    }
-
-    create_video_scrollbar(position, get_progress_callback, seek_callback) {
-        // Video scrollbar is positioned relative to the modal's internal rect (virtual coordinates)
-        let anchor_position = new rect(0, 0, 0, 0);
-        anchor_position.add(this.position);
-        anchor_position.add(this.internal_rect);
-
-        // Convert progress callback to return {current, max} format expected by scrollbar
-        const get_value_callback = () => {
-            const progress = get_progress_callback();
-            if (!progress) return {current: 0, max: 1};
-            return {current: progress.current, max: progress.total};
-        };
-
-        return new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
-    }
-
-    /**
-     * Position video scrollbar at bottom of dialog, anchored to left and right edges
-     * Called on initial setup and whenever the dialog resizes
-     */
-    position_video_scrollbar() {
-        if (!this.video_scrollbar || !this.internal_rect) return;
-
-        // Scale scrollbar thickness based on orientation (match vertical scrollbar scaling)
-        const isPortrait = this.graphics.viewport.isPortrait();
-        const fontScale = isPortrait ? 2 : 1;
-        const scrollbar_height = 31 * fontScale;  // Same scaling as vertical scrollbar width
-
-        // Anchor scrollbar to left and right edges with 10px margin, 30px from bottom
-        const margin_x = 10;
-        const margin_bottom = 30;
-
-        // Update the video scrollbar's position rect
-        if (this.video_scrollbar._legacy_position) {
-            // Update legacy position directly
-            this.video_scrollbar._legacy_position.x = margin_x;
-            this.video_scrollbar._legacy_position.y = this.internal_rect.height - margin_bottom;
-            this.video_scrollbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
-            this.video_scrollbar._legacy_position.height = scrollbar_height;
-
-            // Update the actual position rect
-            this.video_scrollbar.position = this.video_scrollbar._legacy_position.clone();
-        }
-    }
-
-    /**
-     * Override resize to reposition video scrollbar when dialog resizes
-     */
-    resize() {
-        super.resize();
-        this.position_video_scrollbar();
-    }
-
-    handle_click(event) {
-        if (!this.active || !this.player) return;
-
-        // Transform mouse coordinates from physical to virtual space
-        const viewport = this.graphics.viewport;
-        const virtual_click_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
-        const virtual_click_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
-
-        // Check if click is inside the modal window (using virtual coordinates)
-        if (virtual_click_x >= this.position.x &&
-            virtual_click_x <= this.position.x + this.position.width &&
-            virtual_click_y >= this.position.y &&
-            virtual_click_y <= this.position.y + this.position.height) {
-
-            // Don't toggle if clicking on the close button
-            if (this.closeButton && this.buttons) {
-                let clicking_button = false;
-                this.buttons.forEach((button) => {
-                    if (button.is_inside(event.offsetX, event.offsetY)) {
-                        clicking_button = true;
-                    }
-                });
-
-                // Don't toggle if clicking on video scrollbar (scrollbar handles transformation internally)
-                if (this.video_scrollbar && this.video_scrollbar.active) {
-                    // Check if clicking inside scrollbar bounds (use visible canvas coordinates)
-                    const viewport = this.graphics.viewport;
-                    const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
-                    const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
-
-                    let scrollbar_absolute_pos = this.video_scrollbar.position.clone();
-                    if (this.video_scrollbar._legacy_anchor_position) {
-                        scrollbar_absolute_pos.add(this.video_scrollbar._legacy_anchor_position);
-                    }
-
-                    if (virtual_mouse_x >= scrollbar_absolute_pos.x &&
-                        virtual_mouse_x <= scrollbar_absolute_pos.x + scrollbar_absolute_pos.width &&
-                        virtual_mouse_y >= scrollbar_absolute_pos.y &&
-                        virtual_mouse_y <= scrollbar_absolute_pos.y + scrollbar_absolute_pos.height) {
-                        clicking_button = true;
-                    }
-                }
-
-                if (!clicking_button) {
-                    this.player.toggle_pause();
-                }
-            } else {
-                this.player.toggle_pause();
-            }
-        }
-    }
-
-    handle_cinematic_keys(kb) {
-        if (!this.active || !this.player) return;
-
-        // Space to pause/play
-        if (kb.just_stopped(' ')) {
-            this.player.toggle_pause();
-        }
-
-        // Left/Right arrows to seek
-        if (kb.just_stopped('ArrowLeft')) {
-            const new_time = Math.max(0, this.player.elapsed - 5000); // 5 seconds back
-            this.player.seek_to(new_time, false);
-        }
-        if (kb.just_stopped('ArrowRight')) {
-            const new_time = this.player.elapsed + 5000; // 5 seconds forward
-            this.player.seek_to(new_time, false);
-        }
-    }
-
-    render() {
-        // Early exit if not active or graphics is deleted - BEFORE calling super
-        if (!this.active || !this.graphics || !this.graphics.ctx) return;
-
-        // Now safe to call super.render()
-        super.render();
-
-        // Render video scrollbar
-        if (this.video_scrollbar) {
-            this.video_scrollbar.render();
-        }
-
-        // Draw pause/play indicator in center of video area
-        if (this.player && this.graphics && this.graphics.ctx) {
-            const ctx = this.graphics.ctx;
-            if (!ctx || typeof ctx.save !== 'function') return;
-
-            const center_x = this.position.x + this.position.width / 2;
-            const center_y = this.position.y + this.position.height / 2;
-            const radius = 50;
-
-            ctx.save();
-
-            if (this.player.paused) {
-                // Draw pause icon (two vertical bars)
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.beginPath();
-                ctx.arc(center_x, center_y, radius, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                const bar_width = 12;
-                const bar_height = 40;
-                const bar_spacing = 10;
-                ctx.fillRect(center_x - bar_spacing - bar_width, center_y - bar_height/2, bar_width, bar_height);
-                ctx.fillRect(center_x + bar_spacing, center_y - bar_height/2, bar_width, bar_height);
-            }
-
-            ctx.restore();
-        }
-    }
-
-    delete() {
-        // Set inactive first to stop rendering
-        this.active = false;
-
-        // Clean up video scrollbar
-        if (this.video_scrollbar) {
-            this.video_scrollbar.delete();
-            this.video_scrollbar = null;
-        }
-
-        // Clean up click handler (from visible canvas)
-        if (this._bound_click_handler && this.graphics && this.graphics.visibleCanvas) {
-            this.graphics.visibleCanvas.removeEventListener('click', this._bound_click_handler);
-            this._bound_click_handler = null;
-        }
-
-        // Clean up player
-        if (this.player) {
-            this.player.close();
-            this.player = null;
-        }
-
-        super.delete();
-    }
-}
-class scene {
+}class scene {
     constructor(window_manager,scene_url) {
         this.graphics = window_manager.graphics;
         this.audio_manager = window_manager.audio_manager;
@@ -7782,7 +7211,1054 @@ class scene {
         this.currently_playing_audio.clear();
     }
 }
-class game extends modal{
+class help extends modal{
+    layout(){
+        this.active=true;
+        this.ok=false;
+        this.cancel=false;
+        this.closeButton=true;
+        this.title="Help";
+        let window_width=1024;
+        let window_height=700;
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
+        this.position = new rect(x, y, window_width,window_height,"left","top");
+
+
+        this.text = "| Key           | Action                 |\n" +
+            "|---------------|------------------------|\n" +
+            "| Arrow Keys    | Bank left/right        |\n" +
+            "|               | Accelerate/decelerate  |\n" +
+            "| WASD          | Strafe movement        |\n" +
+            "| Space         | Fire lasers            |\n" +
+            "| Enter         | Fire Missiles          |\n" +
+            "| Shift         | Boost                  |\n" +
+            "| M             | Toggle Sound           |\n" +
+            "| +             | Volume up              |\n" +
+            "| -             | Volume down            |\n" +
+            "| Escape        | Toggle Pause           |\n" +
+            "| Tab           | Boss Mode (toggle)     |\n" +
+            "| H             | Show this help         |\n";
+
+            this.resize();
+            this.add_buttons();
+    }
+
+
+}// Base class for modals that play cinematic scenes with seekbar and pause controls
+class cinematic_player extends modal {
+
+    setup_player(scene_url) {
+        this.player = new scene(this.window_manager, scene_url);
+        this.on("close", () => { if (this.player) this.player.close(); });
+        this.player.on("complete", () => {
+            // Scene finished, close the modal
+            this.close();
+        });
+        this.render_callback(this.player.update_frame.bind(this.player));
+
+        // Resume audio context on first user interaction (browser autoplay policy)
+        this._resume_audio_once = async () => {
+            if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+                await this.audio_manager.audioContext.resume();
+                console.log('[CinematicPlayer] Audio context resumed on user interaction');
+            }
+        };
+        // Call it once immediately when modal opens
+        this._resume_audio_once();
+
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_cinematic_keys(data.kb);
+        });
+
+        // Create horizontal scrollbar for video scrubbing - position will be recalculated on resize
+        // Start with relative dimensions (will be properly positioned in resize)
+        let scrollbar_position = new rect(10, 0, 100, 20, "left", "top");
+        this.video_scrollbar = this.create_video_scrollbar(
+            scrollbar_position,
+            () => this.player ? this.player.get_progress() : {current: 0, max: 1},
+            (time) => { if (this.player) this.player.seek_to(time, true); }
+        );
+
+        // Add video scrollbar to ui_components so it gets resized automatically
+        this.ui_components.push(this.video_scrollbar);
+
+        // Initial positioning
+        this.position_video_scrollbar();
+
+        // Add click handler for pause/play (use visible canvas)
+        this._bound_click_handler = this.handle_click.bind(this);
+        this.graphics.visibleCanvas.addEventListener('click', this._bound_click_handler);
+    }
+
+    create_video_scrollbar(position, get_progress_callback, seek_callback) {
+        // Video scrollbar is positioned relative to the modal's internal rect (virtual coordinates)
+        let anchor_position = new rect(0, 0, 0, 0);
+        anchor_position.add(this.position);
+        anchor_position.add(this.internal_rect);
+
+        // Convert progress callback to return {current, max} format expected by scrollbar
+        const get_value_callback = () => {
+            const progress = get_progress_callback();
+            if (!progress) return {current: 0, max: 1};
+            return {current: progress.current, max: progress.total};
+        };
+
+        return new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
+    }
+
+    /**
+     * Position video scrollbar at bottom of dialog, anchored to left and right edges
+     * Called on initial setup and whenever the dialog resizes
+     */
+    position_video_scrollbar() {
+        if (!this.video_scrollbar || !this.internal_rect) return;
+
+        // Scale scrollbar thickness based on orientation (match vertical scrollbar scaling)
+        const isPortrait = this.graphics.viewport.isPortrait();
+        const fontScale = isPortrait ? 2 : 1;
+        const scrollbar_height = 31 * fontScale;  // Same scaling as vertical scrollbar width
+
+        // Anchor scrollbar to left and right edges with 10px margin, 30px from bottom
+        const margin_x = 10;
+        const margin_bottom = 30;
+
+        // Update the video scrollbar's position rect
+        if (this.video_scrollbar._legacy_position) {
+            // Update legacy position directly
+            this.video_scrollbar._legacy_position.x = margin_x;
+            this.video_scrollbar._legacy_position.y = this.internal_rect.height - margin_bottom;
+            this.video_scrollbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
+            this.video_scrollbar._legacy_position.height = scrollbar_height;
+
+            // Update the actual position rect
+            this.video_scrollbar.position = this.video_scrollbar._legacy_position.clone();
+        }
+    }
+
+    /**
+     * Override resize to reposition video scrollbar when dialog resizes
+     */
+    resize() {
+        super.resize();
+        this.position_video_scrollbar();
+    }
+
+    handle_click(event) {
+        if (!this.active || !this.player) return;
+
+        // Transform mouse coordinates from physical to virtual space
+        const viewport = this.graphics.viewport;
+        const virtual_click_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+        const virtual_click_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+        // Check if click is inside the modal window (using virtual coordinates)
+        if (virtual_click_x >= this.position.x &&
+            virtual_click_x <= this.position.x + this.position.width &&
+            virtual_click_y >= this.position.y &&
+            virtual_click_y <= this.position.y + this.position.height) {
+
+            // Don't toggle if clicking on the close button
+            if (this.closeButton && this.buttons) {
+                let clicking_button = false;
+                this.buttons.forEach((button) => {
+                    if (button.is_inside(event.offsetX, event.offsetY)) {
+                        clicking_button = true;
+                    }
+                });
+
+                // Don't toggle if clicking on video scrollbar (scrollbar handles transformation internally)
+                if (this.video_scrollbar && this.video_scrollbar.active) {
+                    // Check if clicking inside scrollbar bounds (use visible canvas coordinates)
+                    const viewport = this.graphics.viewport;
+                    const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
+                    const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
+
+                    let scrollbar_absolute_pos = this.video_scrollbar.position.clone();
+                    if (this.video_scrollbar._legacy_anchor_position) {
+                        scrollbar_absolute_pos.add(this.video_scrollbar._legacy_anchor_position);
+                    }
+
+                    if (virtual_mouse_x >= scrollbar_absolute_pos.x &&
+                        virtual_mouse_x <= scrollbar_absolute_pos.x + scrollbar_absolute_pos.width &&
+                        virtual_mouse_y >= scrollbar_absolute_pos.y &&
+                        virtual_mouse_y <= scrollbar_absolute_pos.y + scrollbar_absolute_pos.height) {
+                        clicking_button = true;
+                    }
+                }
+
+                if (!clicking_button) {
+                    this.player.toggle_pause();
+                }
+            } else {
+                this.player.toggle_pause();
+            }
+        }
+    }
+
+    handle_cinematic_keys(kb) {
+        if (!this.active || !this.player) return;
+
+        // Space to pause/play
+        if (kb.just_stopped(' ')) {
+            this.player.toggle_pause();
+        }
+
+        // Left/Right arrows to seek
+        if (kb.just_stopped('ArrowLeft')) {
+            const new_time = Math.max(0, this.player.elapsed - 5000); // 5 seconds back
+            this.player.seek_to(new_time, false);
+        }
+        if (kb.just_stopped('ArrowRight')) {
+            const new_time = this.player.elapsed + 5000; // 5 seconds forward
+            this.player.seek_to(new_time, false);
+        }
+    }
+
+    render() {
+        // Early exit if not active or graphics is deleted - BEFORE calling super
+        if (!this.active || !this.graphics || !this.graphics.ctx) return;
+
+        // Now safe to call super.render()
+        super.render();
+
+        // Render video scrollbar
+        if (this.video_scrollbar) {
+            this.video_scrollbar.render();
+        }
+
+        // Draw pause/play indicator in center of video area
+        if (this.player && this.graphics && this.graphics.ctx) {
+            const ctx = this.graphics.ctx;
+            if (!ctx || typeof ctx.save !== 'function') return;
+
+            const center_x = this.position.x + this.position.width / 2;
+            const center_y = this.position.y + this.position.height / 2;
+            const radius = 50;
+
+            ctx.save();
+
+            if (this.player.paused) {
+                // Draw pause icon (two vertical bars)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(center_x, center_y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                const bar_width = 12;
+                const bar_height = 40;
+                const bar_spacing = 10;
+                ctx.fillRect(center_x - bar_spacing - bar_width, center_y - bar_height/2, bar_width, bar_height);
+                ctx.fillRect(center_x + bar_spacing, center_y - bar_height/2, bar_width, bar_height);
+            }
+
+            ctx.restore();
+        }
+    }
+
+    delete() {
+        // Set inactive first to stop rendering
+        this.active = false;
+
+        // Clean up video scrollbar
+        if (this.video_scrollbar) {
+            this.video_scrollbar.delete();
+            this.video_scrollbar = null;
+        }
+
+        // Clean up click handler (from visible canvas)
+        if (this._bound_click_handler && this.graphics && this.graphics.visibleCanvas) {
+            this.graphics.visibleCanvas.removeEventListener('click', this._bound_click_handler);
+            this._bound_click_handler = null;
+        }
+
+        // Clean up player
+        if (this.player) {
+            this.player.close();
+            this.player = null;
+        }
+
+        super.delete();
+    }
+}
+class prologue extends cinematic_player {
+
+    layout() {
+        this.set_background("prologue");
+        this.ok = false;
+        this.cancel = false;
+        this.closeButton = true;
+        this.title = "Prologue";
+        this.text = "";
+        this.active = true;
+
+        // Store landscape dimensions
+        this.landscape_width = 1400;
+        this.landscape_height = 800;
+
+        // Calculate initial dimensions
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
+        this.resize();
+        this.add_buttons();
+
+        // Load intro scene from ASSETS.json
+        const intro_scene_path = this.graphics.asset_loader.get('cinematics.intro.data');
+        this.setup_player(intro_scene_path);
+    }
+}
+class high_scores extends modal{
+    layout(){
+        this.set_background("highscore");
+        this.active=true;
+        this.ok=false;
+        this.cancel=false;
+        this.closeButton=true;
+        this.title="High Scores";
+        this.text="";
+
+        // Store landscape dimensions
+        this.landscape_width = 800;
+        this.landscape_height = 600;
+
+        // Calculate initial dimensions
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
+        this.resize();
+        this.add_buttons();
+        this.high_scores=null;
+        this.scroll_offset=0;
+
+        // Line height - doubled in portrait mode
+        const isPortrait = this.graphics.viewport.isPortrait();
+        this.line_height = isPortrait ? 80 : 40;
+
+        // Load highscores from ASSETS.json
+        const highscores_path = this.graphics.asset_loader.get('game_data.highscores');
+        this.load_high_scores(highscores_path);
+        this.render_callback(this.render_scores.bind(this));
+
+        // Listen to modal's keyboard events
+        this.on("keys", (data) => {
+            this.handle_scroll_keys(data.kb);
+        });
+
+        // Mouse wheel scrolling (use visible canvas for events)
+        this._bound_wheel_handler = this.handle_wheel.bind(this);
+        this.visibleCanvas.addEventListener('wheel', this._bound_wheel_handler);
+
+        // Create scrollbar component with proper anchoring (initially inactive, will be activated when needed)
+        const fontScale = isPortrait ? 2 : 1;
+        const scrollbar_width = 31 * fontScale;
+        const header_height = 60 * fontScale;
+
+        // Calculate absolute x position from right edge
+        const scrollbar_x = this.internal_rect.width - scrollbar_width - (5 * fontScale);
+
+        const scrollbar_pos = new rect(
+            scrollbar_x,                          // Relative to internal_rect
+            header_height,                        // Distance from TOP
+            scrollbar_width,
+            this.internal_rect.height - header_height,
+            "left",
+            "top"
+        );
+
+        // Create anchor position that includes both modal position and internal_rect
+        let anchor_position = new rect(0, 0, 0, 0);
+        anchor_position.add(this.position);
+        anchor_position.add(this.internal_rect);
+
+        this.scrollbar_component = new scrollbar(
+            this, this.graphics, scrollbar_pos, anchor_position, "vertical",
+            () => this.get_scroll_value(),
+            (value) => this.set_scroll_value(value)
+        );
+        this.scrollbar_component.active = false;
+    }
+
+    get_scroll_value() {
+        if (!this.high_scores) return { current: 0, max: 1 };
+
+        const isPortrait = this.graphics.viewport.isPortrait();
+        const fontScale = isPortrait ? 2 : 1;
+        const header_height = 60 * fontScale;
+        const scrollable_height = this.render_internal_rect.height - header_height;
+        const max_scroll = Math.max(1, (this.high_scores.length * this.line_height) - scrollable_height);
+
+        return { current: this.scroll_offset, max: max_scroll };
+    }
+
+    set_scroll_value(value) {
+        const isPortrait = this.graphics.viewport.isPortrait();
+        const fontScale = isPortrait ? 2 : 1;
+        const header_height = 60 * fontScale;
+        const scrollable_height = this.render_internal_rect.height - header_height;
+        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+
+        this.scroll_offset = Math.max(0, Math.min(value, max_scroll));
+    }
+
+    async load_high_scores(jsonFileUrl){
+        try {
+                const response = await fetch(jsonFileUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                this.high_scores=data;
+        } catch (error) {
+            console.error("Error loading the JSON file:", error);
+        }
+     }
+
+    handle_wheel(event) {
+        if (!this.active || !this.high_scores) return;
+
+        // Check if mouse is over the modal window (use visible canvas)
+        const rect = this.visibleCanvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        if (mouseX >= this.render_internal_rect.x &&
+            mouseX <= this.render_internal_rect.x + this.render_internal_rect.width &&
+            mouseY >= this.render_internal_rect.y &&
+            mouseY <= this.render_internal_rect.y + this.render_internal_rect.height) {
+
+            event.preventDefault();
+
+            // Scroll by wheel delta
+            this.scroll_offset += event.deltaY * 0.5;
+
+            // Clamp scroll offset - account for portrait mode
+            const isPortrait = this.graphics.viewport.isPortrait();
+            const fontScale = isPortrait ? 2 : 1;
+            const header_height = 60 * fontScale;
+            const scrollable_height = this.render_internal_rect.height - header_height;
+            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+            this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
+        }
+    }
+
+    handle_scroll_keys(kb) {
+        if (!this.active || !this.high_scores) return;
+
+        // Arrow key scrolling
+        if (kb.is_pressed('ArrowUp')) {
+            this.scroll_offset -= 5;
+        }
+        if (kb.is_pressed('ArrowDown')) {
+            this.scroll_offset += 5;
+        }
+
+        // Page up/down scrolling - account for portrait mode
+        const isPortrait = this.graphics.viewport.isPortrait();
+        const fontScale = isPortrait ? 2 : 1;
+        const header_height = 60 * fontScale;
+        const scrollable_height = this.render_internal_rect.height - header_height;
+
+        if (kb.just_stopped('PageUp')) {
+            this.scroll_offset -= scrollable_height;
+        }
+        if (kb.just_stopped('PageDown')) {
+            this.scroll_offset += scrollable_height;
+        }
+
+        // Home/End
+        if (kb.just_stopped('Home')) {
+            this.scroll_offset = 0;
+        }
+        if (kb.just_stopped('End')) {
+            const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+            this.scroll_offset = max_scroll;
+        }
+
+        // Clamp scroll offset
+        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+        this.scroll_offset = Math.max(0, Math.min(this.scroll_offset, max_scroll));
+    }
+
+    render_scores(position) {
+        if (!this.high_scores) {
+            // Show loading text
+            let loading_pos = new rect(position.x + position.width/2, position.y + position.height/2, null, null, "center", "center");
+            this.graphics.font.draw_text(loading_pos, "Loading...", true, false);
+            return;
+        }
+
+        const ctx = this.graphics.ctx;
+        const isPortrait = this.graphics.viewport.isPortrait();
+
+        // Double sizes in portrait mode
+        const fontScale = isPortrait ? 2 : 1;
+        const header_height = 60 * fontScale; // Height reserved for header
+        const start_y = position.y + (70 * fontScale) - this.scroll_offset;
+        const header_y = position.y + (40 * fontScale);
+
+        // Draw column headers (fixed at top)
+        ctx.save();
+        ctx.fillStyle = '#00FFFF';
+        ctx.font = `bold ${18 * fontScale}px monospace`;
+
+        const rank_x = position.x + (20 * fontScale);
+        const name_x = position.x + (100 * fontScale);
+        const score_x = position.x + position.width - (150 * fontScale);
+
+        ctx.fillText("Rank", rank_x, header_y);
+        ctx.fillText("Name", name_x, header_y);
+        ctx.fillText("Score", score_x, header_y);
+
+        // Draw separator line
+        ctx.strokeStyle = '#00FFFF';
+        ctx.lineWidth = 2 * fontScale;
+        ctx.beginPath();
+        ctx.moveTo(position.x + (10 * fontScale), header_y + (10 * fontScale));
+        ctx.lineTo(position.x + position.width - (10 * fontScale), header_y + (10 * fontScale));
+        ctx.stroke();
+
+        // Draw scores (clip to scrollable area below header)
+        ctx.font = `${16 * fontScale}px monospace`;
+        for (let i = 0; i < this.high_scores.length; i++) {
+            const score = this.high_scores[i];
+            const y = start_y + (i * this.line_height);
+
+            // Skip if outside visible area (below header and above bottom)
+            if (y < position.y + header_height || y > position.y + position.height) {
+                continue;
+            }
+
+            // Highlight current player (if name matches)
+            if (score.name === "Chris Watkins") {
+                ctx.fillStyle = '#FFFF00';
+            } else {
+                // Gradient colors based on rank
+                if (score.rank === 1) ctx.fillStyle = '#FFD700'; // Gold
+                else if (score.rank === 2) ctx.fillStyle = '#C0C0C0'; // Silver
+                else if (score.rank === 3) ctx.fillStyle = '#CD7F32'; // Bronze
+                else ctx.fillStyle = '#00FF00'; // Green
+            }
+
+            ctx.fillText(score.rank.toString(), rank_x, y);
+            ctx.fillText(score.name, name_x, y);
+            ctx.fillText(score.score.toLocaleString(), score_x, y);
+        }
+
+        ctx.restore();
+
+        // Update scrollbar component state
+        const scrollable_height = position.height - header_height;
+        const max_scroll = Math.max(0, (this.high_scores.length * this.line_height) - scrollable_height);
+
+        if (max_scroll > 0) {
+            // Activate and render scrollbar
+            this.scrollbar_component.active = true;
+            this.scrollbar_component.render();
+        } else {
+            // No scrolling needed, deactivate scrollbar
+            this.scrollbar_component.active = false;
+        }
+    }
+
+
+    delete() {
+        // Remove wheel event listener (from visible canvas)
+        if (this._bound_wheel_handler) {
+            this.visibleCanvas.removeEventListener('wheel', this._bound_wheel_handler);
+        }
+
+        // Clean up scrollbar component
+        if (this.scrollbar_component) {
+            this.scrollbar_component.delete();
+            this.scrollbar_component = null;
+        }
+
+        super.delete();
+    }
+}
+class credits extends cinematic_player {
+
+    layout() {
+        this.set_background("credits");
+        this.active = true;
+        this.ok = false;
+        this.cancel = false;
+        this.closeButton = true;
+        this.title = "Credits";
+        this.text = "";
+
+        // Store landscape dimensions
+        this.landscape_width = 1400;
+        this.landscape_height = 800;
+
+        // Calculate initial dimensions
+        const dims = this.calculate_dialog_dimensions(this.landscape_width, this.landscape_height);
+        this.position = new rect(dims.x, dims.y, dims.width, dims.height, "left", "top");
+        this.resize();
+        this.add_buttons();
+
+        // Load credits scene from ASSETS.json
+        const credits_scene_path = this.graphics.asset_loader.get('cinematics.credits.data');
+        this.setup_player(credits_scene_path);
+    }
+}
+class menu extends modal{
+    constructor(){
+        super();
+
+        // Store button data for resize recalculation
+        this.menu_buttons = [];
+        this.title_image = null;  // Reference to title graphic
+        this.glow_phase = 0;  // For pulsing glow animation
+    }
+
+    layout(){
+        //window specifics
+        this.set_background("menu");
+        this.ok=false;
+        this.cancel=false;
+        this.closeButton=false;  // No close button for main menu
+        this.no_close=true;  // Prevent ESC from closing main menu
+        this.title="Menu";
+        this.text="";
+        this.active=true;
+
+        // Use virtual viewport dimensions (logical pixels, not physical)
+        let vw = this.graphics.viewport.virtual.width;
+        let vh = this.graphics.viewport.virtual.height;
+
+        // Calculate menu position based on orientation
+        const isPortrait = this.graphics.viewport.isPortrait();
+
+        // Add title image at top of screen
+        this.setup_title_image();
+
+        // Get title bottom position (where menu should start)
+        const titleBottom = this.get_title_bottom();
+        const menuTopPadding = 20;
+        const menuTop = titleBottom + menuTopPadding;
+
+        if (isPortrait) {
+            // Portrait: Use minimum height, centered between title and bottom
+            const marginX = 20;
+            const marginBottom = 20;
+            const window_width = vw - (marginX * 2);
+
+            // Calculate minimum height based on button layout
+            // Top buttons: y=30 + 3 buttons with 80px spacing = 270
+            // Last regular button height = 60, ends at 330
+            // Gap before Exit button = 60
+            // Exit button height = 60
+            // Bottom margin for Exit = 20
+            // Extra padding = 20
+            const baseHeight = 30 + (3 * 80) + 60 + 60 + 60 + 20 + 20; // = 490px
+            const minMenuHeight = baseHeight * 1.2; // 20% larger = 588px
+
+            // Calculate available space and center the menu
+            const availableHeight = vh - menuTop - marginBottom;
+            const menuHeight = Math.max(minMenuHeight, Math.min(minMenuHeight, availableHeight));
+
+            // Center vertically in available space
+            const centeredY = menuTop + (availableHeight - menuHeight) / 2;
+            const x = marginX;
+
+            this.position = new rect(x, centeredY, window_width, menuHeight, "left", "top");
+        } else {
+            // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
+            let window_width = 400;
+            let x = 60;  // Left-anchored at 60 pixels
+            const menuBottom = vh * 0.90;
+            const menuHeight = menuBottom - menuTop;
+            this.position = new rect(x, menuTop, window_width, menuHeight, "left", "top");
+        }
+
+        this.resize();
+        this.add_buttons();
+
+        // Listen to modal's keyboard events for help
+        this.on("keys", (data) => {
+            if (data.kb.just_stopped('h') || data.kb.just_stopped('H')) {
+                this.show_help();
+            }
+        });
+
+        //layout options - keep gradient for visual effect
+        this.add_bg_gradient(0, 'rgba(0,0,0,0.3)');
+        this.add_bg_gradient(.7, 'rgba(211,211,211,0.2)');
+        this.add_bg_gradient(.8, 'rgba(169,169,169,0.2)');
+        this.add_bg_gradient(1, 'rgba(0,0,0,0.3)');
+
+        // Create buttons with viewport-relative positions
+        this.create_menu_buttons();
+    }
+
+    setup_title_image() {
+        const vw = this.graphics.viewport.virtual.width;
+
+        // Calculate title dimensions
+        let title_width = Math.min(1024, vw * 0.6);
+        let title_height = title_width * (236 / 1024);  // Maintain aspect ratio
+        let title_x = vw / 2 - title_width / 2;
+        let title_y = 10;
+
+        this.title_image = this.add_image(new rect(title_x, title_y, title_width, title_height, "left", "top"), "title");
+    }
+
+    get_title_bottom() {
+        if (!this.title_image) return 210;  // Default
+
+        const title_bottom = this.title_image.position.y + this.title_image.position.height;
+        return title_bottom + 20;  // Add small padding
+    }
+
+    recalculate_title() {
+        if (!this.title_image || !this.title_image.position) return;
+
+        const vw = this.graphics.viewport.virtual.width;
+
+        // Recalculate title image position - centered
+        const margin = 40;
+        const maxWidth = vw - (margin * 2);
+        let title_width = Math.min(1024, vw * 0.6, maxWidth);
+        let title_height = title_width * (236 / 1024);
+        let title_x = vw / 2 - title_width / 2;
+
+        // Set absolute positions
+        this.title_image.position.x = title_x;
+        this.title_image.position.y = 10;
+        this.title_image.position.width = title_width;
+        this.title_image.position.height = title_height;
+    }
+
+    render() {
+        if (!this.active) return;
+
+        // Call parent render first (draws dialog background, buttons, etc.)
+        super.render();
+
+        // Render title with glow
+        if (this.title_image) {
+            this.render_title_with_glow(this.title_image);
+        }
+
+        // Render tagline below title (only in landscape mode)
+        const isPortrait = this.graphics.viewport.isPortrait();
+        if (!isPortrait) {
+            this.render_tagline();
+        }
+    }
+
+    render_title_with_glow(image) {
+        if (!this.graphics || !this.graphics.ctx) return;
+
+        const ctx = this.graphics.ctx;
+
+        // Update glow animation phase
+        this.glow_phase += 0.05;
+
+        // Calculate pulse (oscillates between 20 and 40 for shadow blur)
+        const pulse = 25 + Math.sin(this.glow_phase) * 15;
+
+        ctx.save();
+
+        // Draw the title multiple times with increasing glow for stronger effect
+        // Layer 1: Strongest glow (underneath)
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+        ctx.shadowBlur = pulse * 2;
+        let image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 2: Medium glow
+        ctx.shadowColor = 'rgba(0, 230, 255, 0.6)';
+        ctx.shadowBlur = pulse * 1.5;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Layer 3: Soft glow
+        ctx.shadowColor = 'rgba(0, 200, 255, 0.4)';
+        ctx.shadowBlur = pulse;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        // Final layer: No shadow (crisp title on top)
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        image_pos = image.position.clone();
+        this.graphics.sprites.render(image.key, null, image_pos, 1, "contain");
+
+        ctx.restore();
+
+        // Extra cleanup to ensure no shadow state leaks
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    render_tagline() {
+        if (!this.graphics || !this.graphics.ctx) return;
+        if (!this.title_image) return;
+
+        const ctx = this.graphics.ctx;
+        const vw = this.graphics.viewport.virtual.width;
+
+        // Calculate position below title
+        const title_bottom = this.title_image.position.y + this.title_image.position.height;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        const mainText = 'The Battle for Humanity\'s Jobs Has Begun.';
+        const subText1 = 'Command your ship. Defend the last human workforce.';
+        const subText2 = 'Destroy the machine overlords before they automate everything.';
+
+        // Landscape: fit in space to the right of menu
+        const menuRightEdge = 60 + 400;  // menu x + menu width
+        const marginFromMenu = 40;
+        const marginFromScreenEdge = 20;
+        const availableWidth = vw - menuRightEdge - marginFromMenu - marginFromScreenEdge;
+
+        // Start with default sizes and scale down if needed
+        let mainFontSize = 32;
+        let subFontSize = 18;
+
+        // Measure text with current font sizes
+        ctx.font = `bold ${mainFontSize}px monospace`;
+        let maxWidth = ctx.measureText(mainText).width;
+        ctx.font = `${subFontSize}px monospace`;
+        maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
+
+        const boxPadding = 20;
+        const neededWidth = maxWidth + boxPadding * 2;
+
+        // Scale down fonts if text doesn't fit
+        if (neededWidth > availableWidth) {
+            const scale = availableWidth / neededWidth;
+            mainFontSize = Math.max(16, Math.floor(mainFontSize * scale));
+            subFontSize = Math.max(12, Math.floor(subFontSize * scale));
+
+            // Recalculate width with new font sizes
+            ctx.font = `bold ${mainFontSize}px monospace`;
+            maxWidth = ctx.measureText(mainText).width;
+            ctx.font = `${subFontSize}px monospace`;
+            maxWidth = Math.max(maxWidth, ctx.measureText(subText1).width, ctx.measureText(subText2).width);
+        }
+
+        const boxWidth = Math.min(maxWidth + boxPadding * 2, availableWidth);
+        const boxHeight = 125;
+        const boxX = menuRightEdge + marginFromMenu;
+        const textCenterX = boxX + boxWidth / 2;
+        const boxY = title_bottom + 20;
+
+        // Draw semi-transparent background box for all text
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Optional: Add border for more definition
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // Draw main text with glow
+        ctx.font = `bold ${mainFontSize}px monospace`;
+        ctx.fillStyle = '#FF6B00';
+        ctx.shadowColor = 'rgba(255, 107, 0, 0.8)';
+        ctx.shadowBlur = 15;
+        ctx.fillText(mainText, textCenterX, boxY + 35);
+
+        // Clear shadow for subtext
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Subtext lines - smaller, cyan colored
+        ctx.fillStyle = '#00FFFF';
+        ctx.font = `${subFontSize}px monospace`;
+        ctx.fillText(subText1, textCenterX, boxY + 65);
+        ctx.fillText(subText2, textCenterX, boxY + 90);
+
+        ctx.restore();
+    }
+
+    show_help() {
+        let modal = new help();
+        this.window_manager.add(modal);
+    }
+
+    create_menu_buttons() {
+        // Clear existing menu buttons
+        this.menu_buttons = [];
+
+        const isPortrait = this.graphics.viewport.isPortrait();
+
+        // Button sizing - use base dimensions (canvas transformation handles UI scale)
+        const button_margin_x = 20;  // Margin from dialog edges
+        const button_width = this.internal_rect.width - (button_margin_x * 2);
+        const button_height = 60;  // Base height
+        const button_spacing = 80;  // Base spacing
+
+        let y = 30;
+
+        // Store button definitions
+        this.menu_buttons = [
+            { label: "New Game", callback: this.new_game, y_offset: y, style: "cyan" },
+            { label: "Prologue", callback: this.story, y_offset: y + button_spacing, style: "cyan" },
+            { label: "High Scores", callback: this.high_scoress, y_offset: y + button_spacing * 2, style: "cyan" },
+            { label: "Credits", callback: this.credits, y_offset: y + button_spacing * 3, style: "cyan" },
+            { label: "Exit", callback: this.exit, y_offset: this.internal_rect.height - (button_height + 20), style: "red" }
+        ];
+
+        // Create actual button instances
+        for (let btn_def of this.menu_buttons) {
+            let button_position = new rect(button_margin_x, btn_def.y_offset, button_width, button_height, "left", "top");
+            let up_img = btn_def.style === "cyan" ? "button-up-cyan" : "button-up-red";
+            let down_img = btn_def.style === "cyan" ? "button-down-cyan" : "button-down-red";
+            btn_def.button = this.add_button(btn_def.label, button_position, btn_def.callback, up_img, down_img);
+            btn_def.position = button_position;
+        }
+    }
+
+    update_dimensions_for_orientation() {
+        // Just call resize() - it handles everything including button recreation
+        this.resize();
+    }
+
+    recreate_buttons() {
+        // Delete old buttons
+        if (this.buttons) {
+            this.buttons.forEach((button) => {
+                if (button.delete) button.delete();
+            });
+        }
+        this.buttons = [];
+
+        // Recreate with new sizing
+        this.create_menu_buttons();
+    }
+
+    resize() {
+        // Recalculate menu position based on new viewport and orientation
+        if (this.graphics && this.graphics.viewport) {
+            let vw = this.graphics.viewport.virtual.width;
+            let vh = this.graphics.viewport.virtual.height;
+            const isPortrait = this.graphics.viewport.isPortrait();
+
+            // Recalculate title position
+            this.recalculate_title();
+
+            // Get title bottom position (where menu should start)
+            const titleBottom = this.get_title_bottom();
+            const menuTopPadding = 20;
+            const menuTop = titleBottom + menuTopPadding;
+
+            if (isPortrait) {
+                // Portrait: Use minimum height, centered between title and bottom
+                const marginX = 20;
+                const marginBottom = 20;
+                const window_width = vw - (marginX * 2);
+
+                // Calculate minimum height based on button layout
+                // Top buttons: y=30 + 3 buttons with 80px spacing = 270
+                // Last regular button height = 60, ends at 330
+                // Gap before Exit button = 60
+                // Exit button height = 60
+                // Bottom margin for Exit = 20
+                // Extra padding = 20
+                const baseHeight = 30 + (3 * 80) + 60 + 60 + 60 + 20 + 20; // = 490px
+                const minMenuHeight = baseHeight * 1.2; // 20% larger = 588px
+
+                // Calculate available space and center the menu
+                const availableHeight = vh - menuTop - marginBottom;
+                const menuHeight = Math.max(minMenuHeight, Math.min(minMenuHeight, availableHeight));
+
+                // Center vertically in available space
+                const centeredY = menuTop + (availableHeight - menuHeight) / 2;
+                const x = marginX;
+
+                this.position.x = x;
+                this.position.y = centeredY;
+                this.position.width = window_width;
+                this.position.height = menuHeight;
+            } else {
+                // Landscape: Fixed width, left-anchored at 60px, extends to 90% of screen height
+                let window_width = 400;
+                let x = 60;
+                const menuBottom = vh * 0.90;
+                const menuHeight = menuBottom - menuTop;
+
+                this.position.x = x;
+                this.position.y = menuTop;
+                this.position.width = window_width;
+                this.position.height = menuHeight;
+            }
+        }
+
+        // Call parent resize to update internal_rect FIRST
+        super.resize();
+
+        // Recreate buttons to match new dialog width
+        this.recreate_buttons();
+    }
+
+
+    exit(event ){
+        alert("I can't realy close the window...\n But I'd like to!\n Thanks for playin\n -Chris");
+    }
+
+    async credits(event) {
+        // Resume audio context on user interaction (browser autoplay policy)
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
+        let modal=new credits();
+        this.window_manager.add(modal)
+    }
+
+    high_scoress(event) {
+        let modal=new high_scores();
+        this.window_manager.add(modal)
+    }
+
+    async story(event) {
+        // Resume audio context on user interaction (browser autoplay policy)
+        if (this.audio_manager && this.audio_manager.audioContext.state === 'suspended') {
+            await this.audio_manager.audioContext.resume();
+        }
+
+        let modal=new prologue();
+        this.window_manager.add(modal)
+    }
+
+    new_game(){
+        let modal=new game();
+        this.window_manager.add(modal)
+    }
+
+
+}class pause extends modal{
+    layout(){
+        this.active=true;
+        this.ok=true;
+        this.cancel=false;
+        this.closeButton=true;
+        this.title="Paused";
+        this.text="";
+        let window_width=800;
+        let window_height=600;
+
+        // Use virtual viewport dimensions for positioning (logical pixels)
+        let x=(this.graphics.viewport.virtual.width-window_width)/2;
+        let y=(this.graphics.viewport.virtual.height-window_height)/2;
+        this.position = new rect(x, y, window_width,window_height,"left","top");
+        this.resize();
+        this.add_buttons();
+    }
+
+}class game extends modal{
     layout(){
         this.active=true;
         this.ok=false
