@@ -4,102 +4,252 @@
     "images": [
       {
         "path": "static/asset_packages/default/storyboard/credits/images/1.webp",
-        "timestamp": 0,
-        "duration": 6
+        "timestamp": 0.0,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/2.webp",
-        "timestamp": 6,
-        "duration": 6
+        "timestamp": 2.34,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/3.webp",
-        "timestamp": 12,
-        "duration": 6
+        "timestamp": 4.68,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/4.webp",
-        "timestamp": 18,
-        "duration": 6
+        "timestamp": 7.02,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/5.webp",
-        "timestamp": 24,
-        "duration": 6
+        "timestamp": 9.36,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/6.webp",
-        "timestamp": 30,
-        "duration": 6
+        "timestamp": 11.7,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/7.webp",
-        "timestamp": 36,
-        "duration": 6
+        "timestamp": 14.04,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/8.webp",
-        "timestamp": 42,
-        "duration": 6
+        "timestamp": 16.38,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/9.webp",
-        "timestamp": 48,
-        "duration": 6
+        "timestamp": 18.72,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/10.webp",
-        "timestamp": 54,
-        "duration": 6
+        "timestamp": 21.06,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/11.webp",
-        "timestamp": 60,
-        "duration": 6
+        "timestamp": 23.4,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/12.webp",
-        "timestamp": 66,
-        "duration": 6
+        "timestamp": 25.74,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/13.webp",
-        "timestamp": 72,
-        "duration": 6
+        "timestamp": 28.08,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/14.webp",
-        "timestamp": 78,
-        "duration": 6
+        "timestamp": 30.42,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/15.webp",
-        "timestamp": 84,
-        "duration": 6
+        "timestamp": 32.76,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/16.webp",
-        "timestamp": 90,
-        "duration": 6
+        "timestamp": 35.1,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/17.webp",
-        "timestamp": 96,
-        "duration": 6
+        "timestamp": 37.44,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/18.webp",
-        "timestamp": 102,
-        "duration": 6
+        "timestamp": 39.78,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/19.webp",
-        "timestamp": 108,
-        "duration": 6
+        "timestamp": 42.12,
+        "duration": 2.34
       },
       {
         "path": "static/asset_packages/default/storyboard/credits/images/20.webp",
-        "timestamp": 114,
+        "timestamp": 44.46,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/21.webp",
+        "timestamp": 46.8,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/22.webp",
+        "timestamp": 49.14,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/23.webp",
+        "timestamp": 51.48,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/24.webp",
+        "timestamp": 53.82,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/25.webp",
+        "timestamp": 56.16,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/26.webp",
+        "timestamp": 58.5,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/27.webp",
+        "timestamp": 60.84,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/28.webp",
+        "timestamp": 63.18,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/29.webp",
+        "timestamp": 65.52,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/30.webp",
+        "timestamp": 67.86,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/31.webp",
+        "timestamp": 70.2,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/32.webp",
+        "timestamp": 72.54,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/33.webp",
+        "timestamp": 74.88,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/34.webp",
+        "timestamp": 77.22,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/35.webp",
+        "timestamp": 79.56,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/36.webp",
+        "timestamp": 81.9,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/37.webp",
+        "timestamp": 84.24,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/38.webp",
+        "timestamp": 86.58,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/39.webp",
+        "timestamp": 88.92,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/40.webp",
+        "timestamp": 91.26,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/41.webp",
+        "timestamp": 93.6,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/42.webp",
+        "timestamp": 95.94,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/43.webp",
+        "timestamp": 98.28,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/44.webp",
+        "timestamp": 100.62,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/45.webp",
+        "timestamp": 102.96,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/46.webp",
+        "timestamp": 105.3,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/47.webp",
+        "timestamp": 107.64,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/48.webp",
+        "timestamp": 109.98,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/49.webp",
+        "timestamp": 112.32,
+        "duration": 2.34
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/credits/images/50.webp",
+        "timestamp": 114.66,
         "duration": 0
       }
     ],
@@ -144,7 +294,7 @@
       {
         "duration": 2.5,
         "timestamp": 23.5,
-        "text": "No fame in mindn\nJust joy and play"
+        "text": "No fame in mind\nJust joy and play"
       },
       {
         "duration": 3.5,

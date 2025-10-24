@@ -107,7 +107,38 @@
           "frame17": "static/asset_packages/default/storyboard/credits/images/17.webp",
           "frame18": "static/asset_packages/default/storyboard/credits/images/18.webp",
           "frame19": "static/asset_packages/default/storyboard/credits/images/19.webp",
-          "frame20": "static/asset_packages/default/storyboard/credits/images/20.webp"
+          "frame20": "static/asset_packages/default/storyboard/credits/images/20.webp",
+          "frame21": "static/asset_packages/default/storyboard/credits/images/21.webp",
+          "frame22": "static/asset_packages/default/storyboard/credits/images/22.webp",
+          "frame23": "static/asset_packages/default/storyboard/credits/images/23.webp",
+          "frame24": "static/asset_packages/default/storyboard/credits/images/24.webp",
+          "frame25": "static/asset_packages/default/storyboard/credits/images/25.webp",
+          "frame26": "static/asset_packages/default/storyboard/credits/images/26.webp",
+          "frame27": "static/asset_packages/default/storyboard/credits/images/27.webp",
+          "frame28": "static/asset_packages/default/storyboard/credits/images/28.webp",
+          "frame29": "static/asset_packages/default/storyboard/credits/images/29.webp",
+          "frame30": "static/asset_packages/default/storyboard/credits/images/30.webp",
+          "frame31": "static/asset_packages/default/storyboard/credits/images/31.webp",
+          "frame32": "static/asset_packages/default/storyboard/credits/images/32.webp",
+          "frame33": "static/asset_packages/default/storyboard/credits/images/33.webp",
+          "frame34": "static/asset_packages/default/storyboard/credits/images/34.webp",
+          "frame35": "static/asset_packages/default/storyboard/credits/images/35.webp",
+          "frame36": "static/asset_packages/default/storyboard/credits/images/36.webp",
+          "frame37": "static/asset_packages/default/storyboard/credits/images/37.webp",
+          "frame38": "static/asset_packages/default/storyboard/credits/images/38.webp",
+          "frame39": "static/asset_packages/default/storyboard/credits/images/39.webp",
+          "frame40": "static/asset_packages/default/storyboard/credits/images/40.webp",
+          "frame41": "static/asset_packages/default/storyboard/credits/images/41.webp",
+          "frame42": "static/asset_packages/default/storyboard/credits/images/42.webp",
+          "frame43": "static/asset_packages/default/storyboard/credits/images/43.webp",
+          "frame44": "static/asset_packages/default/storyboard/credits/images/44.webp",
+          "frame45": "static/asset_packages/default/storyboard/credits/images/45.webp",
+          "frame46": "static/asset_packages/default/storyboard/credits/images/46.webp",
+          "frame47": "static/asset_packages/default/storyboard/credits/images/47.webp",
+          "frame48": "static/asset_packages/default/storyboard/credits/images/48.webp",
+          "frame49": "static/asset_packages/default/storyboard/credits/images/49.webp",
+          "frame50": "static/asset_packages/default/storyboard/credits/images/50.webp"
+          
         },
         "audio": {
           "music": "static/asset_packages/default/storyboard/credits/tracks/Code of Dreams-2.mp3"
@@ -118,7 +149,9 @@
     "audio": {
       "ship_static": "static/asset_packages/default/audio/ship/static.mp3",
       "laser": "static/asset_packages/default/audio/projectiles/sfx_wpn_laser6.wav",
-      "missile": "static/asset_packages/default/audio/projectiles/sfx_weapon_singleshot13.wav"
+      "missile": "static/asset_packages/default/audio/projectiles/sfx_weapon_singleshot13.wav",
+      "level_music": "static/asset_packages/default/audio/tracks/level-1.mp3",
+      "level_boss_music": "static/asset_packages/default/audio/tracks/level-1-boss.mp3"
     },
     "levels": {
       "level_data": "static/asset_packages/default/levels/level.json"

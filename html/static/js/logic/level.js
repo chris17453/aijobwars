@@ -51,12 +51,18 @@ class level extends events{
                 // Parse YAML data
                 this.data = level_data;
                 let bg = this.data['background'];
-                let music = this.data['music'];
+                let music_key = this.data['music'];
                 this.background=(bg);
+
+                // Resolve music path from ASSETS.json if it's a semantic key
+                let music_path = music_key;
+                if (this.window_manager.graphics.asset_loader) {
+                    music_path = this.window_manager.graphics.asset_loader.get(music_key);
+                }
 
                 // Load background music with Web Audio API
                 this.track_key = 'level_music';
-                await this.audio_manager.add(this.track_key, music);
+                await this.audio_manager.add(this.track_key, music_path);
 
                 this.speed = Number(this.data.speed);
                 this.rows = Number(this.data.rows);

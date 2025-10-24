@@ -197,12 +197,22 @@ footer {
     /* Dark transparent background */
     color: #fff;
     /* Footer text color */
-    text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 10px;
     position: fixed;
     bottom: 0;
     width: 100%;
     font-size:medium;
+}
+
+footer .footer-left {
+    text-align: left;
+}
+
+footer .footer-right {
+    text-align: right;
 }
 
 }

@@ -2,6 +2,8 @@
 
 A retro space shooter built with vanilla JavaScript and HTML5 Canvas. Classic arcade-style gameplay with cinematic cutscenes.
 
+**Play Now: [https://aijobwars.com](https://aijobwars.com)**
+
 ![Loading Screen](assets/Loading%20Page.png)
 
 ## Features
@@ -53,7 +55,7 @@ cd html && python3 -m http.server 8000
 Open http://localhost:8000
 
 ### Quick Play
-Open `html/index.html` in a browser, or visit [AIJOBWARS.COM](https://AIJOBWARS.COM)
+Open `html/index.html` in a browser, or visit [https://aijobwars.com](https://aijobwars.com)
 
 ## Architecture
 

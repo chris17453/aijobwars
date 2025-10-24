@@ -1,0 +1,204 @@
+flux_prompts:
+  # NEGATIVE PROMPT - Use this for ALL images
+  negative_prompt: "photorealistic, modern, contemporary, photograph, 3D render, CGI, sharp details, high resolution, cyberpunk, neon pink, dark noir, gritty, dystopian, text, watermark, signature, frame, border, logo, anime, manga, cartoon, blurry, low quality, deformed, ugly"
+  
+  section_1:
+    timeline: "00:00.000 --> 00:14.000"
+    lyrics: "From the mind of Chris Watkins, a coder bold. A game took shape, a story told. With his Threadripper running Linux, he took the helm."
+    style_constants:
+      - "retro 1980s sci-fi illustration"
+      - "painted art style" 
+      - "warm orange and cool blue color palette"
+      - "starfield background"
+    negative_prompt: "photorealistic, modern, contemporary, photograph, 3D render, CGI, cyberpunk, neon pink, dark noir, text, watermark"
+    
+    images:
+      - number: 1
+        description: "Space colony at night with domed habitats, one window glowing bright with computer light, orange sunset, blue starfield, retro sci-fi illustration, painted style"
+        
+      - number: 2  
+        description: "Closer view of the glowing window, silhouette of programmer visible inside, other habitat windows dark, retro sci-fi architecture, painted illustration"
+        
+      - number: 3
+        description: "Inside view of programmer at desk with three CRT monitors, green code scrolling, orange sunset through curved window, retro workspace, painted sci-fi style"
+        
+      - number: 4
+        description: "Programmer's hands on mechanical keyboard, three CRT monitors glowing above, green phosphor reflections, orange sunset through curved habitat window, starfield visible, retro computer setup, painted illustration"
+        
+      - number: 5
+        description: "View of the three CRT monitors showing Linux terminal, code compiling, progress bars, curved habitat window with orange sunset and stars behind monitors, retro computer interface, green text on black, painted aesthetic"
+        
+      - number: 6
+        description: " programmer  sits at his char to start coding, vintage PC case below monitors, orange sunset glow through curved window, analog gauges, retro hardware, painted style"
+        
+      - number: 7
+        description: "Programmer's face reflected in central CRT monitor, determined expression, green code reflecting on face, curved habitat window with sunset and starfield in background, painted portrait style"
+        
+      - number: 8
+        description: "Code visualization flowing from monitors into space, green data streams forming shapes, orange sunset through curved window, digital realm emerging, painted TRON aesthetic"
+        
+      - number: 9
+        description: "Wireframe game world beginning to form on monitors, primitive geometric landscape, grid terrain, curved window showing orange sunset and stars, retro 3D graphics, painted illustration"
+        
+      - number: 10
+        description: "Pull back showing programmer watching as game world builds on screens, orange sunset fading outside curved habitat window, starfield becoming visible, creative moment, painted scene"
+
+  section_2:
+    timeline: "00:14.000 --> 00:27.000"
+    lyrics: "Crafting the world from the digital realm. With lines of code, he built with Glee. A game from scratch, wild and free. No fame in mind, just joy and play."
+    style_constants:
+      - "retro 1980s sci-fi illustration"
+      - "painted art style"
+      - "warm orange and cool blue color palette"
+      - "digital creation theme"
+    
+    images:
+      - number: 11
+        description: "Programmer manipulating holographic 3D terrain above keyboard, wireframe mountains rising, orange and blue grid, retro visualization, painted illustration"
+        
+      - number: 12
+        description: "Game character models appearing on monitors, T-pose figures, retro polygon characters, sprite sheets visible, painted sci-fi workspace"
+        
+      - number: 13
+        description: "Programmer adjusting character animations on screen, movement cycles playing, retro game development, warm workspace lighting, painted style"
+        
+      - number: 14
+        description: "Multiple monitors showing different game systems - combat, inventory, map - all coming together, retro UI design, painted illustration"
+        
+      - number: 15
+        description: "Programmer testing game with retro joystick, arcade controller on desk, gameplay on monitors, excitement visible, painted scene"
+        
+      - number: 16
+        description: "Code editor filled with colorful syntax, game logic visible, function names about players and worlds, retro IDE, painted aesthetic"
+        
+      - number: 17
+        description: "Programmer leaning back in chair, satisfied smile, game running autonomously on screens, moment of joy, painted illustration"
+        
+      - number: 18
+        description: "Game world expanding across all three monitors, seamless landscape, retro graphics coming alive, painted digital vista"
+        
+      - number: 19
+        description: "Clock showing late hours but programmer still energized, passion over exhaustion, creative flow state, painted atmospheric scene"
+        
+      - number: 20
+        description: "Breakthrough moment - game feature working perfectly, fist pump silhouette, monitors showing SUCCESS, painted celebration"
+
+  section_3:
+    timeline: "00:27.000 --> 00:44.000"
+    lyrics: "Chris, the coder, paved his own way. Just him, nobody else. Yeah, yeah, yeah, yeah, yeah. Characters danced, pixels flew. In Chris's game, dreams came true."
+    style_constants:
+      - "retro 1980s sci-fi illustration"
+      - "painted art style"
+      - "warm orange and cool blue color palette"
+      - "solo creator theme"
+    
+    images:
+      - number: 21
+        description: "Wide view of programmer alone in workspace, empty desks around, single lit workstation, isolation but determination, painted illustration"
+        
+      - number: 22
+        description: "Game characters coming alive on screen, dancing animations, pixel sprites in motion, retro arcade style movement, painted aesthetic"
+        
+      - number: 23
+        description: "Programmer controlling character movements like puppet master, hand gestures matching screen action, creative control, painted scene"
+        
+      - number: 24
+        description: "Multiple game characters now dancing together on monitors, particle effects, celebration in digital space, painted illustration"
+        
+      - number: 25
+        description: "Pixels exploding into fireworks on screen, special effects test, retro particle system, orange and blue sparks, painted style"
+        
+      - number: 26
+        description: "Dream sequence - programmer's imagination visible above head, game visions floating, thought bubbles with game scenes, painted surreal"
+        
+      - number: 27
+        description: "Characters seeming to leap between monitors, breaking boundaries, retro 3D effect, magical moment, painted illustration"
+        
+      - number: 28
+        description: "Programmer's reflection in monitor merging with game protagonist, creator and creation unite, painted symbolic moment"
+        
+      - number: 29
+        description: "Game world now fully alive, NPCs moving independently, living ecosystem on screens, dreams realized, painted scene"
+        
+      - number: 30
+        description: "Programmer standing, arms raised in triumph, game playing perfectly behind, solo victory, painted celebration moment"
+
+  section_4:
+    timeline: "00:44.000 --> 01:06.000"
+    lyrics: "Unemployed but undeterred, he delved into the depths of code where wonders swell. His Threadripper hummed, Linux shone bright. Guiding his hands through the digital night. No plans for glory, just passion's flame. As Chris's creation bore his name, okay, it's cool."
+    style_constants:
+      - "retro 1980s sci-fi illustration"
+      - "painted art style"
+      - "warm orange and cool blue color palette"
+      - "late night coding theme"
+    
+    images:
+      - number: 31
+        description: "Night scene, city asleep outside window, only programmer's workspace glowing, dedication in darkness, painted atmosphere"
+        
+      - number: 32
+        description: "Rejection letters visible on side desk, but programmer focused on code, undeterred by setbacks, painted emotional scene"
+        
+      - number: 33
+        description: "computer, blue lights pulsing steadily, reliable companion, copainted detail"
+        
+      - number: 34
+        description: "Linux terminal in full glory, green text cascading, painted tech aesthetic"
+        
+      - number: 35
+        description: "Deep code dive visualization, programmer swimming through functions, ocean of logic, surreal programming metaphor, painted art"
+        
+      - number: 36
+        description: "Multiple terminal windows open, complex debugging session, problem-solving in action, determined focus, painted workspace"
+        
+      - number: 37
+        description: "Clock showing 3 AM, coffee cups accumulated, marathon coding session, passion over comfort, painted dedication scene"
+        
+      - number: 38
+        description: "Breakthrough moment at dawn, sun starting to rise, code finally working, exhausted triumph, painted atmospheric lighting"
+        
+      - number: 39
+        description: "Programmer typing game credits, adding own name with pride, personal signature moment, painted emotional scene"
+        
+      - number: 40
+        description: "First rays of sunrise illuminating completed game on screens, new day with finished creation, painted golden hour"
+
+  section_5:
+    timeline: "01:06.000 --> 01:25.000"
+    lyrics: "From the depths of his imagination, it arose. A testament to the power that coding bestows. Unemployed but fulfilled, he stood tall. For in his game, he found his own."
+    style_constants:
+      - "retro 1980s sci-fi illustration"
+      - "painted art style"
+      - "warm orange and cool blue color palette"
+      - "triumph and fulfillment theme"
+    
+    images:
+      - number: 41
+        description: "Game main menu finally complete, title screen glowing, retro arcade attract mode, achievement manifest, painted illustration"
+        
+      - number: 42
+        description: "Imagination visualization - thought streams becoming game reality, creative power flowing, surreal artistic moment, painted style"
+        
+      - number: 43
+        description: "Upload dialog on screen, finger hovering over PUBLISH button, decisive moment, about to share with world, painted tension"
+        
+      - number: 44
+        description: "Upload progress bar filling, percentage climbing, game going live, anticipation building, painted dramatic moment"
+        
+      - number: 45
+        description: "First player notification appearing, someone playing the game, connection made, validation arriving, painted joy"
+        
+      - number: 46
+        description: "Player count rising on screen, 1 becomes 10 becomes 100, viral growth beginning, success metrics, painted excitement"
+        
+      - number: 47
+        description: "Programmer standing tall despite humble surroundings, fulfilled creator, found purpose, proud posture, painted portrait"
+        
+      - number: 48
+        description: "Monitor showing game world with multiple players, living community formed, creation thriving, painted success scene"
+        
+      - number: 49
+        description: "Reflection in monitor - tired but satisfied face, mission accomplished, personal victory, quiet pride, painted emotional moment"
+        
+      - number: 50
+        description: "Final wide shot - programmer silhouetted against sunrise, game running on screens, journey complete, painted epic ending"
