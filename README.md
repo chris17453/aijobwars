@@ -77,6 +77,26 @@ html/static/js/
 └── lib/          # Utils
 ```
 
+## Recent Improvements
+
+### Rendering Optimizations
+- **Dual Loop Architecture** - Input processing at 60 FPS, rendering at 24 FPS for responsive controls
+- **Double Buffering** - Offscreen canvas eliminates flicker during resize
+- **Pixel-Perfect Rendering** - Math.round() alignment prevents anti-aliasing artifacts
+- **Edge Gradient Sampling** - Letterbox/pillarbox fills sample from inside viewport boundaries
+- **9-Slice Scaling** - Anti-aliasing gaps eliminated with +1 dimension offsets
+
+### UI Refactoring
+- **Independent Window System** - Each modal/screen owns its own UI elements
+- **Title Screen Integration** - Menu class now handles title rendering with animated glow
+- **Orientation Handling** - Proper portrait/landscape transitions with background reloading
+- **Viewport Consistency** - Uniform dark border color across all edges
+
+### Performance
+- Input latency reduced from ~41ms (24fps) to ~16ms (60fps)
+- Zero-blink resize via immediate render after canvas clear
+- Efficient letterbox filling with single-pixel getImageData/putImageData
+
 ### Build
 ```bash
 # Bundle JS

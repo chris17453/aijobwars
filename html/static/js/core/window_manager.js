@@ -151,6 +151,14 @@ class window_manager extends events{
           this.render();
       });
 
+      // Input processing loop - runs at 60 FPS for responsive input
+      setInterval(() => {
+          if (this.has_windows() > 0) {
+              this.handle_keys();
+          }
+      }, 1000 / 60);
+
+      // Render loop - runs at 24 FPS for display
       setInterval(() => {
           // Skip rendering if in frame step mode and F11 wasn't pressed
           if (this.debug_frame_step && !this.debug_render_next_frame) {
@@ -161,10 +169,9 @@ class window_manager extends events{
           // DO NOT call recalc_canvas every frame - it triggers resize events!
           // Canvas dimensions are set in the window resize listener
           if (this.has_windows() > 0) {
-              this.handle_keys();
               this.render();
           }
-        },1000 / 24);
+      }, 1000 / 24);
     }
 
 
