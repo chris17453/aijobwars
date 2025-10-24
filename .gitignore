@@ -167,4 +167,4 @@ master/
 timelapse
 vosk*
 temp.wav
-output.*
+output.*/publish/

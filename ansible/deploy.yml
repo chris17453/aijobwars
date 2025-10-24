@@ -6,9 +6,9 @@
     project_root: "{{ playbook_dir | dirname }}"
     html_dir: "{{ project_root }}/html"
     static_dir: "{{ html_dir }}/static"
+    publish_dir: "{{ project_root }}/publish"
     bundle_output: "{{ static_dir }}/js/bundle.js"
     bundle_min_output: "{{ static_dir }}/js/bundle.min.js"
-    files_list: "{{ project_root }}/files.txt"
     remote_host: "10.90.0.45"
     deploy_user: "root"
     remote_path: "/web/aijobwars.com/"
@@ -123,50 +123,79 @@
               - {{ bundle_min_output }}: {{ (bundle_stats.results[1].stat.size / 1024) | round(2) }} KB
               - Compression: {{ ((1 - bundle_stats.results[1].stat.size / bundle_stats.results[0].stat.size) * 100) | round(2) }}%
 
-    - name: Generate file list for deployment
-      tags: ['filelist', 'build']
+    - name: Prepare publish directory
+      tags: ['publish', 'build']
       block:
-        - name: Find static files
-          find:
-            paths: "{{ static_dir }}"
-            patterns:
-              - "*.png"
-              - "*.webp"
-              - "*.js"
-              - "*.json"
-              - "*.mp3"
-              - "*.wav"
-              - "*.css"
-            recurse: yes
-          register: static_files
+        - name: Clean publish directory
+          file:
+            path: "{{ publish_dir }}"
+            state: absent
 
-        - name: Find HTML files
-          find:
-            paths: "{{ html_dir }}"
-            patterns: "*.html"
-            recurse: no
-          register: html_files
+        - name: Create publish directory structure
+          file:
+            path: "{{ item }}"
+            state: directory
+          loop:
+            - "{{ publish_dir }}"
+            - "{{ publish_dir }}/static"
 
-        - name: Create files list with relative paths
+        - name: Copy static assets to publish
+          synchronize:
+            src: "{{ static_dir }}/"
+            dest: "{{ publish_dir }}/static/"
+            rsync_opts:
+              - "--exclude=js/"
+              - "--include=css/"
+              - "--include=asset_packages/"
+          delegate_to: localhost
+
+        - name: Create js directory in publish
+          file:
+            path: "{{ publish_dir }}/static/js"
+            state: directory
+
+        - name: Copy bundle.min.js to publish
           copy:
-            content: |
-              {% for file in static_files.files + html_files.files %}
-              {{ file.path | regex_replace('^' + project_root + '/', '') }}
-              {% endfor %}
-            dest: "{{ files_list }}"
+            src: "{{ bundle_min_output }}"
+            dest: "{{ publish_dir }}/static/js/bundle.min.js"
 
-        - name: Show file count
+        - name: Copy favicon to publish
+          copy:
+            src: "{{ html_dir }}/favicon.png"
+            dest: "{{ publish_dir }}/favicon.png"
+          failed_when: false
+
+        - name: Copy production index.html to publish
+          copy:
+            src: "{{ html_dir }}/index.prod.html"
+            dest: "{{ publish_dir }}/index.html"
+
+        - name: Show publish directory size
+          shell: "du -sh {{ publish_dir }}"
+          register: publish_size
+          changed_when: false
+
+        - name: Display publish info
           debug:
-            msg: "Generated file list with {{ (static_files.files | length) + (html_files.files | length) }} files"
+            msg: |
+              Publish directory created successfully:
+              - Location: {{ publish_dir }}
+              - Size: {{ publish_size.stdout }}
+              - Ready for deployment
 
     - name: Deploy to remote server
       tags: ['deploy', 'never']
       block:
-        - name: Sync files to remote server using rsync
+        - name: Verify publish directory exists
+          stat:
+            path: "{{ publish_dir }}/index.html"
+          register: publish_check
+          failed_when: not publish_check.stat.exists
+
+        - name: Sync publish directory to remote server
           command: >
-            rsync -avz
-            --files-from={{ files_list }}
-            {{ project_root }}/
+            rsync -avz --delete
+            {{ publish_dir }}/
             {{ deploy_user }}@{{ remote_host }}:{{ remote_path }}
           register: rsync_result
 
