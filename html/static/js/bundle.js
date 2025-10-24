@@ -2722,7 +2722,11 @@ class scrollbar extends ui_component {
                 this.graphics.sprites.render("scroll-down", null, this.button_end_rect, down_button_intensity, "fill");
             }
         } catch (error) {
-            this.logger.error(`scrollbar render: ${error.message}`);
+            if (this.logger && this.logger.error) {
+                this.logger.error(`scrollbar render: ${error.message}`);
+            } else {
+                console.error(`scrollbar render: ${error.message}`);
+            }
         }
     }
 
@@ -2795,6 +2799,9 @@ class scrollbar extends ui_component {
             const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
             const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
 
+            // Check if we were dragging - if so, emit drag_end event
+            const was_dragging = this.is_dragging_thumb;
+
             // Handle start button click
             if (this.button_start_down && this.is_inside_rect(this.button_start_rect, virtual_mouse_x, virtual_mouse_y)) {
                 const value_data = this.get_value_callback();
@@ -2820,6 +2827,11 @@ class scrollbar extends ui_component {
             this.button_start_down = false;
             this.button_end_down = false;
             this.is_dragging_thumb = false;
+
+            // If we were dragging, emit drag_end event
+            if (was_dragging) {
+                this.emit('drag_end', { component: this });
+            }
         } catch (error) {
             this.logger.error(`scrollbar handle_mouse_up: ${error.message}`);
         }
@@ -6991,10 +7003,6 @@ class level extends events{
 
 
     seek_to(time_ms, is_dragging) {
-        // Stop all currently playing audio
-        this.stop_all_audio();
-        this.currently_playing_audio.clear();
-
         // Reset start time to seek position
         this.start_time = Date.now() - time_ms;
         this.manual_time_offset = time_ms;
@@ -7002,9 +7010,12 @@ class level extends events{
 
         // Only prevent audio playback if actively dragging
         if (is_dragging) {
+            // During drag: mute audio but don't stop it (prevents choppy audio)
             this.is_seeking = true;
         } else {
-            // For non-dragging seeks (keyboard, etc), allow audio immediately
+            // Seek complete: stop all audio and allow it to restart at new position
+            this.stop_all_audio();
+            this.currently_playing_audio.clear();
             this.is_seeking = false;
         }
     }
@@ -7306,7 +7317,19 @@ class cinematic_player extends modal {
             return {current: progress.current, max: progress.total};
         };
 
-        return new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
+        const scrollbar_instance = new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
+
+        // Listen for drag_end event to finalize seek
+        scrollbar_instance.on('drag_end', () => {
+            if (this.player) {
+                const progress = get_progress_callback();
+                if (progress) {
+                    this.player.seek_to(progress.current, false);  // false = drag complete, allow audio
+                }
+            }
+        });
+
+        return scrollbar_instance;
     }
 
     /**

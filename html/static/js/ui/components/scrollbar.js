@@ -275,7 +275,11 @@ class scrollbar extends ui_component {
                 this.graphics.sprites.render("scroll-down", null, this.button_end_rect, down_button_intensity, "fill");
             }
         } catch (error) {
-            this.logger.error(`scrollbar render: ${error.message}`);
+            if (this.logger && this.logger.error) {
+                this.logger.error(`scrollbar render: ${error.message}`);
+            } else {
+                console.error(`scrollbar render: ${error.message}`);
+            }
         }
     }
 
@@ -348,6 +352,9 @@ class scrollbar extends ui_component {
             const virtual_mouse_x = (event.offsetX - viewport.offset.x) / viewport.scale.x;
             const virtual_mouse_y = (event.offsetY - viewport.offset.y) / viewport.scale.y;
 
+            // Check if we were dragging - if so, emit drag_end event
+            const was_dragging = this.is_dragging_thumb;
+
             // Handle start button click
             if (this.button_start_down && this.is_inside_rect(this.button_start_rect, virtual_mouse_x, virtual_mouse_y)) {
                 const value_data = this.get_value_callback();
@@ -373,6 +380,11 @@ class scrollbar extends ui_component {
             this.button_start_down = false;
             this.button_end_down = false;
             this.is_dragging_thumb = false;
+
+            // If we were dragging, emit drag_end event
+            if (was_dragging) {
+                this.emit('drag_end', { component: this });
+            }
         } catch (error) {
             this.logger.error(`scrollbar handle_mouse_up: ${error.message}`);
         }

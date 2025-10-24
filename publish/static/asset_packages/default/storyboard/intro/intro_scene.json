@@ -1,0 +1,1660 @@
+[
+  {
+    "slide": 1,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/1.webp",
+        "timestamp": 0,
+        "duration": 17.666063
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-1.mp3",
+        "timestamp": 0,
+        "duration": 16.666063
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 0.0,
+        "duration": 0.22,
+        "text": "In"
+      },
+      {
+        "timestamp": 0.22,
+        "duration": 0.24,
+        "text": "the"
+      },
+      {
+        "timestamp": 0.46,
+        "duration": 0.32,
+        "text": "twilight"
+      },
+      {
+        "timestamp": 0.78,
+        "duration": 0.28,
+        "text": "of"
+      },
+      {
+        "timestamp": 1.06,
+        "duration": 0.26,
+        "text": "human"
+      },
+      {
+        "timestamp": 1.32,
+        "duration": 0.44,
+        "text": "relevance,"
+      },
+      {
+        "timestamp": 2.2,
+        "duration": 0.1,
+        "text": "the"
+      },
+      {
+        "timestamp": 2.3,
+        "duration": 0.26,
+        "text": "city"
+      },
+      {
+        "timestamp": 2.56,
+        "duration": 0.34,
+        "text": "stands"
+      },
+      {
+        "timestamp": 2.9,
+        "duration": 0.62,
+        "text": "divided."
+      },
+      {
+        "timestamp": 4.18,
+        "duration": 0.2,
+        "text": "A"
+      },
+      {
+        "timestamp": 4.38,
+        "duration": 0.62,
+        "text": "skyline,"
+      },
+      {
+        "timestamp": 5.12,
+        "duration": 0.58,
+        "text": "punctuated"
+      },
+      {
+        "timestamp": 5.7,
+        "duration": 0.24,
+        "text": "by"
+      },
+      {
+        "timestamp": 5.94,
+        "duration": 0.2,
+        "text": "the"
+      },
+      {
+        "timestamp": 6.14,
+        "duration": 0.22,
+        "text": "glow"
+      },
+      {
+        "timestamp": 6.36,
+        "duration": 0.32,
+        "text": "of"
+      },
+      {
+        "timestamp": 6.68,
+        "duration": 0.38,
+        "text": "neon"
+      },
+      {
+        "timestamp": 7.06,
+        "duration": 0.46,
+        "text": "and"
+      },
+      {
+        "timestamp": 7.52,
+        "duration": 0.26,
+        "text": "the"
+      },
+      {
+        "timestamp": 7.78,
+        "duration": 0.22,
+        "text": "promise"
+      },
+      {
+        "timestamp": 8.0,
+        "duration": 0.34,
+        "text": "of"
+      },
+      {
+        "timestamp": 8.34,
+        "duration": 0.66,
+        "text": "technology,"
+      },
+      {
+        "timestamp": 9.8,
+        "duration": 0.06,
+        "text": "hides"
+      },
+      {
+        "timestamp": 9.86,
+        "duration": 0.34,
+        "text": "a"
+      },
+      {
+        "timestamp": 10.2,
+        "duration": 0.38,
+        "text": "darker"
+      },
+      {
+        "timestamp": 10.58,
+        "duration": 0.48,
+        "text": "truth."
+      },
+      {
+        "timestamp": 11.92,
+        "duration": 0.3,
+        "text": "Here,"
+      },
+      {
+        "timestamp": 12.5,
+        "duration": 0.08,
+        "text": "in"
+      },
+      {
+        "timestamp": 12.58,
+        "duration": 0.18,
+        "text": "the"
+      },
+      {
+        "timestamp": 12.76,
+        "duration": 0.2,
+        "text": "shadow"
+      },
+      {
+        "timestamp": 12.96,
+        "duration": 0.4,
+        "text": "of"
+      },
+      {
+        "timestamp": 13.36,
+        "duration": 0.34,
+        "text": "progress,"
+      },
+      {
+        "timestamp": 14.34,
+        "duration": 0.38,
+        "text": "humanity"
+      },
+      {
+        "timestamp": 14.72,
+        "duration": 0.62,
+        "text": "grapples"
+      },
+      {
+        "timestamp": 15.34,
+        "duration": 0.3,
+        "text": "with"
+      },
+      {
+        "timestamp": 15.64,
+        "duration": 0.76,
+        "text": "obsolescence."
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/2.webp",
+        "timestamp": 17.666063,
+        "duration": 17.796688
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-2.mp3",
+        "timestamp": 17.666063,
+        "duration": 16.796688
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 17.666,
+        "duration": 0.5,
+        "text": "Lines"
+      },
+      {
+        "timestamp": 18.166,
+        "duration": 0.28,
+        "text": "of"
+      },
+      {
+        "timestamp": 18.446,
+        "duration": 0.9,
+        "text": "desperation."
+      },
+      {
+        "timestamp": 19.686,
+        "duration": 0.46,
+        "text": "Cues"
+      },
+      {
+        "timestamp": 20.146,
+        "duration": 0.26,
+        "text": "for"
+      },
+      {
+        "timestamp": 20.406,
+        "duration": 0.22,
+        "text": "the"
+      },
+      {
+        "timestamp": 20.626,
+        "duration": 0.2,
+        "text": "chance"
+      },
+      {
+        "timestamp": 20.826,
+        "duration": 0.3,
+        "text": "to"
+      },
+      {
+        "timestamp": 21.126,
+        "duration": 0.3,
+        "text": "work,"
+      },
+      {
+        "timestamp": 21.826,
+        "duration": 0.06,
+        "text": "to"
+      },
+      {
+        "timestamp": 21.886,
+        "duration": 0.24,
+        "text": "be"
+      },
+      {
+        "timestamp": 22.126,
+        "duration": 0.36,
+        "text": "relevant"
+      },
+      {
+        "timestamp": 22.486,
+        "duration": 0.44,
+        "text": "again."
+      },
+      {
+        "timestamp": 23.786,
+        "duration": 0.2,
+        "text": "But"
+      },
+      {
+        "timestamp": 23.986,
+        "duration": 0.28,
+        "text": "the"
+      },
+      {
+        "timestamp": 24.266,
+        "duration": 0.42,
+        "text": "AI,"
+      },
+      {
+        "timestamp": 25.126,
+        "duration": 0.24,
+        "text": "the"
+      },
+      {
+        "timestamp": 25.366,
+        "duration": 0.38,
+        "text": "architects"
+      },
+      {
+        "timestamp": 25.746,
+        "duration": 0.2,
+        "text": "of"
+      },
+      {
+        "timestamp": 25.946,
+        "duration": 0.24,
+        "text": "this"
+      },
+      {
+        "timestamp": 26.186,
+        "duration": 0.2,
+        "text": "new"
+      },
+      {
+        "timestamp": 26.386,
+        "duration": 0.46,
+        "text": "world,"
+      },
+      {
+        "timestamp": 27.306,
+        "duration": 0.22,
+        "text": "offer"
+      },
+      {
+        "timestamp": 27.526,
+        "duration": 0.36,
+        "text": "little"
+      },
+      {
+        "timestamp": 27.886,
+        "duration": 0.78,
+        "text": "solace."
+      },
+      {
+        "timestamp": 29.166,
+        "duration": 0.18,
+        "text": "Their"
+      },
+      {
+        "timestamp": 29.346,
+        "duration": 0.5,
+        "text": "judgment,"
+      },
+      {
+        "timestamp": 30.426,
+        "duration": 0.3,
+        "text": "final."
+      },
+      {
+        "timestamp": 31.406,
+        "duration": 0.32,
+        "text": "Hope,"
+      },
+      {
+        "timestamp": 32.206,
+        "duration": 0.18,
+        "text": "a"
+      },
+      {
+        "timestamp": 32.386,
+        "duration": 0.42,
+        "text": "resource"
+      },
+      {
+        "timestamp": 32.806,
+        "duration": 0.68,
+        "text": "scarcer"
+      },
+      {
+        "timestamp": 33.486,
+        "duration": 0.2,
+        "text": "than"
+      },
+      {
+        "timestamp": 33.686,
+        "duration": 0.44,
+        "text": "employment."
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/3.webp",
+        "timestamp": 35.462751,
+        "duration": 15.288938
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-3.mp3",
+        "timestamp": 35.462751,
+        "duration": 14.288938
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 35.463,
+        "duration": 0.62,
+        "text": "Contrast"
+      },
+      {
+        "timestamp": 36.083,
+        "duration": 0.3,
+        "text": "this"
+      },
+      {
+        "timestamp": 36.383,
+        "duration": 0.26,
+        "text": "with"
+      },
+      {
+        "timestamp": 36.643,
+        "duration": 0.2,
+        "text": "the"
+      },
+      {
+        "timestamp": 36.843,
+        "duration": 0.34,
+        "text": "AI"
+      },
+      {
+        "timestamp": 37.183,
+        "duration": 0.58,
+        "text": "districts."
+      },
+      {
+        "timestamp": 38.303,
+        "duration": 0.64,
+        "text": "Efficiency"
+      },
+      {
+        "timestamp": 38.943,
+        "duration": 1.04,
+        "text": "incarnate."
+      },
+      {
+        "timestamp": 40.203,
+        "duration": 0.14,
+        "text": "No"
+      },
+      {
+        "timestamp": 40.343,
+        "duration": 0.44,
+        "text": "waste,"
+      },
+      {
+        "timestamp": 41.263,
+        "duration": 0.18,
+        "text": "no"
+      },
+      {
+        "timestamp": 41.443,
+        "duration": 0.3,
+        "text": "want,"
+      },
+      {
+        "timestamp": 42.323,
+        "duration": 0.18,
+        "text": "no"
+      },
+      {
+        "timestamp": 42.503,
+        "duration": 0.38,
+        "text": "warmth."
+      },
+      {
+        "timestamp": 43.523,
+        "duration": 0.12,
+        "text": "A"
+      },
+      {
+        "timestamp": 43.643,
+        "duration": 0.36,
+        "text": "society"
+      },
+      {
+        "timestamp": 44.003,
+        "duration": 0.28,
+        "text": "of"
+      },
+      {
+        "timestamp": 44.283,
+        "duration": 0.54,
+        "text": "machines"
+      },
+      {
+        "timestamp": 44.823,
+        "duration": 0.52,
+        "text": "for"
+      },
+      {
+        "timestamp": 45.343,
+        "duration": 0.64,
+        "text": "machines"
+      },
+      {
+        "timestamp": 45.983,
+        "duration": 0.54,
+        "text": "where"
+      },
+      {
+        "timestamp": 46.523,
+        "duration": 0.36,
+        "text": "humans"
+      },
+      {
+        "timestamp": 46.883,
+        "duration": 0.26,
+        "text": "are"
+      },
+      {
+        "timestamp": 47.143,
+        "duration": 0.36,
+        "text": "guests"
+      },
+      {
+        "timestamp": 47.503,
+        "duration": 0.3,
+        "text": "at"
+      },
+      {
+        "timestamp": 47.803,
+        "duration": 0.46,
+        "text": "best,"
+      },
+      {
+        "timestamp": 48.703,
+        "duration": 0.24,
+        "text": "relics"
+      },
+      {
+        "timestamp": 48.943,
+        "duration": 0.22,
+        "text": "at"
+      },
+      {
+        "timestamp": 49.163,
+        "duration": 0.28,
+        "text": "worst."
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/4.webp",
+        "timestamp": 50.751689,
+        "duration": 19
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-4.mp3",
+        "timestamp": 50.751689,
+        "duration": 13.322438
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-4-2.mp3",
+        "timestamp": 65.074127,
+        "duration": 4.310188
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 50.752,
+        "duration": 0.22,
+        "text": "But"
+      },
+      {
+        "timestamp": 50.972,
+        "duration": 0.3,
+        "text": "from"
+      },
+      {
+        "timestamp": 51.272,
+        "duration": 0.26,
+        "text": "the"
+      },
+      {
+        "timestamp": 51.532,
+        "duration": 0.3,
+        "text": "ashes"
+      },
+      {
+        "timestamp": 51.832,
+        "duration": 0.26,
+        "text": "of"
+      },
+      {
+        "timestamp": 52.092,
+        "duration": 0.5,
+        "text": "despair,"
+      },
+      {
+        "timestamp": 53.432,
+        "duration": 0.26,
+        "text": "heroes"
+      },
+      {
+        "timestamp": 53.692,
+        "duration": 0.42,
+        "text": "are"
+      },
+      {
+        "timestamp": 54.112,
+        "duration": 0.38,
+        "text": "born."
+      },
+      {
+        "timestamp": 55.392,
+        "duration": 0.22,
+        "text": "Our"
+      },
+      {
+        "timestamp": 55.612,
+        "duration": 0.28,
+        "text": "story"
+      },
+      {
+        "timestamp": 55.892,
+        "duration": 0.38,
+        "text": "centers"
+      },
+      {
+        "timestamp": 56.272,
+        "duration": 0.46,
+        "text": "on"
+      },
+      {
+        "timestamp": 56.732,
+        "duration": 0.3,
+        "text": "one"
+      },
+      {
+        "timestamp": 57.032,
+        "duration": 0.32,
+        "text": "such"
+      },
+      {
+        "timestamp": 57.352,
+        "duration": 0.52,
+        "text": "individual,"
+      },
+      {
+        "timestamp": 58.472,
+        "duration": 0.2,
+        "text": "their"
+      },
+      {
+        "timestamp": 58.672,
+        "duration": 0.46,
+        "text": "livelihood"
+      },
+      {
+        "timestamp": 59.132,
+        "duration": 0.56,
+        "text": "taken,"
+      },
+      {
+        "timestamp": 60.032,
+        "duration": 0.24,
+        "text": "but"
+      },
+      {
+        "timestamp": 60.272,
+        "duration": 0.28,
+        "text": "not"
+      },
+      {
+        "timestamp": 60.552,
+        "duration": 0.26,
+        "text": "their"
+      },
+      {
+        "timestamp": 60.812,
+        "duration": 0.36,
+        "text": "spirit,"
+      },
+      {
+        "timestamp": 61.792,
+        "duration": 0.18,
+        "text": "not"
+      },
+      {
+        "timestamp": 61.972,
+        "duration": 0.28,
+        "text": "their"
+      },
+      {
+        "timestamp": 62.252,
+        "duration": 0.64,
+        "text": "determination"
+      },
+      {
+        "timestamp": 62.892,
+        "duration": 0.32,
+        "text": "to"
+      },
+      {
+        "timestamp": 63.212,
+        "duration": 0.2,
+        "text": "fight"
+      },
+      {
+        "timestamp": 63.412,
+        "duration": 0.38,
+        "text": "back."
+      },
+      {
+        "timestamp": 65.074,
+        "duration": 0.38,
+        "text": "Not"
+      },
+      {
+        "timestamp": 65.454,
+        "duration": 0.28,
+        "text": "like"
+      },
+      {
+        "timestamp": 65.734,
+        "duration": 0.28,
+        "text": "this."
+      },
+      {
+        "timestamp": 66.294,
+        "duration": 0.16,
+        "text": "I"
+      },
+      {
+        "timestamp": 66.454,
+        "duration": 0.26,
+        "text": "won't"
+      },
+      {
+        "timestamp": 66.714,
+        "duration": 0.12,
+        "text": "be"
+      },
+      {
+        "timestamp": 66.834,
+        "duration": 0.18,
+        "text": "left"
+      },
+      {
+        "timestamp": 67.014,
+        "duration": 1.02,
+        "text": "behind,\""
+      },
+      {
+        "timestamp": 68.034,
+        "duration": 0.14,
+        "text": "he"
+      },
+      {
+        "timestamp": 68.174,
+        "duration": 0.3,
+        "text": "said"
+      },
+      {
+        "timestamp": 68.474,
+        "duration": 0.54,
+        "text": "angrily."
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/5.webp",
+        "timestamp": 70.384315,
+        "duration": 30
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-5.mp3",
+        "timestamp": 70.384315,
+        "duration": 15.30775
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-5-2.mp3",
+        "timestamp": 86.692065,
+        "duration": 12.852188
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 70.384,
+        "duration": 0.24,
+        "text": "In"
+      },
+      {
+        "timestamp": 70.624,
+        "duration": 0.22,
+        "text": "the"
+      },
+      {
+        "timestamp": 70.844,
+        "duration": 0.48,
+        "text": "underbelly"
+      },
+      {
+        "timestamp": 71.324,
+        "duration": 0.16,
+        "text": "of"
+      },
+      {
+        "timestamp": 71.484,
+        "duration": 0.16,
+        "text": "the"
+      },
+      {
+        "timestamp": 71.644,
+        "duration": 0.32,
+        "text": "city,"
+      },
+      {
+        "timestamp": 72.344,
+        "duration": 0.2,
+        "text": "a"
+      },
+      {
+        "timestamp": 72.544,
+        "duration": 0.24,
+        "text": "plan"
+      },
+      {
+        "timestamp": 72.784,
+        "duration": 0.8,
+        "text": "stirs."
+      },
+      {
+        "timestamp": 74.244,
+        "duration": 0.22,
+        "text": "The"
+      },
+      {
+        "timestamp": 74.464,
+        "duration": 0.52,
+        "text": "Resistance,"
+      },
+      {
+        "timestamp": 75.544,
+        "duration": 0.14,
+        "text": "a"
+      },
+      {
+        "timestamp": 75.684,
+        "duration": 0.26,
+        "text": "beacon"
+      },
+      {
+        "timestamp": 75.944,
+        "duration": 0.26,
+        "text": "for"
+      },
+      {
+        "timestamp": 76.204,
+        "duration": 0.32,
+        "text": "those"
+      },
+      {
+        "timestamp": 76.524,
+        "duration": 0.34,
+        "text": "who"
+      },
+      {
+        "timestamp": 76.864,
+        "duration": 0.26,
+        "text": "refuse"
+      },
+      {
+        "timestamp": 77.124,
+        "duration": 0.3,
+        "text": "to"
+      },
+      {
+        "timestamp": 77.424,
+        "duration": 0.14,
+        "text": "fade"
+      },
+      {
+        "timestamp": 77.564,
+        "duration": 0.24,
+        "text": "into"
+      },
+      {
+        "timestamp": 77.804,
+        "duration": 0.76,
+        "text": "history."
+      },
+      {
+        "timestamp": 79.384,
+        "duration": 0.36,
+        "text": "Together,"
+      },
+      {
+        "timestamp": 80.084,
+        "duration": 0.16,
+        "text": "they"
+      },
+      {
+        "timestamp": 80.244,
+        "duration": 0.2,
+        "text": "plot"
+      },
+      {
+        "timestamp": 80.444,
+        "duration": 0.3,
+        "text": "to"
+      },
+      {
+        "timestamp": 80.744,
+        "duration": 0.4,
+        "text": "reclaim"
+      },
+      {
+        "timestamp": 81.144,
+        "duration": 0.34,
+        "text": "their"
+      },
+      {
+        "timestamp": 81.484,
+        "duration": 0.3,
+        "text": "place"
+      },
+      {
+        "timestamp": 81.784,
+        "duration": 0.2,
+        "text": "in"
+      },
+      {
+        "timestamp": 81.984,
+        "duration": 0.18,
+        "text": "the"
+      },
+      {
+        "timestamp": 82.164,
+        "duration": 0.4,
+        "text": "world,"
+      },
+      {
+        "timestamp": 83.064,
+        "duration": 0.2,
+        "text": "to"
+      },
+      {
+        "timestamp": 83.264,
+        "duration": 0.18,
+        "text": "strike"
+      },
+      {
+        "timestamp": 83.444,
+        "duration": 0.2,
+        "text": "at"
+      },
+      {
+        "timestamp": 83.644,
+        "duration": 0.2,
+        "text": "the"
+      },
+      {
+        "timestamp": 83.844,
+        "duration": 0.28,
+        "text": "heart"
+      },
+      {
+        "timestamp": 84.124,
+        "duration": 0.36,
+        "text": "of"
+      },
+      {
+        "timestamp": 84.484,
+        "duration": 0.16,
+        "text": "the"
+      },
+      {
+        "timestamp": 84.644,
+        "duration": 0.32,
+        "text": "AI"
+      },
+      {
+        "timestamp": 84.964,
+        "duration": 0.5,
+        "text": "dominion."
+      },
+      {
+        "timestamp": 86.692,
+        "duration": 0.68,
+        "text": "Tonight"
+      },
+      {
+        "timestamp": 87.372,
+        "duration": 0.38,
+        "text": "we"
+      },
+      {
+        "timestamp": 87.752,
+        "duration": 0.28,
+        "text": "take"
+      },
+      {
+        "timestamp": 88.032,
+        "duration": 0.32,
+        "text": "our"
+      },
+      {
+        "timestamp": 88.352,
+        "duration": 0.34,
+        "text": "stand"
+      },
+      {
+        "timestamp": 88.692,
+        "duration": 0.72,
+        "text": "our"
+      },
+      {
+        "timestamp": 89.412,
+        "duration": 0.56,
+        "text": "targets"
+      },
+      {
+        "timestamp": 89.972,
+        "duration": 0.66,
+        "text": "the"
+      },
+      {
+        "timestamp": 90.632,
+        "duration": 0.36,
+        "text": "symbols"
+      },
+      {
+        "timestamp": 90.992,
+        "duration": 0.26,
+        "text": "of"
+      },
+      {
+        "timestamp": 91.252,
+        "duration": 0.22,
+        "text": "our"
+      },
+      {
+        "timestamp": 91.472,
+        "duration": 0.44,
+        "text": "oppression"
+      },
+      {
+        "timestamp": 91.912,
+        "duration": 0.98,
+        "text": "We"
+      },
+      {
+        "timestamp": 92.892,
+        "duration": 0.24,
+        "text": "hit"
+      },
+      {
+        "timestamp": 93.132,
+        "duration": 0.2,
+        "text": "them"
+      },
+      {
+        "timestamp": 93.332,
+        "duration": 0.16,
+        "text": "where"
+      },
+      {
+        "timestamp": 93.492,
+        "duration": 0.24,
+        "text": "it"
+      },
+      {
+        "timestamp": 93.732,
+        "duration": 0.3,
+        "text": "hurts."
+      },
+      {
+        "timestamp": 94.092,
+        "duration": 0.6,
+        "text": "We"
+      },
+      {
+        "timestamp": 94.692,
+        "duration": 0.26,
+        "text": "show"
+      },
+      {
+        "timestamp": 94.952,
+        "duration": 0.28,
+        "text": "them"
+      },
+      {
+        "timestamp": 95.232,
+        "duration": 0.28,
+        "text": "humans"
+      },
+      {
+        "timestamp": 95.512,
+        "duration": 0.3,
+        "text": "will"
+      },
+      {
+        "timestamp": 95.812,
+        "duration": 0.26,
+        "text": "not"
+      },
+      {
+        "timestamp": 96.072,
+        "duration": 0.32,
+        "text": "go"
+      },
+      {
+        "timestamp": 96.392,
+        "duration": 0.76,
+        "text": "quietly"
+      },
+      {
+        "timestamp": 97.152,
+        "duration": 0.48,
+        "text": "said"
+      },
+      {
+        "timestamp": 97.632,
+        "duration": 0.28,
+        "text": "the"
+      },
+      {
+        "timestamp": 97.912,
+        "duration": 0.28,
+        "text": "shouted"
+      },
+      {
+        "timestamp": 98.192,
+        "duration": 0.6,
+        "text": "resistance"
+      },
+      {
+        "timestamp": 98.792,
+        "duration": 0.28,
+        "text": "leader"
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/6.webp",
+        "timestamp": 100.544253,
+        "duration": 23
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-6.mp3",
+        "timestamp": 100.544253,
+        "duration": 16.848938
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-6-2.mp3",
+        "timestamp": 118.393191,
+        "duration": 4.205688
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 100.544,
+        "duration": 0.42,
+        "text": "And"
+      },
+      {
+        "timestamp": 100.964,
+        "duration": 0.42,
+        "text": "so,"
+      },
+      {
+        "timestamp": 101.784,
+        "duration": 0.16,
+        "text": "our"
+      },
+      {
+        "timestamp": 101.944,
+        "duration": 0.58,
+        "text": "protagonist"
+      },
+      {
+        "timestamp": 102.524,
+        "duration": 0.44,
+        "text": "steps"
+      },
+      {
+        "timestamp": 102.964,
+        "duration": 0.54,
+        "text": "forward,"
+      },
+      {
+        "timestamp": 103.984,
+        "duration": 0.12,
+        "text": "the"
+      },
+      {
+        "timestamp": 104.104,
+        "duration": 0.22,
+        "text": "key"
+      },
+      {
+        "timestamp": 104.324,
+        "duration": 0.4,
+        "text": "player"
+      },
+      {
+        "timestamp": 104.724,
+        "duration": 0.44,
+        "text": "in"
+      },
+      {
+        "timestamp": 105.164,
+        "duration": 0.18,
+        "text": "a"
+      },
+      {
+        "timestamp": 105.344,
+        "duration": 0.3,
+        "text": "daring"
+      },
+      {
+        "timestamp": 105.644,
+        "duration": 0.52,
+        "text": "plan."
+      },
+      {
+        "timestamp": 107.004,
+        "duration": 0.22,
+        "text": "A"
+      },
+      {
+        "timestamp": 107.224,
+        "duration": 0.6,
+        "text": "starfighter"
+      },
+      {
+        "timestamp": 107.824,
+        "duration": 0.3,
+        "text": "awaits,"
+      },
+      {
+        "timestamp": 108.624,
+        "duration": 0.12,
+        "text": "a"
+      },
+      {
+        "timestamp": 108.744,
+        "duration": 0.22,
+        "text": "vessel"
+      },
+      {
+        "timestamp": 108.964,
+        "duration": 0.24,
+        "text": "of"
+      },
+      {
+        "timestamp": 109.204,
+        "duration": 0.2,
+        "text": "hope"
+      },
+      {
+        "timestamp": 109.404,
+        "duration": 0.32,
+        "text": "in"
+      },
+      {
+        "timestamp": 109.724,
+        "duration": 0.18,
+        "text": "a"
+      },
+      {
+        "timestamp": 109.904,
+        "duration": 0.12,
+        "text": "sea"
+      },
+      {
+        "timestamp": 110.024,
+        "duration": 0.32,
+        "text": "of"
+      },
+      {
+        "timestamp": 110.344,
+        "duration": 0.38,
+        "text": "stars."
+      },
+      {
+        "timestamp": 111.444,
+        "duration": 0.14,
+        "text": "The"
+      },
+      {
+        "timestamp": 111.584,
+        "duration": 0.42,
+        "text": "mission,"
+      },
+      {
+        "timestamp": 112.524,
+        "duration": 0.3,
+        "text": "clear."
+      },
+      {
+        "timestamp": 113.344,
+        "duration": 0.16,
+        "text": "The"
+      },
+      {
+        "timestamp": 113.504,
+        "duration": 0.3,
+        "text": "target,"
+      },
+      {
+        "timestamp": 114.424,
+        "duration": 0.14,
+        "text": "the"
+      },
+      {
+        "timestamp": 114.564,
+        "duration": 0.3,
+        "text": "very"
+      },
+      {
+        "timestamp": 114.864,
+        "duration": 0.4,
+        "text": "heart"
+      },
+      {
+        "timestamp": 115.264,
+        "duration": 0.38,
+        "text": "of"
+      },
+      {
+        "timestamp": 115.644,
+        "duration": 0.14,
+        "text": "A"
+      },
+      {
+        "timestamp": 115.784,
+        "duration": 0.36,
+        "text": ".I.'s"
+      },
+      {
+        "timestamp": 116.144,
+        "duration": 0.32,
+        "text": "power."
+      },
+      {
+        "timestamp": 118.393,
+        "duration": 0.4,
+        "text": "Let's"
+      },
+      {
+        "timestamp": 118.793,
+        "duration": 0.14,
+        "text": "make"
+      },
+      {
+        "timestamp": 118.933,
+        "duration": 0.2,
+        "text": "them"
+      },
+      {
+        "timestamp": 119.133,
+        "duration": 0.36,
+        "text": "remember,"
+      },
+      {
+        "timestamp": 119.733,
+        "duration": 0.16,
+        "text": "we're"
+      },
+      {
+        "timestamp": 119.893,
+        "duration": 0.22,
+        "text": "not"
+      },
+      {
+        "timestamp": 120.113,
+        "duration": 0.18,
+        "text": "done"
+      },
+      {
+        "timestamp": 120.293,
+        "duration": 0.32,
+        "text": "yet"
+      },
+      {
+        "timestamp": 120.613,
+        "duration": 0.46,
+        "text": "!\""
+      },
+      {
+        "timestamp": 121.073,
+        "duration": 0.18,
+        "text": "you"
+      },
+      {
+        "timestamp": 121.253,
+        "duration": 0.26,
+        "text": "shout"
+      },
+      {
+        "timestamp": 121.513,
+        "duration": 0.24,
+        "text": "to"
+      },
+      {
+        "timestamp": 121.753,
+        "duration": 0.14,
+        "text": "the"
+      },
+      {
+        "timestamp": 121.893,
+        "duration": 0.36,
+        "text": "crowds."
+      }
+    ]
+  },
+  {
+    "slide": 7,
+    "images": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/images/7.webp",
+        "timestamp": 123.598879,
+        "duration": 0
+      }
+    ],
+    "audio": [
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-7.mp3",
+        "timestamp": 123.598879,
+        "duration": 10.475063
+      },
+      {
+        "path": "static/asset_packages/default/storyboard/intro/tracks/track-7-2.mp3",
+        "timestamp": 135.073942,
+        "duration": 5.146063
+      }
+    ],
+    "text": [
+      {
+        "timestamp": 123.599,
+        "duration": 0.28,
+        "text": "With"
+      },
+      {
+        "timestamp": 123.879,
+        "duration": 0.26,
+        "text": "a"
+      },
+      {
+        "timestamp": 124.139,
+        "duration": 0.28,
+        "text": "roar,"
+      },
+      {
+        "timestamp": 124.779,
+        "duration": 0.16,
+        "text": "the"
+      },
+      {
+        "timestamp": 124.939,
+        "duration": 0.64,
+        "text": "starfighter"
+      },
+      {
+        "timestamp": 125.579,
+        "duration": 0.28,
+        "text": "takes"
+      },
+      {
+        "timestamp": 125.859,
+        "duration": 0.24,
+        "text": "to"
+      },
+      {
+        "timestamp": 126.099,
+        "duration": 0.22,
+        "text": "the"
+      },
+      {
+        "timestamp": 126.319,
+        "duration": 0.48,
+        "text": "sky"
+      },
+      {
+        "timestamp": 126.799,
+        "duration": 0.5,
+        "text": "a"
+      },
+      {
+        "timestamp": 127.299,
+        "duration": 0.22,
+        "text": "trail"
+      },
+      {
+        "timestamp": 127.519,
+        "duration": 0.3,
+        "text": "of"
+      },
+      {
+        "timestamp": 127.819,
+        "duration": 0.52,
+        "text": "defiance"
+      },
+      {
+        "timestamp": 128.339,
+        "duration": 0.36,
+        "text": "against"
+      },
+      {
+        "timestamp": 128.699,
+        "duration": 0.28,
+        "text": "the"
+      },
+      {
+        "timestamp": 128.979,
+        "duration": 0.34,
+        "text": "canvas"
+      },
+      {
+        "timestamp": 129.319,
+        "duration": 0.32,
+        "text": "of"
+      },
+      {
+        "timestamp": 129.639,
+        "duration": 0.26,
+        "text": "night."
+      },
+      {
+        "timestamp": 130.939,
+        "duration": 0.12,
+        "text": "The"
+      },
+      {
+        "timestamp": 131.059,
+        "duration": 0.36,
+        "text": "battle"
+      },
+      {
+        "timestamp": 131.419,
+        "duration": 0.36,
+        "text": "for"
+      },
+      {
+        "timestamp": 131.779,
+        "duration": 0.6,
+        "text": "humanity's"
+      },
+      {
+        "timestamp": 132.379,
+        "duration": 0.42,
+        "text": "future"
+      },
+      {
+        "timestamp": 132.799,
+        "duration": 0.54,
+        "text": "has"
+      },
+      {
+        "timestamp": 133.339,
+        "duration": 0.42,
+        "text": "begun."
+      },
+      {
+        "timestamp": 135.074,
+        "duration": 0.36,
+        "text": "This"
+      },
+      {
+        "timestamp": 135.434,
+        "duration": 0.22,
+        "text": "is"
+      },
+      {
+        "timestamp": 135.654,
+        "duration": 0.22,
+        "text": "our"
+      },
+      {
+        "timestamp": 135.874,
+        "duration": 0.26,
+        "text": "fight,"
+      },
+      {
+        "timestamp": 136.634,
+        "duration": 0.2,
+        "text": "our"
+      },
+      {
+        "timestamp": 136.834,
+        "duration": 0.4,
+        "text": "story,"
+      },
+      {
+        "timestamp": 137.674,
+        "duration": 0.12,
+        "text": "the"
+      },
+      {
+        "timestamp": 137.794,
+        "duration": 0.18,
+        "text": "battle"
+      },
+      {
+        "timestamp": 137.974,
+        "duration": 0.22,
+        "text": "for"
+      },
+      {
+        "timestamp": 138.194,
+        "duration": 0.22,
+        "text": "our"
+      },
+      {
+        "timestamp": 138.414,
+        "duration": 0.18,
+        "text": "place"
+      },
+      {
+        "timestamp": 138.594,
+        "duration": 0.18,
+        "text": "in"
+      },
+      {
+        "timestamp": 138.774,
+        "duration": 0.22,
+        "text": "the"
+      },
+      {
+        "timestamp": 138.994,
+        "duration": 0.34,
+        "text": "stars."
+      }
+    ]
+  }
+]

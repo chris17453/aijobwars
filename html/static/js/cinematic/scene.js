@@ -129,10 +129,6 @@ class scene {
 
 
     seek_to(time_ms, is_dragging) {
-        // Stop all currently playing audio
-        this.stop_all_audio();
-        this.currently_playing_audio.clear();
-
         // Reset start time to seek position
         this.start_time = Date.now() - time_ms;
         this.manual_time_offset = time_ms;
@@ -140,9 +136,12 @@ class scene {
 
         // Only prevent audio playback if actively dragging
         if (is_dragging) {
+            // During drag: mute audio but don't stop it (prevents choppy audio)
             this.is_seeking = true;
         } else {
-            // For non-dragging seeks (keyboard, etc), allow audio immediately
+            // Seek complete: stop all audio and allow it to restart at new position
+            this.stop_all_audio();
+            this.currently_playing_audio.clear();
             this.is_seeking = false;
         }
     }

@@ -58,7 +58,19 @@ class cinematic_player extends modal {
             return {current: progress.current, max: progress.total};
         };
 
-        return new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
+        const scrollbar_instance = new scrollbar(this, this.graphics, position, anchor_position, "horizontal", get_value_callback, seek_callback);
+
+        // Listen for drag_end event to finalize seek
+        scrollbar_instance.on('drag_end', () => {
+            if (this.player) {
+                const progress = get_progress_callback();
+                if (progress) {
+                    this.player.seek_to(progress.current, false);  // false = drag complete, allow audio
+                }
+            }
+        });
+
+        return scrollbar_instance;
     }
 
     /**
