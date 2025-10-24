@@ -11,7 +11,7 @@
     bundle_min_output: "{{ static_dir }}/js/bundle.min.js"
     remote_host: "10.90.0.45"
     deploy_user: "root"
-    remote_path: "/web/aijobwars.com/"
+    remote_path: "/web/aijobwars.com/html/"
 
     # JavaScript files in dependency order
     js_files:
