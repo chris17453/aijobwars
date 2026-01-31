@@ -208,12 +208,11 @@ class scene {
                         if (property === 'images' && Array.isArray(object.layers)) {
                             for (let layerIdx = object.layers.length - 1; layerIdx >= 0; layerIdx--) {
                                 const layerObj = object.layers[layerIdx];
-                                // Merge layer into a new object preserving timelines
-                                const merged = {
-                                    data: Object.assign({}, object, layerObj, { timestamp: object.timestamp, duration: object.duration }),
-                                    type: 'images',
-                                    timestamp
-                                };
+                                // Merge layer into a new object preserving base timeline unless overridden
+                                const mergedData = Object.assign({}, object, layerObj);
+                                if (mergedData.timestamp === undefined) mergedData.timestamp = object.timestamp;
+                                if (mergedData.duration === undefined) mergedData.duration = object.duration;
+                                const merged = { data: mergedData, type: 'images', timestamp };
                                 objectsToShow.unshift(merged);
                             }
                         } else {
@@ -315,6 +314,7 @@ class scene {
                 const progress = this.get_progress_for_object(object.data);
                 const startRect = this.build_rect(object.data.start_rect, position);
                 const endRect = this.build_rect(object.data.end_rect, startRect);
+                // If no start/end rects provided, fall back to the modal position to preserve existing behavior
                 const destRect = this.interpolate_rect(startRect, endRect, progress) || position;
                 const intensity = this.get_opacity_for_object(object.data, progress);
 
