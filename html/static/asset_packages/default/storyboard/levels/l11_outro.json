@@ -1,0 +1,41 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l11_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with calmed Teams notifications, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l11_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about mastering collaboration chaos"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Collaboration",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "controlled.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l11_teams_terror",
+    "scene_type": "outro",
+    "description": "Level 11 victory scene showing tamed Teams platform",
+    "theme": "Victory over collaboration overload",
+    "visual_notes": "Show organized Teams interface with controlled notifications, transparent victory effects",
+    "audio_notes": "Triumphant music celebrating balanced communication"
+  }
+}

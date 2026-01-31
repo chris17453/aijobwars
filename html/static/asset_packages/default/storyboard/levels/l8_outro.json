@@ -1,0 +1,41 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l8_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with organized documents, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l8_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about conquering paperwork"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Documents",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "tamed.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l8_pdf_pandemonium",
+    "scene_type": "outro",
+    "description": "Level 8 victory scene showing organized documentation",
+    "theme": "Victory over paperwork chaos",
+    "visual_notes": "Show neatly filed documents fading away, transparent victory effects",
+    "audio_notes": "Triumphant music celebrating organizational mastery"
+  }
+}

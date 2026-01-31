@@ -1,0 +1,65 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l12_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 10.0,
+      "comment": "PLACEHOLDER: Victory scene showing triumphant hero with all challenges overcome, transparent celebration effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l12_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 10.0,
+      "comment": "PLACEHOLDER: Epic victory narration celebrating ultimate triumph over job market chaos"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Victory.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "The",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.5,
+      "duration": 0.5,
+      "text": "job",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 2.0,
+      "duration": 0.5,
+      "text": "war",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 2.5,
+      "duration": 0.5,
+      "text": "is",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 3.0,
+      "duration": 0.5,
+      "text": "won.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l12_interview_inferno",
+    "scene_type": "outro",
+    "description": "Level 12 final victory scene showing ultimate triumph",
+    "theme": "Ultimate victory over all job market challenges",
+    "visual_notes": "Show hero celebrated, all enemies vanquished, peaceful job market, transparent celebration effects",
+    "audio_notes": "Epic triumphant finale music celebrating complete victory and hope for future"
+  }
+}

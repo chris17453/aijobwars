@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l7_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with cleared inbox, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l7_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about achieving inbox zero"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Inbox",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "zero",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "achieved.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l7_email_onslaught",
+    "scene_type": "outro",
+    "description": "Level 7 victory scene showing cleared email space",
+    "theme": "Victory over email overload",
+    "visual_notes": "Show clean inbox with no notifications, transparent celebration effects",
+    "audio_notes": "Relieved, triumphant music celebrating communication control"
+  }
+}

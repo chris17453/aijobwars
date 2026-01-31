@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l11_intro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Transparent background showing Microsoft Teams logos mobilizing"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l11_intro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Narration about Teams platform overwhelming communication"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Teams",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "unleashes",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "terror.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l11_teams_terror",
+    "scene_type": "intro",
+    "description": "Level 11 introduction showing Microsoft Teams platform assault",
+    "theme": "Teams Terror - Withstand the corporate collaboration onslaught",
+    "visual_notes": "Show Teams logos with notification badges swarming, transparent chaos effects",
+    "audio_notes": "Dramatic narration about overwhelming collaboration demands"
+  }
+}

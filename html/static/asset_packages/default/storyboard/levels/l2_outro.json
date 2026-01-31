@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l2_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene showing cleared resume debris with transparent overlay"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l2_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about overcoming the resume storm"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Resume",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "rapids",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "cleared.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l2_resume_rapids",
+    "scene_type": "outro",
+    "description": "Level 2 victory scene showing cleared resume debris",
+    "theme": "Victory over the resume flood",
+    "visual_notes": "Show triumphant scene with cleared space, transparent victory effects",
+    "audio_notes": "Triumphant music celebrating navigation through chaos"
+  }
+}

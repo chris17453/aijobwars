@@ -1,0 +1,41 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l3_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with broken LinkedIn chains, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l3_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about breaking free from networking trap"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Network",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "navigated.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l3_linkedin_labyrinth",
+    "scene_type": "outro",
+    "description": "Level 3 victory scene showing escaped LinkedIn maze",
+    "theme": "Freedom from networking labyrinth",
+    "visual_notes": "Show broken chains and cleared path, transparent victory overlays",
+    "audio_notes": "Triumphant music celebrating independence"
+  }
+}
