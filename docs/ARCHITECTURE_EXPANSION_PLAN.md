@@ -60,3 +60,29 @@ Create a unified foundation to scale AI Job Wars to dozens of levels with improv
 - Leaderboards accept runs with metadata and support seasonal rotation.
 - Players can pick loadouts and persist settings across sessions.
 - Controls are remappable with accessibility options available in-game.
+
+## Level Roadmap (12 New Levels)
+- **L1: Orbital Onboarding** — tutorialized dogfights, intro cutscene sets stakes; outro cutscene unlocks next tier.
+- **L2: Debris Drift** — asteroid field with timed mine clears; cutscene shows salvage briefing and debrief.
+- **L3: Factory Siege** — interior conveyor hazards; cutscene introduces sabotage objective and exit evac.
+- **L4: Signal Scramble** — jammer nodes disable radar until destroyed; cutscene frames intel op and data exfil.
+- **L5: Glacier Run** — ice caves with sliding physics; cutscene highlights environmental risk and victory escape.
+- **L6: Stormfront Skies** — lightning that chains across enemies; cutscene tees up weather tech and aftermath.
+- **L7: Crimson Armada** — elite squadron mini-bosses; cutscene sets rival aces and surrender scene.
+- **L8: Relay Heist** — escort hack drone, defend uplink; cutscene briefs hack route and success transmission.
+- **L9: Bioforge Breach** — organic turrets, corrosive pools; cutscene reveals mutation threat and seal-off.
+- **L10: Quantum Rift** — teleporting enemies and shifting lanes; cutscene explains anomaly entry/closure.
+- **L11: Dreadnought Hull** — multi-phase capital ship assault; cutscene stakes boarding and extraction.
+- **L12: Nexus Showdown** — final boss with layered mechanics; opening cutscene recaps campaign, finale cinematic on win.
+
+### Cutscene Requirements
+- Every level plays a start **and** finish cutscene via the cinematic engine before gameplay and after objectives.
+- Cutscenes are declared in the level schema (intro/outro handles) and loaded by the Level Registry.
+- Default fallback cutscenes exist per tier to avoid missing assets; level JSON references validated at load.
+
+### Media Player Enhancements
+- Reuse the existing cinematic/media player for level cutscenes with:
+  - **Playlist support** (intro + optional mid-mission + outro) driven by schema.
+  - **Async preload hints** for video/audio so start cutscenes are gapless.
+  - **Skip/Resume hooks** that respect accessibility settings and persist last-seen cutscene per level.
+- Media player is bundled as a shared service (no UI duplication) and exposed to the modal system for consistent controls.
