@@ -101,6 +101,13 @@ class ui{
         }
     }
 
+    toggle_accessibility(option) {
+        const current = this.load_setting('accessibility', { reduce_flash: false, colorblind: false, aim_assist: false });
+        current[option] = !current[option];
+        this.persist_setting('accessibility', current);
+        return current;
+    }
+
 
     // Not used right this second.. was part of the network websocket package
     updateChatWindow() {

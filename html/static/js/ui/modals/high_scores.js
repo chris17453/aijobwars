@@ -27,6 +27,7 @@ class high_scores extends modal{
         // Load highscores from ASSETS.json
         const highscores_path = this.graphics.asset_loader.get('game_data.highscores');
         this.load_high_scores(highscores_path);
+        this.load_local_scores();
         this.render_callback(this.render_scores.bind(this));
 
         // Listen to modal's keyboard events
@@ -102,6 +103,31 @@ class high_scores extends modal{
             console.error("Error loading the JSON file:", error);
         }
      }
+
+    load_local_scores() {
+        try {
+            const raw = localStorage.getItem('aijobwars_local_scores');
+            if (!raw) return;
+            const localScores = JSON.parse(raw);
+            if (Array.isArray(localScores)) {
+                if (!this.high_scores) this.high_scores = [];
+                this.high_scores = [...localScores, ...this.high_scores].sort((a,b)=>a.rank-b.rank);
+            }
+        } catch (e) {
+            console.warn('[HighScores] Failed to load local scores', e);
+        }
+    }
+
+    persist_local_score(entry) {
+        try {
+            const raw = localStorage.getItem('aijobwars_local_scores');
+            const scores = raw ? JSON.parse(raw) : [];
+            scores.push(entry);
+            localStorage.setItem('aijobwars_local_scores', JSON.stringify(scores));
+        } catch (e) {
+            console.warn('[HighScores] Failed to persist local score', e);
+        }
+    }
 
     handle_wheel(event) {
         if (!this.active || !this.high_scores) return;

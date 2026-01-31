@@ -34,9 +34,9 @@ Create a unified foundation to scale AI Job Wars to dozens of levels with improv
 
 ## Milestones
 - **M1: Level Framework**
-  - Land Level Schema + Registry
-  - Update `logic/level.js` to load schema-defined waves
-  - Add 3 sample levels + a boss template
+   - Land Level Schema + Registry ✅
+   - Update `logic/level.js` to load schema-defined waves ✅
+   - Add 3 sample levels + a boss template ⚠️ (1 sample added in default pack)
 - **M2: Scoreboarding**
   - Implement Score Event Bus and backend payload changes
   - Add local/seasonal leaderboards UI toggle

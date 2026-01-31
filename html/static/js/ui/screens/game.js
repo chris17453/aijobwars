@@ -21,6 +21,7 @@ class game extends modal{
         // Score tracking
         this.score = 0;
         this.kills = 0;
+        this.run_metadata = { difficulty: "tier1", loadout: "starter", seed: Date.now() };
 
         // Boss spawn tracking
         this.boss_spawned = false;
@@ -41,7 +42,7 @@ class game extends modal{
         const selected = registry.default || this.graphics.asset_loader.get('levels.level_data');
         const difficulty = registry.default_difficulty || { hp: 1, damage: 1, speed: 1 };
         const loadout = registry.default_loadout || null;
-        this.level.load(selected, { difficulty_modifiers: difficulty, loadout_config: loadout });
+            this.level.load(selected, { difficulty_modifiers: difficulty, loadout_config: loadout, registry });
         this.level.on("loaded",this.start_level.bind(this));
 
         // Create HUD bars as children of this modal

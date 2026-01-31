@@ -42,6 +42,9 @@ class level extends events{
         if (obj && typeof obj.set_max_life === "function" && obj.life) {
             obj.set_max_life(obj.life * (this.difficulty_modifiers.hp || 1));
         }
+        if (obj && this.difficulty_modifiers.speed && typeof obj.accelerate === "function") {
+            obj.accelerate(this.difficulty_modifiers.speed);
+        }
     }
 
     apply_loadout(ship) {
