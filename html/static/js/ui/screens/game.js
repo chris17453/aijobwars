@@ -36,9 +36,12 @@ class game extends modal{
         this.ui = new ui(this.ctx, this);
         this.level = new level(this.window_manager);
 
-        // Load level from ASSETS.json
-        const level_path = this.graphics.asset_loader.get('levels.level_data');
-        this.level.load(level_path);
+        // Load level from ASSETS.json with optional registry metadata
+        const registry = this.graphics.asset_loader.get('levels.registry') || {};
+        const selected = registry.default || this.graphics.asset_loader.get('levels.level_data');
+        const difficulty = registry.default_difficulty || { hp: 1, damage: 1, speed: 1 };
+        const loadout = registry.default_loadout || null;
+        this.level.load(selected, { difficulty_modifiers: difficulty, loadout_config: loadout });
         this.level.on("loaded",this.start_level.bind(this));
 
         // Create HUD bars as children of this modal

@@ -154,7 +154,8 @@
       "level_boss_music": "static/asset_packages/default/audio/tracks/level-1-boss.mp3"
     },
     "levels": {
-      "level_data": "static/asset_packages/default/levels/level.json"
+      "level_data": "static/asset_packages/default/levels/level.json",
+      "registry": "static/asset_packages/default/levels/registry.json"
     },
     "game_data": {
       "highscores": "static/asset_packages/default/data/highscores.json"

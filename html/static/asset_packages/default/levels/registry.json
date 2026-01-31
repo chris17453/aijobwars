@@ -1,0 +1,30 @@
+{
+  "default": "static/asset_packages/default/levels/level.json",
+  "default_difficulty": {
+    "hp": 1,
+    "damage": 1,
+    "speed": 1
+  },
+  "default_loadout": {
+    "primary": "bolt3",
+    "secondary": "bolt4",
+    "passives": []
+  },
+  "levels": [
+    {
+      "id": "l1_orbital_onboarding",
+      "name": "Orbital Onboarding",
+      "difficulty": "tier1",
+      "path": "static/asset_packages/default/levels/level.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/intro/intro_scene.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/intro/intro_scene.json",
+      "modifiers": {
+        "hp": 1,
+        "damage": 1
+      },
+      "unlock": {
+        "requires": null
+      }
+    }
+  ]
+}

@@ -103,4 +103,25 @@ class InputManager extends events {
             ctrlPressed: this.keyboard.ctrl()
         };
     }
+
+    // Simple remapping storage using localStorage (non-destructive)
+    getKeymap(defaults) {
+        try {
+            const stored = localStorage.getItem('aijobwars_keymap');
+            if (stored) {
+                return Object.assign({}, defaults, JSON.parse(stored));
+            }
+        } catch (e) {
+            console.warn('[InputManager] Unable to read keymap', e);
+        }
+        return defaults;
+    }
+
+    saveKeymap(map) {
+        try {
+            localStorage.setItem('aijobwars_keymap', JSON.stringify(map));
+        } catch (e) {
+            console.warn('[InputManager] Unable to save keymap', e);
+        }
+    }
 }
