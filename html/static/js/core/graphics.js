@@ -15,6 +15,11 @@ class graphics extends events {
         this.viewport = new viewport(1920, 1080);
         this.frame_background_color = '#222';
         this.background_color = '#000000';
+        
+        // Initialize new utility systems
+        this.coordinateTransformer = new CoordinateTransformer(this.viewport);
+        this.contextManager = new GraphicsContextManager(this.ctx);
+        this.scalingManager = new ScalingManager(1920, 1080);
       } catch (error) {
         this.logger.error(`graphics constructor: ${error.message}`);
       }

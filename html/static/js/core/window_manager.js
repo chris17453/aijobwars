@@ -18,7 +18,18 @@ class window_manager extends events{
       this.active_modal=null;
       this.boss_mode_activated = false;
 
-      this.kb = new key_states();
+      // Initialize unified input manager
+      this.inputManager = new InputManager();
+      
+      // Keep backward compatibility with direct kb access
+      this.kb = this.inputManager.getKeyboard();
+
+      // Initialize render pipeline with new utilities
+      this.renderPipeline = new RenderPipeline(
+        this.graphics,
+        this.graphics.contextManager,
+        this.graphics.coordinateTransformer
+      );
 
       // Set initial canvas size (offscreen canvas via graphics, then sync visible canvas)
       this.graphics.recalc_canvas();
@@ -31,8 +42,8 @@ class window_manager extends events{
       this.debug_frame_count = 0;
 
       window.addEventListener('keydown', (event) => {
-          this.kb.down(event.key);
-          this.kb.event(event)
+          // Use InputManager for centralized keyboard handling
+          this.inputManager.handleKeyDown(event.key, event);
 
           // F12 = Toggle frame stepping mode
           if (event.key === 'F12') {
@@ -52,7 +63,7 @@ class window_manager extends events{
               return;
           }
 
-          // Forward keyboard events to active modal's keyboard state
+          // Forward keyboard events to active modal (now via InputManager)
           if (this.active_modal && this.active_modal.update_keyboard_state) {
               this.active_modal.update_keyboard_state(event.key, true);
           }
@@ -65,10 +76,10 @@ class window_manager extends events{
       });
 
       window.addEventListener('keyup', (event) => {
-          this.kb.up(event.key);
-          this.kb.event(event)
+          // Use InputManager for centralized keyboard handling
+          this.inputManager.handleKeyUp(event.key, event);
 
-          // Forward keyboard events to active modal's keyboard state
+          // Forward keyboard events to active modal (now via InputManager)
           if (this.active_modal && this.active_modal.update_keyboard_state) {
               this.active_modal.update_keyboard_state(event.key, false);
           }
@@ -280,65 +291,8 @@ class window_manager extends events{
 
     render() {
         if (this.modals.length > 0) {
-          // DEBUG: Track save/restore balance
-          const initialSaveCount = this.graphics.ctx._saveCount || 0;
-
-          // Save the current canvas state
-          this.graphics.ctx.save();
-          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 0) + 1;
-
-          // Clear canvas with a base color (fallback for any gaps)
-          this.graphics.ctx.fillStyle = '#0a1628';
-          this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.given.width, this.graphics.viewport.given.height);
-
-          // Apply viewport scaling and centering transformation
-          // This makes everything drawn in virtual coordinates automatically scale to physical pixels
-          const viewport = this.graphics.viewport;
-
-          // Apply translation to center (using precalculated offset), then scale
-          this.graphics.ctx.translate(viewport.offset.x, viewport.offset.y);
-          this.graphics.ctx.scale(viewport.scale.x, viewport.scale.y);
-
-          // Now everything is drawn in virtual coordinate space (1920x1080)
-          // and automatically scaled and centered to fit the canvas
-
-          // Render background from active modal (if exists)
-          if (this.active_modal && this.active_modal.background){
-              const bgRect = new rect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
-              // Use "cover" mode to fill entire viewport (crop edges if needed)
-              this.graphics.sprites.render(this.active_modal.background, null, bgRect, 1, "cover");
-            }
-
-          // Then render gradient overlay from active modal (if exists)
-          if (this.active_modal && this.active_modal.bg_gradient) {
-            var gradient = this.graphics.ctx.createLinearGradient(0, 0, 0, this.graphics.viewport.virtual.height);
-            for(let i=0;i<this.active_modal.bg_gradient.length;i++)
-              gradient.addColorStop(this.active_modal.bg_gradient[i][0],this.active_modal.bg_gradient[i][1]);
-
-            // Draw gradient with proper transparency support
-            this.graphics.ctx.fillStyle = gradient;
-            this.graphics.ctx.fillRect(0, 0, this.graphics.viewport.virtual.width, this.graphics.viewport.virtual.height);
-          }
-
-          // Render ALL active modals (title screen, then menu, etc.)
-          this.modals.forEach((modal, index) => {
-            if (modal.active) {
-              modal.render();
-            }
-          });
-
-          // Restore the canvas state (removes the scale transformation)
-          this.graphics.ctx.restore();
-          this.graphics.ctx._saveCount = (this.graphics.ctx._saveCount || 1) - 1;
-
-          // Fill letterbox/pillarbox areas with edge pixels from viewport
-          this.fill_letterbox_with_edge_pixels();
-
-          // DEBUG: Verify save/restore balance
-          const finalSaveCount = this.graphics.ctx._saveCount || 0;
-          if (finalSaveCount !== initialSaveCount) {
-            console.error(`[CTX LEAK] Save/restore mismatch! Initial: ${initialSaveCount}, Final: ${finalSaveCount}`);
-          }
+          // Use the new unified RenderPipeline for all rendering
+          this.renderPipeline.render(this.modals, this.active_modal);
 
           // BLIT: Copy the entire offscreen canvas to the visible canvas in one operation
           // This eliminates flicker by making all updates atomic
@@ -346,6 +300,8 @@ class window_manager extends events{
         }
     }
 
+    // DEPRECATED: Letterbox filling is now handled by RenderPipeline
+    // Kept for backward compatibility but not used
     fill_letterbox_with_edge_pixels() {
       const ctx = this.graphics.ctx;
       const viewport = this.graphics.viewport;
