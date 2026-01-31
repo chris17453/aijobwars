@@ -24,7 +24,7 @@ class high_scores extends modal{
         const isPortrait = this.graphics.viewport.isPortrait();
         this.line_height = isPortrait ? 80 : 40;
 
-        // Load highscores from ASSETS.json
+        // Load highscores from ASSETS.json plus local/seasonal
         const highscores_path = this.graphics.asset_loader.get('game_data.highscores');
         this.load_high_scores(highscores_path);
         this.load_local_scores();
@@ -107,11 +107,13 @@ class high_scores extends modal{
     load_local_scores() {
         try {
             const raw = localStorage.getItem('aijobwars_local_scores');
-            if (!raw) return;
-            const localScores = JSON.parse(raw);
-            if (Array.isArray(localScores)) {
+            const seasonal = localStorage.getItem('aijobwars_leaderboard_seasonal');
+            const localScores = raw ? JSON.parse(raw) : [];
+            const seasonalScores = seasonal ? JSON.parse(seasonal) : [];
+            const merged = [...localScores, ...seasonalScores];
+            if (merged.length > 0) {
                 if (!this.high_scores) this.high_scores = [];
-                this.high_scores = [...localScores, ...this.high_scores].sort((a,b)=>a.rank-b.rank);
+                this.high_scores = [...merged, ...this.high_scores].sort((a,b)=>b.score-a.score).map((s, idx)=>({...s, rank: idx+1}));
             }
         } catch (e) {
             console.warn('[HighScores] Failed to load local scores', e);
