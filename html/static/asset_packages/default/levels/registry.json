@@ -15,7 +15,7 @@
       "id": "l1_orbital_onboarding",
       "name": "Orbital Onboarding",
       "difficulty": "tier1",
-      "path": "static/asset_packages/default/levels/level.json",
+      "path": "static/asset_packages/default/levels/l1_orbital_onboarding.json",
       "intro_cutscene": "static/asset_packages/default/storyboard/intro/intro_scene.json",
       "outro_cutscene": "static/asset_packages/default/storyboard/intro/intro_scene.json",
       "modifiers": {
