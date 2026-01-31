@@ -135,7 +135,7 @@ class scrollbar extends ui_component {
             if (!this.get_value_callback) return;
 
             const value_data = this.get_value_callback();
-            if (!value_data) return;
+            if (!value_data || value_data.current == null || value_data.max == null) return;
 
             const { current, max } = value_data;
             if (typeof current !== 'number' || typeof max !== 'number' || max <= 0) return;
