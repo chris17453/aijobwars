@@ -1,0 +1,41 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l10_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with defeated Webex elements, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l10_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about breaking platform monopoly"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Platform",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "defeated.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l10_webex_warfare",
+    "scene_type": "outro",
+    "description": "Level 10 victory scene showing defeated Webex forces",
+    "theme": "Victory over corporate platform control",
+    "visual_notes": "Show scattered Webex logos retreating, transparent victory banners",
+    "audio_notes": "Epic triumphant music celebrating independence from platforms"
+  }
+}

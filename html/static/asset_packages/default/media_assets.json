@@ -1,0 +1,923 @@
+{
+  "package_name": "AI Job Wars - Media Assets Specification",
+  "version": "1.0.0",
+  "description": "Complete specification of all media assets required for 12-level game implementation",
+  "asset_requirements": {
+    "transparency": "All visual assets MUST support transparency (PNG/WebP with alpha channel)",
+    "layering": "Assets should be designed for multi-layer composition in the media player",
+    "format_video": "WebM or MP4 with transparency support",
+    "format_image": "WebP or PNG with alpha channel",
+    "format_audio": "MP3 or OGG",
+    "resolution_images": "1920x1080 or higher for backgrounds, variable for sprites"
+  },
+  "levels": [
+    {
+      "level_id": "l1_orbital_onboarding",
+      "level_name": "Orbital Onboarding",
+      "theme": "Introduction to space combat training",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l1_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/intro/images/1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Existing intro scene frame - city skyline at dusk",
+              "status": "EXISTS"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l1_intro_narration",
+              "path": "static/asset_packages/default/storyboard/intro/tracks/track-1.mp3",
+              "type": "audio/mp3",
+              "description": "Existing intro narration about AI dominance",
+              "status": "EXISTS"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [],
+          "audio": [],
+          "videos": [],
+          "note": "Uses same cutscene as intro for Level 1"
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l2_resume_rapids",
+      "level_name": "Resume Rapids",
+      "theme": "Navigate through overwhelming resume document storm",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l2_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l2_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Resume documents floating in space, multiple layers, transparent background for compositing",
+              "dimensions": "1920x1080",
+              "visual_style": "Space debris aesthetic with resume papers drifting",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l2_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l2_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about endless resume submissions flooding the job market",
+              "script_suggestion": "The resume flood never ends. Each document a hope, each rejection a wound in the war for employment.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l2_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l2_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Victory scene with cleared space, resume debris fading away with transparent effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Clean space with triumphant glow effects",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l2_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l2_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about navigating the resume storm",
+              "script_suggestion": "Resume rapids cleared. You've proven you can navigate the chaos of modern job applications.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l3_linkedin_labyrinth",
+      "level_name": "LinkedIn Labyrinth",
+      "theme": "Navigate complex professional networking maze",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l3_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l3_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "LinkedIn network nodes and connections forming a web maze, transparent overlays",
+              "dimensions": "1920x1080",
+              "visual_style": "Network graph visualization with glowing connection lines",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l3_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l3_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about the maze of professional networking",
+              "script_suggestion": "LinkedIn connections everywhere. Each node a potential path, each connection a trap in the networking labyrinth.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l3_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l3_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Broken LinkedIn chains and freed network, transparent victory effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Broken network nodes dissolving into freedom",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l3_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l3_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about escaping the networking trap",
+              "script_suggestion": "Network navigated. You've broken free from the endless connection requests.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l4_application_asteroid",
+      "level_name": "Application Asteroid",
+      "theme": "Dodge endless job application forms",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l4_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l4_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Job application forms floating as dangerous asteroids, transparent background",
+              "dimensions": "1920x1080",
+              "visual_style": "Application forms as space hazards with spinning motion blur",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l4_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l4_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about endless application requirements",
+              "script_suggestion": "Applications like asteroids. Endless forms, endless questions, endless waiting.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l4_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l4_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Completed applications drifting peacefully away, transparent effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Organized forms fading into peaceful completion",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l4_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l4_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about completing the application gauntlet",
+              "script_suggestion": "Applications conquered. Your perseverance has paid off.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l5_meeting_mayhem",
+      "level_name": "Meeting Mayhem",
+      "theme": "Survive endless virtual meeting bombardment",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l5_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l5_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Overlapping meeting windows (Teams, Zoom, Webex) with notification badges, transparent layers",
+              "dimensions": "1920x1080",
+              "visual_style": "Chaotic overlay of video call interfaces",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l5_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l5_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about meeting fatigue",
+              "script_suggestion": "Meetings without end. Your time, fragmented. Your focus, shattered.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l5_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l5_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Closed meeting windows, peaceful workspace with muted notifications, transparent effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Calm, organized interface with no interruptions",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l5_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l5_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about reclaiming time",
+              "script_suggestion": "Silence at last. You've reclaimed your time, your focus, your productivity.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l6_chatgpt_cluster",
+      "level_name": "ChatGPT Cluster",
+      "theme": "Face the AI intelligence swarm",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l6_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l6_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "ChatGPT logos and AI elements forming threatening cluster, transparent layers with glow effects",
+              "dimensions": "1920x1080",
+              "visual_style": "AI interface elements converging with ominous lighting",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l6_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l6_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Ominous narration about AI replacing creativity",
+              "script_suggestion": "The AI swarm approaches. They promise efficiency, but threaten to replace human creativity itself.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l6_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l6_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Dispersed AI elements retreating, transparent victory overlays",
+              "dimensions": "1920x1080",
+              "visual_style": "Scattered AI logos fading away, human creativity triumphant",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l6_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l6_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about human creativity",
+              "script_suggestion": "Human creativity prevails. AI is a tool, not a replacement.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_boss_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1-boss.mp3",
+            "type": "audio/mp3",
+            "description": "Boss battle music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l7_email_onslaught",
+      "level_name": "Email Onslaught",
+      "theme": "Navigate through overwhelming email flood",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l7_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l7_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Email envelopes and notification badges flooding screen, transparent layers",
+              "dimensions": "1920x1080",
+              "visual_style": "Overwhelming wave of email icons with urgent badges",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l7_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l7_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about email stress",
+              "script_suggestion": "Inbox zero impossible. Each email demands attention, drains energy, steals time.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l7_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l7_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Clean inbox with no notifications, transparent celebration effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Peaceful empty inbox with achievement glow",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l7_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l7_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about inbox zero",
+              "script_suggestion": "Inbox zero achieved. You've mastered the art of communication control.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l8_pdf_pandemonium",
+      "level_name": "PDF Pandemonium",
+      "theme": "Battle through document madness",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l8_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l8_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "PDF file icons spinning and multiplying chaotically, transparent overlays",
+              "dimensions": "1920x1080",
+              "visual_style": "Document chaos with spinning PDF icons",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l8_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l8_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about documentation overload",
+              "script_suggestion": "PDFs multiply endlessly. Documentation demands consume all productive time.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l8_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l8_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Neatly organized documents fading away, transparent victory effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Clean filing system with satisfaction glow",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l8_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l8_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about conquering paperwork",
+              "script_suggestion": "Documents tamed. You've mastered organizational chaos.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l9_phone_phalanx",
+      "level_name": "Phone Phalanx",
+      "theme": "Survive synchronized call bombardment",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l9_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l9_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Phone call icons in military formation with ringing effects, transparent overlays",
+              "dimensions": "1920x1080",
+              "visual_style": "Coordinated phone attack with motion blur and vibration effects",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l9_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l9_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Narration about relentless interruptions",
+              "script_suggestion": "The calls never stop. Each ring an interruption, each voicemail a demand on your attention.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l9_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l9_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Silenced phones fading away, transparent peace effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Muted phone icons dissolving into peaceful silence",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l9_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l9_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about restored focus",
+              "script_suggestion": "Silence restored. Deep work is possible again.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1.mp3",
+            "type": "audio/mp3",
+            "description": "Level background music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l10_webex_warfare",
+      "level_name": "Webex Warfare",
+      "theme": "Face the corporate meeting juggernaut",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l10_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l10_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Webex logos organizing into military attack formation, transparent effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Corporate branding as weaponized formations",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l10_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l10_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Intense narration about platform dominance",
+              "script_suggestion": "Webex declares war. Corporate platforms demand total submission.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l10_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l10_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Defeated Webex logos retreating, transparent victory banners",
+              "dimensions": "1920x1080",
+              "visual_style": "Platform monopoly broken with freedom lighting",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l10_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l10_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about breaking platform control",
+              "script_suggestion": "Platform defeated. You're no longer bound to corporate meeting tools.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_boss_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1-boss.mp3",
+            "type": "audio/mp3",
+            "description": "Boss battle music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l11_teams_terror",
+      "level_name": "Teams Terror",
+      "theme": "Withstand corporate collaboration onslaught",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l11_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l11_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Microsoft Teams logos with notification badges swarming, transparent chaos effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Overwhelming notification storm from Teams platform",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l11_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l11_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Dramatic narration about collaboration overload",
+              "script_suggestion": "Teams unleashes terror. Constant pings, endless channels, no escape from collaboration demands.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l11_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l11_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Organized Teams interface with controlled notifications, transparent victory effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Balanced communication with manageable notification system",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l11_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l11_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "5 seconds",
+              "description": "Victory narration about mastering collaboration",
+              "script_suggestion": "Collaboration controlled. You've learned to manage the digital workplace.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_boss_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1-boss.mp3",
+            "type": "audio/mp3",
+            "description": "Boss battle music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    },
+    {
+      "level_id": "l12_interview_inferno",
+      "level_name": "Interview Inferno - Final Boss",
+      "theme": "Face the ultimate job interview gauntlet",
+      "assets": {
+        "cutscene_intro": {
+          "images": [
+            {
+              "name": "l12_intro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l12_intro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "All enemy types converging around massive interview boss, transparent epic effects",
+              "dimensions": "1920x1080",
+              "visual_style": "Climactic final battle scene with all game elements",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l12_intro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l12_intro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "8 seconds",
+              "description": "Epic narration building to final challenge",
+              "script_suggestion": "The final interview. Everything you've faced, every skill you've gained, culminates here. This is your moment.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "cutscene_outro": {
+          "images": [
+            {
+              "name": "l12_outro_frame1",
+              "path": "static/asset_packages/default/storyboard/levels/images/l12_outro_frame1.webp",
+              "type": "image/webp",
+              "transparency": true,
+              "description": "Triumphant hero with all challenges overcome, peaceful job market, transparent celebration",
+              "dimensions": "1920x1080",
+              "visual_style": "Epic victory scene with hopeful future lighting",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "audio": [
+            {
+              "name": "l12_outro_narration",
+              "path": "static/asset_packages/default/storyboard/levels/audio/l12_outro_narration.mp3",
+              "type": "audio/mp3",
+              "duration": "10 seconds",
+              "description": "Epic victory narration celebrating complete triumph",
+              "script_suggestion": "Victory. The job war is won. You've proven that human determination, creativity, and resilience cannot be automated. The future belongs to those who adapt, who fight, who never give up.",
+              "status": "PLACEHOLDER"
+            }
+          ],
+          "videos": []
+        },
+        "gameplay": {
+          "background": {
+            "name": "bg_stars",
+            "path": "static/asset_packages/default/scenes/bg_stars.png",
+            "type": "image/png",
+            "transparency": false,
+            "description": "Starfield background (reused)",
+            "status": "EXISTS"
+          },
+          "music": {
+            "name": "level_boss_music",
+            "path": "static/asset_packages/default/audio/tracks/level-1-boss.mp3",
+            "type": "audio/mp3",
+            "description": "Boss battle music (reused)",
+            "status": "EXISTS"
+          }
+        }
+      }
+    }
+  ],
+  "asset_summary": {
+    "total_levels": 12,
+    "total_cutscenes": 24,
+    "placeholder_images": 22,
+    "placeholder_audio": 22,
+    "placeholder_videos": 0,
+    "existing_assets": {
+      "backgrounds": 1,
+      "music_tracks": 2,
+      "intro_cutscene": 1
+    }
+  },
+  "generation_notes": {
+    "priority": "High priority for levels 2-6 cutscenes to establish game flow",
+    "style_guide": "Maintain consistent futuristic/dystopian aesthetic with job market themes",
+    "transparency": "All images MUST have transparent backgrounds for proper layering",
+    "audio_format": "MP3 format preferred for compatibility",
+    "image_format": "WebP with alpha channel for optimal size/quality balance",
+    "subtitles": "All audio must have corresponding subtitle text in scene JSON files"
+  }
+}

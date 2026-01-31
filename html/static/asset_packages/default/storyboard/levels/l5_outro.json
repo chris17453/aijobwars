@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l5_outro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory scene with closed meeting windows, transparent effects"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l5_outro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Victory narration about reclaiming time from meetings"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "Silence",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "at",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "last.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l5_meeting_mayhem",
+    "scene_type": "outro",
+    "description": "Level 5 victory scene showing ended meeting chaos",
+    "theme": "Victory over meeting overload",
+    "visual_notes": "Show peaceful space with muted notifications, transparent victory effects",
+    "audio_notes": "Calm, peaceful music celebrating quiet productivity"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l9_intro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Transparent background showing phone call icons in formation"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l9_intro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Narration about relentless phone call interruptions"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "The",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "calls",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "never",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.5,
+      "duration": 0.5,
+      "text": "stop.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l9_phone_phalanx",
+    "scene_type": "intro",
+    "description": "Level 9 introduction showing coordinated phone call attack",
+    "theme": "Phone Phalanx - Survive the synchronized call bombardment",
+    "visual_notes": "Show phone icons in military formation, transparent overlays with ringing effects",
+    "audio_notes": "Narration emphasizes relentless interruption and lost focus"
+  }
+}

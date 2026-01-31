@@ -1,5 +1,5 @@
 {
-  "default": "static/asset_packages/default/levels/level.json",
+  "default": "static/asset_packages/default/levels/l1_orbital_onboarding.json",
   "default_difficulty": {
     "hp": 1,
     "damage": 1,
@@ -20,10 +20,187 @@
       "outro_cutscene": "static/asset_packages/default/storyboard/intro/intro_scene.json",
       "modifiers": {
         "hp": 1,
-        "damage": 1
+        "damage": 1,
+        "speed": 1
       },
       "unlock": {
         "requires": null
+      }
+    },
+    {
+      "id": "l2_resume_rapids",
+      "name": "Resume Rapids",
+      "difficulty": "tier1",
+      "path": "static/asset_packages/default/levels/l2_resume_rapids.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l2_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l2_outro.json",
+      "modifiers": {
+        "hp": 1,
+        "damage": 1,
+        "speed": 1
+      },
+      "unlock": {
+        "requires": "l1_orbital_onboarding"
+      }
+    },
+    {
+      "id": "l3_linkedin_labyrinth",
+      "name": "LinkedIn Labyrinth",
+      "difficulty": "tier1",
+      "path": "static/asset_packages/default/levels/l3_linkedin_labyrinth.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l3_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l3_outro.json",
+      "modifiers": {
+        "hp": 1,
+        "damage": 1,
+        "speed": 1
+      },
+      "unlock": {
+        "requires": "l2_resume_rapids"
+      }
+    },
+    {
+      "id": "l4_application_asteroid",
+      "name": "Application Asteroid",
+      "difficulty": "tier2",
+      "path": "static/asset_packages/default/levels/l4_application_asteroid.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l4_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l4_outro.json",
+      "modifiers": {
+        "hp": 1.2,
+        "damage": 1.2,
+        "speed": 1.1
+      },
+      "unlock": {
+        "requires": "l3_linkedin_labyrinth"
+      }
+    },
+    {
+      "id": "l5_meeting_mayhem",
+      "name": "Meeting Mayhem",
+      "difficulty": "tier2",
+      "path": "static/asset_packages/default/levels/l5_meeting_mayhem.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l5_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l5_outro.json",
+      "modifiers": {
+        "hp": 1.2,
+        "damage": 1.2,
+        "speed": 1.1
+      },
+      "unlock": {
+        "requires": "l4_application_asteroid"
+      }
+    },
+    {
+      "id": "l6_chatgpt_cluster",
+      "name": "ChatGPT Cluster",
+      "difficulty": "tier2",
+      "path": "static/asset_packages/default/levels/l6_chatgpt_cluster.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l6_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l6_outro.json",
+      "modifiers": {
+        "hp": 1.2,
+        "damage": 1.2,
+        "speed": 1.1
+      },
+      "unlock": {
+        "requires": "l5_meeting_mayhem"
+      }
+    },
+    {
+      "id": "l7_email_onslaught",
+      "name": "Email Onslaught",
+      "difficulty": "tier3",
+      "path": "static/asset_packages/default/levels/l7_email_onslaught.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l7_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l7_outro.json",
+      "modifiers": {
+        "hp": 1.5,
+        "damage": 1.5,
+        "speed": 1.2
+      },
+      "unlock": {
+        "requires": "l6_chatgpt_cluster"
+      }
+    },
+    {
+      "id": "l8_pdf_pandemonium",
+      "name": "PDF Pandemonium",
+      "difficulty": "tier3",
+      "path": "static/asset_packages/default/levels/l8_pdf_pandemonium.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l8_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l8_outro.json",
+      "modifiers": {
+        "hp": 1.5,
+        "damage": 1.5,
+        "speed": 1.2
+      },
+      "unlock": {
+        "requires": "l7_email_onslaught"
+      }
+    },
+    {
+      "id": "l9_phone_phalanx",
+      "name": "Phone Phalanx",
+      "difficulty": "tier3",
+      "path": "static/asset_packages/default/levels/l9_phone_phalanx.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l9_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l9_outro.json",
+      "modifiers": {
+        "hp": 1.5,
+        "damage": 1.5,
+        "speed": 1.2
+      },
+      "unlock": {
+        "requires": "l8_pdf_pandemonium"
+      }
+    },
+    {
+      "id": "l10_webex_warfare",
+      "name": "Webex Warfare",
+      "difficulty": "tier4",
+      "path": "static/asset_packages/default/levels/l10_webex_warfare.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l10_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l10_outro.json",
+      "modifiers": {
+        "hp": 2.0,
+        "damage": 2.0,
+        "speed": 1.5
+      },
+      "unlock": {
+        "requires": "l9_phone_phalanx"
+      }
+    },
+    {
+      "id": "l11_teams_terror",
+      "name": "Teams Terror",
+      "difficulty": "tier4",
+      "path": "static/asset_packages/default/levels/l11_teams_terror.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l11_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l11_outro.json",
+      "modifiers": {
+        "hp": 2.0,
+        "damage": 2.0,
+        "speed": 1.5
+      },
+      "unlock": {
+        "requires": "l10_webex_warfare"
+      }
+    },
+    {
+      "id": "l12_interview_inferno",
+      "name": "Interview Inferno",
+      "difficulty": "tier4",
+      "path": "static/asset_packages/default/levels/l12_interview_inferno.json",
+      "intro_cutscene": "static/asset_packages/default/storyboard/levels/l12_intro.json",
+      "outro_cutscene": "static/asset_packages/default/storyboard/levels/l12_outro.json",
+      "modifiers": {
+        "hp": 2.5,
+        "damage": 2.5,
+        "speed": 2.0
+      },
+      "unlock": {
+        "requires": "l11_teams_terror"
       }
     }
   ]

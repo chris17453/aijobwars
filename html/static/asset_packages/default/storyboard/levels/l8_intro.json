@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l8_intro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Transparent background showing PDF documents spinning in chaos"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l8_intro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Narration about endless documentation requirements"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "PDFs",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "multiply",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "endlessly.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l8_pdf_pandemonium",
+    "scene_type": "intro",
+    "description": "Level 8 introduction showing PDF document chaos",
+    "theme": "PDF Pandemonium - Battle through document madness",
+    "visual_notes": "Show PDF file icons spinning and multiplying, transparent overlays",
+    "audio_notes": "Narration emphasizes bureaucratic documentation overload"
+  }
+}

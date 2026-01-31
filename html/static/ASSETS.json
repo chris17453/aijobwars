@@ -86,6 +86,228 @@
         },
         "data": "static/asset_packages/default/storyboard/intro/intro_scene.json"
       },
+      "levels": {
+        "l2_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l2_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l2_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l2_intro.json",
+          "comment": "PLACEHOLDER: Resume Rapids intro - transparent resume documents floating in space"
+        },
+        "l2_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l2_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l2_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l2_outro.json",
+          "comment": "PLACEHOLDER: Resume Rapids victory scene with transparent effects"
+        },
+        "l3_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l3_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l3_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l3_intro.json",
+          "comment": "PLACEHOLDER: LinkedIn Labyrinth intro - transparent network nodes"
+        },
+        "l3_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l3_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l3_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l3_outro.json",
+          "comment": "PLACEHOLDER: LinkedIn Labyrinth victory with transparent effects"
+        },
+        "l4_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l4_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l4_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l4_intro.json",
+          "comment": "PLACEHOLDER: Application Asteroid intro - transparent application forms"
+        },
+        "l4_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l4_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l4_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l4_outro.json",
+          "comment": "PLACEHOLDER: Application Asteroid victory with transparent effects"
+        },
+        "l5_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l5_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l5_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l5_intro.json",
+          "comment": "PLACEHOLDER: Meeting Mayhem intro - transparent meeting windows"
+        },
+        "l5_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l5_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l5_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l5_outro.json",
+          "comment": "PLACEHOLDER: Meeting Mayhem victory with transparent effects"
+        },
+        "l6_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l6_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l6_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l6_intro.json",
+          "comment": "PLACEHOLDER: ChatGPT Cluster intro - transparent AI elements"
+        },
+        "l6_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l6_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l6_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l6_outro.json",
+          "comment": "PLACEHOLDER: ChatGPT Cluster victory with transparent effects"
+        },
+        "l7_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l7_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l7_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l7_intro.json",
+          "comment": "PLACEHOLDER: Email Onslaught intro - transparent email icons"
+        },
+        "l7_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l7_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l7_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l7_outro.json",
+          "comment": "PLACEHOLDER: Email Onslaught victory with transparent effects"
+        },
+        "l8_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l8_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l8_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l8_intro.json",
+          "comment": "PLACEHOLDER: PDF Pandemonium intro - transparent PDF icons"
+        },
+        "l8_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l8_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l8_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l8_outro.json",
+          "comment": "PLACEHOLDER: PDF Pandemonium victory with transparent effects"
+        },
+        "l9_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l9_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l9_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l9_intro.json",
+          "comment": "PLACEHOLDER: Phone Phalanx intro - transparent phone icons"
+        },
+        "l9_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l9_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l9_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l9_outro.json",
+          "comment": "PLACEHOLDER: Phone Phalanx victory with transparent effects"
+        },
+        "l10_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l10_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l10_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l10_intro.json",
+          "comment": "PLACEHOLDER: Webex Warfare intro - transparent Webex logos"
+        },
+        "l10_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l10_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l10_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l10_outro.json",
+          "comment": "PLACEHOLDER: Webex Warfare victory with transparent effects"
+        },
+        "l11_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l11_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l11_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l11_intro.json",
+          "comment": "PLACEHOLDER: Teams Terror intro - transparent Teams logos"
+        },
+        "l11_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l11_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l11_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l11_outro.json",
+          "comment": "PLACEHOLDER: Teams Terror victory with transparent effects"
+        },
+        "l12_intro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l12_intro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l12_intro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l12_intro.json",
+          "comment": "PLACEHOLDER: Interview Inferno intro - epic final battle scene"
+        },
+        "l12_outro": {
+          "images": {
+            "frame1": "static/asset_packages/default/storyboard/levels/images/l12_outro_frame1.webp"
+          },
+          "audio": {
+            "narration": "static/asset_packages/default/storyboard/levels/audio/l12_outro_narration.mp3"
+          },
+          "data": "static/asset_packages/default/storyboard/levels/l12_outro.json",
+          "comment": "PLACEHOLDER: Interview Inferno victory - ultimate triumph"
+        }
+      },
       "credits": {
         "images": {
           "frame1": "static/asset_packages/default/storyboard/credits/images/1.webp",

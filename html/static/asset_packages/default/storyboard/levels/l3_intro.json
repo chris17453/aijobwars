@@ -1,0 +1,47 @@
+{
+  "slide": 1,
+  "images": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/images/l3_intro_frame1.webp",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Transparent background showing LinkedIn network nodes and connections"
+    }
+  ],
+  "audio": [
+    {
+      "path": "static/asset_packages/default/storyboard/levels/audio/l3_intro_narration.mp3",
+      "timestamp": 0,
+      "duration": 5.0,
+      "comment": "PLACEHOLDER: Narration about navigating the professional networking maze"
+    }
+  ],
+  "text": [
+    {
+      "timestamp": 0.0,
+      "duration": 0.5,
+      "text": "LinkedIn",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 0.5,
+      "duration": 0.5,
+      "text": "connections",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    },
+    {
+      "timestamp": 1.0,
+      "duration": 0.5,
+      "text": "everywhere.",
+      "subtitle": "PLACEHOLDER: Audio transcript"
+    }
+  ],
+  "metadata": {
+    "level": "l3_linkedin_labyrinth",
+    "scene_type": "intro",
+    "description": "Level 3 introduction showing the complex web of LinkedIn connections",
+    "theme": "LinkedIn Labyrinth - Navigate through professional networking chaos",
+    "visual_notes": "Show interconnected nodes representing LinkedIn network, transparent overlays",
+    "audio_notes": "Narration emphasizes the maze-like nature of professional networking"
+  }
+}
