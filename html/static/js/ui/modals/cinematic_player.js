@@ -21,9 +21,10 @@ class cinematic_player extends modal {
         this._resume_audio_once();
 
         // Listen to modal's keyboard events
-        this.on("keys", (data) => {
+        this._bound_keys_handler = (data) => {
             this.handle_cinematic_keys(data.kb);
-        });
+        };
+        this.on("keys", this._bound_keys_handler);
 
         // Create horizontal scrollbar for video scrubbing - position will be recalculated on resize
         // Start with relative dimensions (will be properly positioned in resize)
@@ -91,14 +92,16 @@ class cinematic_player extends modal {
 
         // Update the video scrollbar's position rect
         if (this.video_scrollbar._legacy_position) {
-            // Update legacy position directly
-            this.video_scrollbar._legacy_position.x = margin_x;
-            this.video_scrollbar._legacy_position.y = this.internal_rect.height - margin_bottom;
-            this.video_scrollbar._legacy_position.width = this.internal_rect.width - (margin_x * 2);
-            this.video_scrollbar._legacy_position.height = scrollbar_height;
+            // Update legacy position using a clone to avoid mutating shared rects
+            const updated_position = this.video_scrollbar._legacy_position.clone();
+            updated_position.x = margin_x;
+            updated_position.y = this.internal_rect.height - margin_bottom;
+            updated_position.width = this.internal_rect.width - (margin_x * 2);
+            updated_position.height = scrollbar_height;
 
-            // Update the actual position rect
-            this.video_scrollbar.position = this.video_scrollbar._legacy_position.clone();
+            // Persist cloned positions
+            this.video_scrollbar._legacy_position = updated_position;
+            this.video_scrollbar.position = updated_position.clone();
         }
     }
 
@@ -233,8 +236,14 @@ class cinematic_player extends modal {
             this.video_scrollbar = null;
         }
 
+        // Clean up keyboard listener
+        if (this._bound_keys_handler && this.events && this.events.keys) {
+            this.events.keys = this.events.keys.filter((cb) => cb !== this._bound_keys_handler);
+        }
+        this._bound_keys_handler = null;
+
         // Clean up click handler (from visible canvas)
-        if (this._bound_click_handler && this.graphics && this.graphics.visibleCanvas) {
+        if (this._bound_click_handler && this.graphics && this.graphics.visibleCanvas && this.graphics.visibleCanvas.removeEventListener) {
             this.graphics.visibleCanvas.removeEventListener('click', this._bound_click_handler);
             this._bound_click_handler = null;
         }

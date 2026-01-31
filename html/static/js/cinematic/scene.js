@@ -15,8 +15,27 @@ class scene {
         this.is_dragging_seekbar = false;
         this.is_seeking = false; // Prevent audio from playing during seek
         this._seek_timeout = null;
-        this.currently_playing_audio = new Set(); // Track which audio files are playing
+        this.currently_playing_audio = new Set(); // Track which audio instances are playing (keyed by path+timestamp)
         this.load_scene_data(this.scene_url);
+    }
+
+    make_audio_key(path, timestamp) {
+        try {
+            return JSON.stringify({ path, timestamp });
+        } catch (e) {
+            // Fallback to simple concat if JSON fails (unlikely)
+            return `${path}::${timestamp}`;
+        }
+    }
+
+    parse_audio_key(key) {
+        try {
+            const parsed = JSON.parse(key);
+            return { path: parsed.path, timestamp: parseFloat(parsed.timestamp) };
+        } catch (e) {
+            const parts = key.split("::", 2);
+            return { path: parts[0], timestamp: parseFloat(parts[1]) };
+        }
     }
 
     on(event_name, callback) {
@@ -90,17 +109,23 @@ class scene {
                 if (!(property in slide)) continue;
                 for (let j = 0; j < slide[property].length; j++) {
                     let object = slide[property][j];
-                    let end_time = (object.timestamp + object.duration) * 1000;
-                    if (object.duration > 0 && end_time > max_end_time) {
-                        max_end_time = end_time;
+                    const duration_sec = (object.duration == null ? 0 : object.duration);
+                    let end_time = (object.timestamp + duration_sec) * 1000;
+                    // Ensure zero-duration objects still contribute their timestamp as a bound
+                    if (duration_sec === 0) {
+                        end_time = object.timestamp * 1000;
                     }
+                    if (end_time > max_end_time) max_end_time = end_time;
                 }
             }
         }
         return max_end_time;
     }
 
-    get_objects_in_time() {
+    get_objects_in_time(total_duration_ms) {
+        if (total_duration_ms === null || total_duration_ms === undefined) {
+            total_duration_ms = this.get_total_duration();
+        }
         const objectsToShow = [];
         const properties = ['images', 'audio', 'text'];
     
@@ -114,7 +139,9 @@ class scene {
                     let object = slide[property][j];
                     let timestamp = object.timestamp * 1000;
                     let duration = (object.timestamp+object.duration) * 1000;
-                    if(object.duration==0) duration+=9999999;
+                    if (object.duration === 0) {
+                        duration = total_duration_ms || timestamp;
+                    }
     
                     if (this.elapsed>=timestamp &&  this.elapsed<=duration) {
                         objectsToShow.unshift({
@@ -137,8 +164,10 @@ class scene {
         this.manual_time_offset = time_ms;
         this.scene_ended = false;
 
+        this.is_dragging_seekbar = !!is_dragging;
+
         // Only prevent audio playback if actively dragging
-        if (is_dragging) {
+        if (this.is_dragging_seekbar) {
             // During drag: mute audio but don't stop it (prevents choppy audio)
             this.is_seeking = true;
         } else {
@@ -151,6 +180,7 @@ class scene {
 
     end_seek() {
         // Allow audio to play again after dragging ends
+        this.is_dragging_seekbar = false;
         this.is_seeking = false;
     }
 
@@ -218,26 +248,32 @@ class scene {
 
         // Handle audio - only play if not paused and not seeking
         if (!this.paused && !this.is_seeking) {
-            // Get list of audio that should be playing at this time
+            // Get list of audio that should be playing at this time (include timestamp to distinguish repeats)
             let should_be_playing = new Set();
             for(let i=0;i<objects.length;i++ ) {
                 let object=objects[i];
                 if(object.type=='audio') {
-                    should_be_playing.add(object.data.path);
+                    should_be_playing.add(this.make_audio_key(object.data.path, object.data.timestamp));
                 }
             }
 
             // Stop audio that shouldn't be playing anymore
-            for (let audio_path of this.currently_playing_audio) {
-                if (!should_be_playing.has(audio_path)) {
-                    this.audio_manager.stop(audio_path);
-                    this.currently_playing_audio.delete(audio_path);
+            for (let audio_key of this.currently_playing_audio) {
+                if (!should_be_playing.has(audio_key)) {
+                    const parsed = this.parse_audio_key(audio_key);
+                    if (parsed.path) {
+                        this.audio_manager.stop(parsed.path);
+                    }
+                    this.currently_playing_audio.delete(audio_key);
                 }
             }
 
             // Start audio that should be playing but isn't
-            for (let audio_path of should_be_playing) {
-                if (!this.currently_playing_audio.has(audio_path)) {
+            for (let audio_key of should_be_playing) {
+                if (!this.currently_playing_audio.has(audio_key)) {
+                    const parsed = this.parse_audio_key(audio_key);
+                    const audio_path = parsed.path;
+                    const audio_timestamp = parsed.timestamp;
                     // Find ALL instances of this audio in the timeline to get the one that matches current time
                     let matching_audio = null;
                     let current_elapsed_seconds = this.elapsed / 1000;
@@ -254,7 +290,7 @@ class scene {
                                 const audio_end = audio.timestamp + audio.duration;
 
                                 // Check if current time falls within this audio's playback window
-                                if (current_elapsed_seconds >= audio_start && current_elapsed_seconds <= audio_end) {
+                                if (audio.timestamp === audio_timestamp && current_elapsed_seconds >= audio_start && current_elapsed_seconds <= audio_end) {
                                     matching_audio = audio;
                                     break;
                                 }
@@ -270,7 +306,7 @@ class scene {
                         // Only play with offset if we're past the start and within duration
                         if (offset_in_audio >= 0 && offset_in_audio <= matching_audio.duration) {
                             // Audio should be preloaded - play immediately
-                            this.currently_playing_audio.add(audio_path);
+                            this.currently_playing_audio.add(this.make_audio_key(audio_path, matching_audio.timestamp));
                             this.audio_manager.play(audio_path, offset_in_audio);
                         }
                     }

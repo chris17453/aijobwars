@@ -110,7 +110,7 @@ class seekbar extends ui_component {
             if (!this.ctx || !this.graphics || !this.position) return;
 
             const progress_data = this.get_progress_callback();
-            if (!progress_data) return;
+            if (!progress_data || progress_data.current == null || progress_data.total == null) return;
 
             const {current, total, paused} = progress_data;
 
