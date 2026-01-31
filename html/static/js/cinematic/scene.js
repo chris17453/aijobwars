@@ -19,6 +19,63 @@ class scene {
         this.load_scene_data(this.scene_url);
     }
 
+    clamp(value, min = 0, max = 1) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    lerp(a, b, t) {
+        if (a === undefined || a === null) return b;
+        if (b === undefined || b === null) return a;
+        return a + (b - a) * t;
+    }
+
+    build_rect(data, fallback) {
+        if (!data && fallback) {
+            return fallback.clone ? fallback.clone() : new rect(fallback.x, fallback.y, fallback.width, fallback.height);
+        }
+        if (!data) return null;
+        const base = fallback ? (fallback.clone ? fallback.clone() : fallback) : null;
+        const x = data.x !== undefined ? data.x : base ? base.x : 0;
+        const y = data.y !== undefined ? data.y : base ? base.y : 0;
+        const width = data.width !== undefined ? data.width : base ? base.width : null;
+        const height = data.height !== undefined ? data.height : base ? base.height : null;
+        return new rect(x, y, width, height);
+    }
+
+    interpolate_rect(startRect, endRect, t) {
+        if (!startRect && !endRect) return null;
+        if (!startRect) startRect = endRect.clone ? endRect.clone() : endRect;
+        if (!endRect) endRect = startRect.clone ? startRect.clone() : startRect;
+        return new rect(
+            this.lerp(startRect.x, endRect.x, t),
+            this.lerp(startRect.y, endRect.y, t),
+            this.lerp(startRect.width, endRect.width, t),
+            this.lerp(startRect.height, endRect.height, t)
+        );
+    }
+
+    get_progress_for_object(object) {
+        if (!object || object.duration <= 0) return 0;
+        const elapsedSeconds = this.elapsed / 1000;
+        const t = (elapsedSeconds - object.timestamp) / object.duration;
+        return this.clamp(t, 0, 1);
+    }
+
+    get_opacity_for_object(object, progress) {
+        if (!object || object.opacity === undefined || object.opacity === null) return 1;
+        if (typeof object.opacity === "number") {
+            return this.clamp(object.opacity, 0, 1);
+        }
+        if (typeof object.opacity === "object") {
+            const from = object.opacity.from !== undefined ? object.opacity.from : 1;
+            const to = object.opacity.to !== undefined ? object.opacity.to : from;
+            return this.clamp(this.lerp(from, to, progress), 0, 1);
+        }
+        return 1;
+    }
+
     make_audio_key(path, timestamp) {
         try {
             return JSON.stringify({ path, timestamp });
@@ -122,17 +179,15 @@ class scene {
         return max_end_time;
     }
 
-    get_objects_in_time(total_duration_ms) {
+     get_objects_in_time(total_duration_ms) {
         if (total_duration_ms === null || total_duration_ms === undefined) {
             total_duration_ms = this.get_total_duration();
         }
         const objectsToShow = [];
         const properties = ['images', 'audio', 'text'];
-    
-        for (let property of properties) {
-    
-            for (let i = 0; i < this.scene_data.length; i++) {
 
+        for (let property of properties) {
+            for (let i = 0; i < this.scene_data.length; i++) {
                 const slide = this.scene_data[i];
                 if (!(property in slide)) continue; // Skip the loop if property doesn't exist in the scene_data
                 for (let j = 0; j < slide[property].length; j++) {
@@ -142,18 +197,32 @@ class scene {
                     if (object.duration === 0) {
                         duration = total_duration_ms || timestamp;
                     }
-    
+
                     if (this.elapsed>=timestamp &&  this.elapsed<=duration) {
-                        objectsToShow.unshift({
+                        const base = {
                             data: object,
                             type:property,
                             timestamp: timestamp
-                        });
+                        };
+                        // If there is a layers array for images, expand it, otherwise push as-is
+                        if (property === 'images' && Array.isArray(object.layers)) {
+                            for (let layerIdx = object.layers.length - 1; layerIdx >= 0; layerIdx--) {
+                                const layerObj = object.layers[layerIdx];
+                                // Merge layer into a new object preserving base timeline unless overridden
+                                const mergedData = Object.assign({}, object, layerObj);
+                                if (mergedData.timestamp === undefined) mergedData.timestamp = object.timestamp;
+                                if (mergedData.duration === undefined) mergedData.duration = object.duration;
+                                const merged = { data: mergedData, type: 'images', timestamp };
+                                objectsToShow.unshift(merged);
+                            }
+                        } else {
+                            objectsToShow.unshift(base);
+                        }
                     }
                 }
             }
         }
-    
+
         return objectsToShow;
     }
 
@@ -240,8 +309,19 @@ class scene {
             let object=objects[i];
             if(object.type=='images') {
                 let current_img = object.data.path;
-                // Use "cover" mode to always fill viewport (crop edges if needed)
-                this.graphics.sprites.render(current_img, null, position, 1, "cover");
+
+                // Motion/morph support
+                const progress = this.get_progress_for_object(object.data);
+                const startRect = this.build_rect(object.data.start_rect, position);
+                const endRect = this.build_rect(object.data.end_rect, startRect);
+                // If no start/end rects provided, fall back to the modal position to preserve existing behavior
+                const destRect = this.interpolate_rect(startRect, endRect, progress) || position;
+                const intensity = this.get_opacity_for_object(object.data, progress);
+
+                // Allow optional render mode per image (default cover)
+                const mode = object.data.mode || "cover";
+
+                this.graphics.sprites.render(current_img, null, destRect, intensity, mode);
             }
 
         }
@@ -331,8 +411,13 @@ class scene {
                 bounds.y=text_position.y-bounds.height/2;
                 this.graphics.sprites.draw_rect(bounds,"rgba(22, 22, 22, 0.8)");
 
+                // Optional per-text opacity animation
+                const text_progress = this.get_progress_for_object(object.data);
+                const text_intensity = this.get_opacity_for_object(object.data, text_progress);
+                const originalAlpha = this.graphics.ctx.globalAlpha;
+                this.graphics.ctx.globalAlpha = text_intensity;
                 this.graphics.font.draw_text(text_position, wrapped_text,true,false);
-
+                this.graphics.ctx.globalAlpha = originalAlpha;
 
             }
         }
@@ -347,6 +432,13 @@ class scene {
         if (slide.images) {
             for(let i=0;i<slide.images.length;i++) {
                 this.graphics.sprites.add(slide.images[i].path);
+                if (Array.isArray(slide.images[i].layers)) {
+                    for (let l = 0; l < slide.images[i].layers.length; l++) {
+                        if (slide.images[i].layers[l].path) {
+                            this.graphics.sprites.add(slide.images[i].layers[l].path);
+                        }
+                    }
+                }
             }
         }
 
