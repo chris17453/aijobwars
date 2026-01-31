@@ -127,6 +127,115 @@ class rect {
         if (this._height!=null) this._height=parseInt(this._height*dest.y);
     }
 
+    // Align this rect to another rect
+    // position: 'center', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center'
+    alignTo(targetRect, position = 'center') {
+        switch(position) {
+            case 'center':
+                this.center_x = targetRect.center_x;
+                this.center_y = targetRect.center_y;
+                break;
+            case 'top-left':
+                this._x = targetRect.x;
+                this._y = targetRect.y;
+                break;
+            case 'top-right':
+                this._x = targetRect.right - this._width;
+                this._y = targetRect.y;
+                break;
+            case 'bottom-left':
+                this._x = targetRect.x;
+                this._y = targetRect.bottom - this._height;
+                break;
+            case 'bottom-right':
+                this._x = targetRect.right - this._width;
+                this._y = targetRect.bottom - this._height;
+                break;
+            case 'top-center':
+                this.center_x = targetRect.center_x;
+                this._y = targetRect.y;
+                break;
+            case 'bottom-center':
+                this.center_x = targetRect.center_x;
+                this._y = targetRect.bottom - this._height;
+                break;
+            case 'left-center':
+                this._x = targetRect.x;
+                this.center_y = targetRect.center_y;
+                break;
+            case 'right-center':
+                this._x = targetRect.right - this._width;
+                this.center_y = targetRect.center_y;
+                break;
+        }
+    }
+
+    // Fit this rect inside another rect maintaining aspect ratio
+    fitInside(targetRect, mode = 'contain') {
+        if (mode === 'contain') {
+            // Scale to fit entirely inside (letterbox if needed)
+            const scale = Math.min(
+                targetRect.width / this._width,
+                targetRect.height / this._height
+            );
+            this._width = parseInt(this._width * scale);
+            this._height = parseInt(this._height * scale);
+        } else if (mode === 'cover') {
+            // Scale to cover entire area (crop if needed)
+            const scale = Math.max(
+                targetRect.width / this._width,
+                targetRect.height / this._height
+            );
+            this._width = parseInt(this._width * scale);
+            this._height = parseInt(this._height * scale);
+        }
+        // Center after scaling
+        this.alignTo(targetRect, 'center');
+    }
+
+    // Check if this rect contains a point
+    containsPoint(x, y) {
+        return x >= this.x && x < this.right && y >= this.y && y < this.bottom;
+    }
+
+    // Check if this rect intersects another rect
+    intersects(otherRect) {
+        return !(
+            this.right <= otherRect.x ||
+            this.x >= otherRect.right ||
+            this.bottom <= otherRect.y ||
+            this.y >= otherRect.bottom
+        );
+    }
+
+    // Get the area of intersection with another rect
+    getIntersection(otherRect) {
+        if (!this.intersects(otherRect)) {
+            return null;
+        }
+
+        const x = Math.max(this.x, otherRect.x);
+        const y = Math.max(this.y, otherRect.y);
+        const right = Math.min(this.right, otherRect.right);
+        const bottom = Math.min(this.bottom, otherRect.bottom);
+
+        return new rect(x, y, right - x, bottom - y);
+    }
+
+    // Expand/contract the rect by a margin
+    inset(margin) {
+        this._x += margin;
+        this._y += margin;
+        this._width -= margin * 2;
+        this._height -= margin * 2;
+    }
+
+    // Get aspect ratio
+    getAspectRatio() {
+        if (this._height === 0) return 0;
+        return this._width / this._height;
+    }
+
 }
 
 class grid {
