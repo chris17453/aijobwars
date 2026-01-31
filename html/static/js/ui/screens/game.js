@@ -21,6 +21,8 @@ class game extends modal{
         // Score tracking
         this.score = 0;
         this.kills = 0;
+        this.run_metadata = { difficulty: "tier1", loadout: "starter", seed: Date.now() };
+        this.score_bus = new ScoreEventBus(this.run_metadata);
 
         // Boss spawn tracking
         this.boss_spawned = false;
@@ -36,9 +38,12 @@ class game extends modal{
         this.ui = new ui(this.ctx, this);
         this.level = new level(this.window_manager);
 
-        // Load level from ASSETS.json
-        const level_path = this.graphics.asset_loader.get('levels.level_data');
-        this.level.load(level_path);
+        // Load level from ASSETS.json with optional registry metadata
+        const registry = this.graphics.asset_loader.get('levels.registry') || {};
+        const selected = registry.default || this.graphics.asset_loader.get('levels.level_data');
+        const difficulty = registry.default_difficulty || { hp: 1, damage: 1, speed: 1 };
+        const loadout = registry.default_loadout || null;
+        this.level.load(selected, { difficulty_modifiers: difficulty, loadout_config: loadout, registry });
         this.level.on("loaded",this.start_level.bind(this));
 
         // Create HUD bars as children of this modal
@@ -257,6 +262,7 @@ class game extends modal{
                         } else {
                             this.score += 25;
                         }
+                        this.score_bus.emit_score({ type: 'kill', target: obj2.type, score: this.score, kills: this.kills });
                     }
                     break;
 
@@ -539,6 +545,15 @@ class game extends modal{
         this.pause_game = true;
         this.level_start = false;
         this.player_won = true;
+        const payload = {
+            type: 'run_complete',
+            score: this.score,
+            kills: this.kills,
+            metadata: this.run_metadata
+        };
+        this.score_bus.emit_score(payload);
+        new LeaderboardClient('seasonal').submit(payload);
+        new LeaderboardClient('local').submit(payload);
     }
 
     draw_game_over_overlay() {

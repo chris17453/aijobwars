@@ -82,6 +82,32 @@ class ui{
         }
     }
 
+    persist_setting(key, value) {
+        try {
+            localStorage.setItem(`aijobwars_${key}`, JSON.stringify(value));
+        } catch (e) {
+            console.warn('[UI] Unable to persist setting', key, e);
+        }
+    }
+
+    load_setting(key, fallback) {
+        try {
+            const raw = localStorage.getItem(`aijobwars_${key}`);
+            if (raw === null || raw === undefined) return fallback;
+            return JSON.parse(raw);
+        } catch (e) {
+            console.warn('[UI] Unable to load setting', key, e);
+            return fallback;
+        }
+    }
+
+    toggle_accessibility(option) {
+        const current = this.load_setting('accessibility', { reduce_flash: false, colorblind: false, aim_assist: false });
+        current[option] = !current[option];
+        this.persist_setting('accessibility', current);
+        return current;
+    }
+
 
     // Not used right this second.. was part of the network websocket package
     updateChatWindow() {

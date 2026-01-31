@@ -87,6 +87,16 @@ class Ship extends game_object {
         }
     }
 
+    apply_loadout(loadout) {
+        if (!loadout) return;
+        if (loadout.primary) this.bolt_type = loadout.primary;
+        if (loadout.secondary) this.missile_type = loadout.secondary;
+        if (loadout.passives && loadout.passives.includes("extra_shield")) {
+            this.shield_max_strength += 50;
+            this.shield_strength = this.shield_max_strength;
+        }
+    }
+
     set_volume(volume) {
         super.set_volume(volume);
         for (let thruster of this.thrusters) {
@@ -537,7 +547,5 @@ class Ship extends game_object {
     }
 
 }//end ship class
-
-
 
 
