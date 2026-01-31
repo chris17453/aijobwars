@@ -1,7 +1,7 @@
 # Architecture Expansion Plan
 
 ## Goal
-Create a unified foundation to scale AI Job Wars to dozens of levels with improved scoreboarding, richer player features, and modernized controls, while preserving the existing virtual viewport, render pipeline, and modal architecture.
+Create a unified foundation to scale AI Job Wars to dozens of levels with improved scoreboarding, richer player features, and modernized controls, while preserving the existing virtual viewport (1920x1080), render pipeline, and modal architecture.
 
 ## Current Strengths (to keep)
 - Virtual 1920×1080 viewport with scaling and letterboxing
